@@ -4,3 +4,4 @@ database/
 __pycache__/
 *.pyc
 *.db
+leytrix/

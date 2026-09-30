@@ -15,16 +15,16 @@ Doble clic en `index.html` — se abre directamente en el navegador.
 
 ## Funciones
 
-- ➕ **Agregar clientes** con: nombre, DNI, celular, dirección, IP, zona, plan y cable (sí/no)
-- 👥 **Lista de clientes** con filtros por zona, estado y plan
+- ➕ **Agregar clientes** con: nombre, DNI, celular, fecha de inicio, dirección, IP, zona, plan y cable (sí/no)
+- 👥 **Lista de clientes** con columna de fecha de inicio, búsqueda y filtros por zona, estado y plan
 - 💰 **Registrar pagos** mensuales (Efectivo, Yape, Plin…)
 - ✂️ **Cortes y reconexiones** de servicio
-- 🗺️ **Vista por zona**: Loboyacu, Huayranga, Pacotillo, Ramal de Cachiyacu, Palmeras
+- 🗺️ **Vista por zona**: Loboyacu, Huayranga, Pacotillo, Ramal de Cachiyacu, Palmeras, Shishiyacu
 - 📅 **Pendientes del mes** con corte masivo
-- 📊 **Importar y exportar Excel** de clientes, pagos y cortes
+- 📊 **Importar y exportar Excel** de clientes (incluye fecha de inicio), pagos y cortes
 
 ## Zonas disponibles
-- Loboyacu · Huayranga · Pacotillo · Ramal de Cachiyacu · Palmeras
+- Loboyacu · Huayranga · Pacotillo · Ramal de Cachiyacu · Palmeras · Shishiyacu
 
 ## Planes
 - S/. 50 — Plan Básico

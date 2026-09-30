@@ -466,7 +466,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
         <div class="form-group"><label>Dirección IP *</label><input id="eIp" maxlength="15" required/><span class="field-error" id="errEIp"></span></div>
         <div class="form-group"><label>Dirección</label><input id="eDireccion" maxlength="200"/></div>
         <div class="form-group"><label>Zona</label>
-          <select id="eZona"><option>Loboyacu</option><option>Huayranga</option><option>Pacotillo</option><option>Ramal de Cachiyacu</option><option>Palmeras</option></select>
+          <select id="eZona"><option>Loboyacu</option><option>Huayranga</option><option>Pacotillo</option><option>Ramal de Cachiyacu</option><option>Palmeras</option><option>Shishiyacu</option></select>
         </div>
         <div class="form-group"><label>Plan S/.</label>
           <select id="ePlan"><option value="50">S/. 50 — Plan Básico</option><option value="60">S/. 60 — Plan Plus</option><option value="65">S/. 65 — Plan Normal</option></select>
@@ -554,7 +554,8 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 // ══════════════════════════════════════════════════════
 //  CONSTANTES Y CONFIGURACIÓN
 // ══════════════════════════════════════════════════════
-const ZONAS   = ['Loboyacu','Huayranga','Pacotillo','Ramal de Cachiyacu','Palmeras'];
+const ZONAS   = ['Loboyacu','Huayranga','Pacotillo','Ramal de Cachiyacu','Palmeras','Shishiyacu'];
+// Zona adicional añadida sin alterar las zonas existentes
 const PLANES  = [50, 60, 65];
 const ESTADOS = ['ACTIVO','CORTADO','PENDIENTE','RETIRADO'];
 const PAGE_SIZE = 50;
@@ -768,6 +769,10 @@ function mesActual() {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
 }
+function fechaHoy() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+}
 function fechaHora() {
   return new Date().toLocaleString('es-PE', { hour12: false });
 }
@@ -972,7 +977,7 @@ async function renderClientes(page = 0) {
   const bus    = safe(document.getElementById('filtBus').value).toLowerCase();
 
   const tbody = document.getElementById('bodyClientes');
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="9"><span class="spinner"></span>Cargando...</td></tr>';
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="10"><span class="spinner"></span>Cargando...</td></tr>';
 
   try {
     const filter = c => {
@@ -980,7 +985,7 @@ async function renderClientes(page = 0) {
       if (estado && c.estado !== estado)          return false;
       if (plan   && String(c.plan) !== plan)      return false;
       if (bus) {
-        const haystack = [c.nombre, c.ip, c.dni, c.celular, c.direccion]
+        const haystack = [c.nombre, c.ip, c.dni, c.celular, c.direccion, c.fecha_inicio]
           .map(v => (v || '').toLowerCase()).join(' ');
         if (!haystack.includes(bus)) return false;
       }
@@ -994,7 +999,7 @@ async function renderClientes(page = 0) {
       `👥 ${total.toLocaleString()} cliente(s) encontrado(s)`;
 
     if (!results.length) {
-      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="e-icon">👥</div>Sin clientes con ese filtro</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="e-icon">👥</div>Sin clientes con ese filtro</div></td></tr>';
     } else {
       tbody.innerHTML = results.map(c => `
         <tr class="${c.estado==='CORTADO'?'row-cortado':''}">
@@ -1005,6 +1010,7 @@ async function renderClientes(page = 0) {
           <td><strong>S/. ${Number(c.plan)}</strong></td>
           <td>${badgeCable(c.cable)}</td>
           <td>${badgeEstado(c.estado)}</td>
+          <td><span style="white-space:nowrap;font-size:0.8rem;color:var(--gris)">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
           <td>${esc(c.celular) || '—'}</td>
           <td>
             <div class="btn-group">
@@ -1020,7 +1026,7 @@ async function renderClientes(page = 0) {
     renderPagination('paginacionClientes','paginfoClientes', _pg.clientes, renderClientes);
   } catch(err) {
     console.error('renderClientes:', err);
-    tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes</td></tr>';
   }
 }
 
@@ -1069,6 +1075,8 @@ let _newPlan = null, _newZona = null, _newCable = false;
 
 function resetFormAgregar() {
   document.getElementById('formAgregar').reset();
+  const aFI = document.getElementById('aFechaInicio');
+  if (aFI) aFI.value = fechaHoy();
   _newPlan = null; _newZona = null; _newCable = false;
   document.querySelectorAll('.plan-card').forEach(p => p.classList.remove('selected'));
   document.querySelectorAll('.zona-opt').forEach(z => z.classList.remove('selected'));
@@ -1076,7 +1084,7 @@ function resetFormAgregar() {
   tog.classList.remove('on');
   tog.setAttribute('aria-pressed','false');
   document.getElementById('cableLbl').textContent = 'Sin cable';
-  clearFieldErrs('errNombre','errDni','errIp','errZona','errPlan');
+  clearFieldErrs('errNombre','errDni','errIp','errZona','errPlan','errFechaInicio');
   ['aNombre','aIp'].forEach(id => setInputErr(id, false));
   document.getElementById('btnGuardarCliente').disabled = false;
 }
@@ -1107,15 +1115,16 @@ function toggleCable() {
 
 async function guardarCliente(e) {
   e.preventDefault();
-  clearFieldErrs('errNombre','errDni','errIp','errZona','errPlan');
+  clearFieldErrs('errNombre','errDni','errIp','errZona','errPlan','errFechaInicio');
   ['aNombre','aDni','aIp'].forEach(id => setInputErr(id, false));
 
-  const nombre    = safe(document.getElementById('aNombre').value, 100);
-  const dni       = safe(document.getElementById('aDni').value, 8);
-  const celular   = safe(document.getElementById('aCelular').value, 15);
-  const direccion = safe(document.getElementById('aDireccion').value, 200);
-  const ip        = safe(document.getElementById('aIp').value, 15);
-  const obs       = safe(document.getElementById('aObs').value, 400);
+  const nombre      = safe(document.getElementById('aNombre').value, 100);
+  const dni         = safe(document.getElementById('aDni').value, 8);
+  const celular     = safe(document.getElementById('aCelular').value, 15);
+  const fechaInicio = document.getElementById('aFechaInicio')?.value || fechaHoy();
+  const direccion   = safe(document.getElementById('aDireccion').value, 200);
+  const ip          = safe(document.getElementById('aIp').value, 15);
+  const obs         = safe(document.getElementById('aObs').value, 400);
 
   let valid = true;
   if (!V.nombre(nombre)) { fieldErr('errNombre','Nombre requerido (2-100 caracteres)'); setInputErr('aNombre',true); valid=false; }
@@ -1132,6 +1141,7 @@ async function guardarCliente(e) {
   try {
     const newId = await IDB.add('clientes', {
       nombre, dni, celular, direccion, ip,
+      fecha_inicio: fechaInicio,
       zona: _newZona,
       plan: _newPlan,
       cable: _newCable,
@@ -1165,6 +1175,7 @@ async function abrirEditar(id) {
   document.getElementById('eNombre').value   = c.nombre || '';
   document.getElementById('eDni').value      = c.dni || '';
   document.getElementById('eCelular').value  = c.celular || '';
+  document.getElementById('eFechaInicio').value = c.fecha_inicio || '';
   document.getElementById('eIp').value       = c.ip || '';
   document.getElementById('eDireccion').value= c.direccion || '';
   document.getElementById('eZona').value     = V.zona(c.zona) ? c.zona : 'Loboyacu';
@@ -1180,17 +1191,18 @@ async function guardarEdicion(e) {
   clearFieldErrs('errENombre','errEDni','errEIp');
   ['eNombre','eDni','eIp'].forEach(id => setInputErr(id, false));
 
-  const id        = Number(document.getElementById('eId').value);
-  const nombre    = safe(document.getElementById('eNombre').value, 100);
-  const dni       = safe(document.getElementById('eDni').value, 8);
-  const celular   = safe(document.getElementById('eCelular').value, 15);
-  const ip        = safe(document.getElementById('eIp').value, 15);
-  const direccion = safe(document.getElementById('eDireccion').value, 200);
-  const zona      = document.getElementById('eZona').value;
-  const plan      = Number(document.getElementById('ePlan').value);
-  const cable     = document.getElementById('eCable').value === 'true';
-  const estado    = document.getElementById('eEstado').value;
-  const obs       = safe(document.getElementById('eObs').value, 400);
+  const id          = Number(document.getElementById('eId').value);
+  const nombre      = safe(document.getElementById('eNombre').value, 100);
+  const dni         = safe(document.getElementById('eDni').value, 8);
+  const celular     = safe(document.getElementById('eCelular').value, 15);
+  const fechaInicio = document.getElementById('eFechaInicio')?.value || '';
+  const ip          = safe(document.getElementById('eIp').value, 15);
+  const direccion   = safe(document.getElementById('eDireccion').value, 200);
+  const zona        = document.getElementById('eZona').value;
+  const plan        = Number(document.getElementById('ePlan').value);
+  const cable       = document.getElementById('eCable').value === 'true';
+  const estado      = document.getElementById('eEstado').value;
+  const obs         = safe(document.getElementById('eObs').value, 400);
 
   let valid = true;
   if (!V.nombre(nombre)) { fieldErr('errENombre','Nombre requerido'); setInputErr('eNombre',true); valid=false; }
@@ -1203,7 +1215,7 @@ async function guardarEdicion(e) {
   try {
     const original = await IDB.get('clientes', id);
     if (!original) { toast('Cliente no encontrado', 'error'); return; }
-    await IDB.put('clientes', { ...original, nombre, dni, celular, ip, direccion, zona, plan, cable, estado, observaciones: obs });
+    await IDB.put('clientes', { ...original, nombre, dni, celular, ip, direccion, fecha_inicio: fechaInicio || original.fecha_inicio || fechaHoy(), zona, plan, cable, estado, observaciones: obs });
     await refreshClientesCache();
     cerrarModal('modalEditar');
     renderClientes(_pg.clientes.page);
@@ -1343,7 +1355,7 @@ async function verPagosCliente(id) {
   document.getElementById('modalPagosBody').innerHTML = `
     <div class="alert alert-info" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div>
-        <strong>${esc(c.nombre)}</strong> · ${esc(c.zona)} · Plan S/. ${c.plan}<br>
+        <strong>${esc(c.nombre)}</strong> · ${esc(c.zona)} · Plan S/. ${c.plan} ${c.fecha_inicio ? '· Inicio: ' + esc(c.fecha_inicio) : ''}<br>
         Total pagado: <strong>S/. ${total.toFixed(2)}</strong> en ${pagos.length} pago(s)
       </div>
       <button class="btn btn-success btn-sm" id="btnPagarDesdeHistorial">💳 Registrar Pago</button>
@@ -1400,13 +1412,14 @@ async function generarRecibo(pagoId) {
     document.getElementById('reciboDetalles').innerHTML = [
       _fila('Nombre del cliente',  cli?.nombre || '—'),
       _fila('Zona de servicio',    cli?.zona   || '—'),
+      cli?.fecha_inicio ? _fila('Fecha de inicio', cli.fecha_inicio) : '',
       _fila('Plan contratado',     planNombre,       { highlight: true }),
       _fila('Período pagado',      mesTexto,         { highlight: true }),
       _fila('Método de pago',      pago.metodo),
       _fila('Dirección IP',        cli?.ip     || '—'),
       _fila('Fecha de pago',       pago.fecha  || '—'),
       pago.observaciones ? _fila('Nota', pago.observaciones) : '',
-    ].join('');
+    ].filter(Boolean).join('');
 
     abrirModal('modalRecibo');
   } catch(err) {
@@ -1507,6 +1520,7 @@ async function renderZonas() {
         <td>S/. ${Number(c.plan)}</td>
         <td>${badgeCable(c.cable)}</td>
         <td>${badgeEstado(c.estado)}</td>
+        <td><span style="font-size:0.78rem;color:var(--gris)">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
         <td>${esc(c.celular)||'—'}</td>
       </tr>`).join('');
       return `
@@ -1521,7 +1535,7 @@ async function renderZonas() {
         </div>
         ${clientes.length
           ? `<div class="table-wrap"><table>
-               <thead><tr><th>Nombre</th><th>IP</th><th>Plan</th><th>Cable</th><th>Estado</th><th>Celular</th></tr></thead>
+               <thead><tr><th>Nombre</th><th>IP</th><th>Plan</th><th>Cable</th><th>Estado</th><th>Inicio</th><th>Celular</th></tr></thead>
                <tbody>${rows}</tbody>
              </table></div>`
           : '<p style="padding:20px;color:var(--gris);text-align:center">Sin clientes</p>'}
@@ -1662,6 +1676,7 @@ async function exportarExcel(tipo) {
       const cli = await IDB.getAll('clientes');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cli.map(c => ({
         ID: c.id, Nombre: c.nombre, DNI: c.dni, Celular: c.celular,
+        'Fecha Inicio': c.fecha_inicio || '',
         Dirección: c.direccion, IP: c.ip, Zona: c.zona,
         'Plan S/.': c.plan, Cable: c.cable ? 'Sí' : 'No',
         Estado: c.estado, 'Fecha Registro': c.fecha_registro, Observaciones: c.observaciones
@@ -1721,17 +1736,19 @@ async function importarExcel(tipo, fileInput) {
             }
             return '';
           };
-          const nombre = get('nombre','name');
-          const ip     = get('ip','dirección ip','direccion ip');
-          const zona   = get('zona','zone');
-          const plan   = Number(get('plan','plan s/.','precio'));
-          const cable  = get('cable') === 'Sí' || get('cable') === '1' || get('cable') === 'true';
+          const nombre       = get('nombre','name');
+          const ip           = get('ip','dirección ip','direccion ip');
+          const zona         = get('zona','zone');
+          const plan         = Number(get('plan','plan s/.','precio'));
+          const cable        = get('cable') === 'Sí' || get('cable') === '1' || get('cable') === 'true';
+          const fecha_inicio = get('fecha_inicio','fecha inicio','inicio','f. inicio','f.inicio','f_inicio','fecha de inicio');
 
           if (!V.nombre(nombre) || !V.ip(ip) || !V.zona(zona) || !V.plan(plan)) { err++; continue; }
           items.push({
             nombre: safe(nombre,100),
             dni: safe(get('dni'),8),
             celular: safe(get('celular','telefono'),15),
+            fecha_inicio: safe(fecha_inicio,15) || fechaHoy(),
             direccion: safe(get('direccion','dirección'),200),
             ip: safe(ip,15), zona, plan, cable,
             estado: ESTADOS.includes(get('estado').toUpperCase()) ? get('estado').toUpperCase() : 'ACTIVO',
@@ -1791,6 +1808,7 @@ function descargarPlantilla(tipo) {
   if (tipo === 'clientes') {
     ws = XLSX.utils.json_to_sheet([{
       nombre: 'Juan Pérez', dni: '45678901', celular: '987654321',
+      fecha_inicio: '2026-09-01',
       direccion: 'Jr. Los Pinos 123', ip: '192.168.1.100',
       zona: 'Loboyacu', plan: 50, cable: 'Sí',
       estado: 'ACTIVO', observaciones: ''
@@ -1917,6 +1935,10 @@ document.querySelectorAll('.modal-bg').forEach(m => {
 //  INICIALIZACIÓN
 // ══════════════════════════════════════════════════════
 async function init() {
+  // Inicializar fecha de hoy en formulario
+  const aFI = document.getElementById('aFechaInicio');
+  if (aFI) aFI.value = fechaHoy();
+
   // Poblar zonas en formulario y filtros
   const zg = document.getElementById('zonasGrid');
   if (zg) zg.innerHTML = ZONAS.map(z =>
@@ -1934,6 +1956,15 @@ async function init() {
       if (![...sel.options].some(o => o.value === z)) sel.appendChild(opt);
     });
   });
+
+  // Añadir Shishiyacu también al selector de edición
+  const eZona = document.getElementById('eZona');
+  if (eZona && ![...eZona.options].some(o => o.value === 'Shishiyacu')) {
+    const opt = document.createElement('option');
+    opt.value = 'Shishiyacu';
+    opt.textContent = 'Shishiyacu';
+    eZona.appendChild(opt);
+  }
 
   // Cargar cache inicial
   await IDB.getAll('clientes').then(todos => {
