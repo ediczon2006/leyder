@@ -1,0 +1,1760 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<!-- CSP: bloquea scripts externos no autorizados -->
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'"/>
+<title>Leytrix ISP — Gestión de Clientes</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --azul:#1E40AF;--azul2:#1D4ED8;--azul-cl:#DBEAFE;--azul-xs:#EFF6FF;
+  --verde:#16A34A;--verde-cl:#DCFCE7;
+  --rojo:#DC2626;--rojo-cl:#FEE2E2;
+  --naranja:#EA580C;
+  --gris:#64748B;--gris-cl:#F1F5F9;
+  --borde:#E2E8F0;--texto:#1E293B;
+  --sidebar:240px;--radio:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#F8FAFC;color:var(--texto);display:flex;min-height:100vh}
+
+#sidebar{width:var(--sidebar);min-width:var(--sidebar);background:linear-gradient(175deg,#0F172A 0%,#1E3A8A 100%);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto}
+.sidebar-logo{text-align:center;padding:24px 12px 16px}
+.sidebar-logo .icon{font-size:2.8rem;display:block}
+.sidebar-logo h1{color:#fff;font-size:1.1rem;font-weight:800;margin:6px 0 2px}
+.sidebar-logo p{color:#94A3B8;font-size:0.72rem}
+.sidebar-sep{border:none;border-top:1px solid #1E40AF;margin:4px 16px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:#CBD5E1;font-size:0.85rem;font-weight:500;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-item.active{background:rgba(59,130,246,.2);color:#93C5FD;border-left-color:#3B82F6;font-weight:700}
+.nav-icon{font-size:1rem;min-width:20px;text-align:center}
+.sidebar-stats{padding:16px;margin-top:auto;border-top:1px solid #1E3A8A}
+.sidebar-stats p{color:#94A3B8;font-size:0.75rem;margin:3px 0}
+.sidebar-stats strong{color:#CBD5E1}
+
+#main{margin-left:var(--sidebar);flex:1;padding:28px 32px;min-height:100vh}
+.page{display:none}.page.active{display:block}
+
+.page-header{background:linear-gradient(135deg,#1E3A8A 0%,#1D4ED8 60%,#3B82F6 100%);border-radius:14px;padding:22px 28px;margin-bottom:24px;box-shadow:0 4px 20px rgba(30,64,175,.25)}
+.page-header h2{color:#fff;font-size:1.6rem;font-weight:800;margin-bottom:4px}
+.page-header p{color:#BFDBFE;font-size:0.88rem}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:16px;margin-bottom:24px}
+.kpi{background:#fff;border-radius:var(--radio);padding:18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid var(--borde)}
+.kpi .val{font-size:2rem;font-weight:800;line-height:1.1}
+.kpi .lbl{font-size:0.73rem;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+.kpi-blue{border-top:4px solid var(--azul)}.kpi-blue .val{color:var(--azul)}
+.kpi-green{border-top:4px solid var(--verde)}.kpi-green .val{color:var(--verde)}
+.kpi-red{border-top:4px solid var(--rojo)}.kpi-red .val{color:var(--rojo)}
+.kpi-orange{border-top:4px solid var(--naranja)}.kpi-orange .val{color:var(--naranja)}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid var(--borde);border-radius:var(--radio);padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card-title{font-size:0.95rem;font-weight:700;color:var(--azul);margin-bottom:14px;display:flex;align-items:center;gap:8px;border-left:3px solid var(--azul);padding-left:10px}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.form-grid{grid-template-columns:1fr}}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:0.82rem;font-weight:600;color:#475569}
+.form-group input,.form-group select,.form-group textarea{padding:9px 12px;border:1.5px solid var(--borde);border-radius:7px;font-size:0.88rem;outline:none;transition:border-color .15s;background:#fff;width:100%}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--azul2);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.form-group input.error{border-color:var(--rojo)}
+.form-full{grid-column:1/-1}
+.field-error{color:var(--rojo);font-size:0.76rem;margin-top:2px}
+
+.plan-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;grid-column:1/-1}
+.plan-card{border:2px solid var(--borde);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:all .2s;user-select:none}
+.plan-card:hover{border-color:var(--azul);background:var(--azul-xs)}
+.plan-card.selected{border-color:var(--azul);background:var(--azul-cl)}
+.plan-card .precio{font-size:1.8rem;font-weight:800;color:var(--azul)}
+.plan-card .nombre{font-size:0.82rem;color:var(--gris);margin-top:2px}
+
+.cable-toggle{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--gris-cl);border-radius:8px;cursor:pointer;grid-column:1/-1;user-select:none}
+.toggle-switch{width:48px;height:26px;background:#CBD5E1;border-radius:13px;position:relative;transition:background .2s;flex-shrink:0}
+.toggle-switch::after{content:'';width:20px;height:20px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.cable-toggle.on .toggle-switch{background:var(--verde)}
+.cable-toggle.on .toggle-switch::after{left:25px}
+.cable-lbl{font-weight:600;font-size:0.88rem}
+
+.zonas-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;grid-column:1/-1}
+.zona-opt{border:2px solid var(--borde);border-radius:8px;padding:10px;text-align:center;cursor:pointer;transition:all .2s;font-size:0.82rem;font-weight:600;color:var(--gris)}
+.zona-opt:hover{border-color:var(--azul);color:var(--azul);background:var(--azul-xs)}
+.zona-opt.selected{border-color:var(--azul);background:var(--azul-cl);color:var(--azul)}
+
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border:none;border-radius:7px;cursor:pointer;font-size:0.86rem;font-weight:600;transition:all .15s}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--azul2);color:#fff}.btn-primary:hover:not(:disabled){background:#1E40AF}
+.btn-success{background:var(--verde);color:#fff}.btn-success:hover:not(:disabled){background:#15803D}
+.btn-danger{background:var(--rojo);color:#fff}.btn-danger:hover:not(:disabled){background:#B91C1C}
+.btn-warning{background:var(--naranja);color:#fff}.btn-warning:hover:not(:disabled){background:#C2410C}
+.btn-outline{background:#fff;color:var(--azul);border:1.5px solid var(--azul)}.btn-outline:hover:not(:disabled){background:var(--azul-xs)}
+.btn-ghost{background:transparent;color:var(--gris);border:1.5px solid var(--borde)}.btn-ghost:hover:not(:disabled){background:var(--gris-cl)}
+.btn-sm{padding:6px 12px;font-size:0.79rem}
+.btn-full{width:100%;justify-content:center}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap}
+
+.table-wrap{overflow-x:auto;border-radius:var(--radio);border:1px solid var(--borde)}
+table{width:100%;border-collapse:collapse;font-size:0.83rem}
+thead{background:var(--azul-xs)}
+th{padding:10px 14px;text-align:left;font-weight:700;color:var(--azul);font-size:0.78rem;text-transform:uppercase;letter-spacing:.4px}
+td{padding:10px 14px;border-top:1px solid var(--borde);vertical-align:middle}
+tr:hover td{background:#FAFBFF}
+.row-cortado td{background:#FFF5F5}
+.row-pendiente td{background:#FFFBEB}
+
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700}
+.badge-activo{background:var(--verde-cl);color:#166534}
+.badge-cortado{background:var(--rojo-cl);color:#991B1B}
+.badge-pendiente{background:#FEF08A;color:#854D0E}
+.badge-retirado{background:var(--gris-cl);color:#475569}
+.badge-cable{background:var(--azul-cl);color:var(--azul)}
+.badge-nocable{background:var(--gris-cl);color:var(--gris)}
+
+/* Paginación */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--gris-cl);border-top:1px solid var(--borde);border-radius:0 0 var(--radio) var(--radio)}
+.pagination .info{font-size:0.82rem;color:var(--gris)}
+.pg-btns{display:flex;gap:6px}
+.pg-btn{padding:5px 12px;border:1.5px solid var(--borde);border-radius:6px;background:#fff;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--gris)}
+.pg-btn:hover:not(:disabled){background:var(--azul-xs);border-color:var(--azul);color:var(--azul)}
+.pg-btn:disabled{opacity:.4;cursor:not-allowed}
+.pg-btn.active{background:var(--azul);color:#fff;border-color:var(--azul)}
+
+.filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end}
+.filters .form-group{min-width:150px}
+.filters input,.filters select{padding:8px 11px;border:1.5px solid var(--borde);border-radius:7px;font-size:0.84rem;background:#fff;outline:none}
+.filters input:focus,.filters select:focus{border-color:var(--azul2)}
+
+.alert{padding:12px 16px;border-radius:8px;font-size:0.86rem;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px}
+.alert-info{background:var(--azul-cl);color:#1E40AF;border-left:4px solid var(--azul2)}
+.alert-success{background:var(--verde-cl);color:#166534;border-left:4px solid var(--verde)}
+.alert-warning{background:#FEF3C7;color:#92400E;border-left:4px solid #F59E0B}
+.alert-danger{background:var(--rojo-cl);color:#991B1B;border-left:4px solid var(--rojo)}
+
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:28px;width:90%;max-width:640px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-header h3{font-size:1.1rem;font-weight:700;color:var(--azul)}
+.modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--gris);line-height:1}
+.modal-close:hover{color:var(--rojo)}
+
+#toast{position:fixed;bottom:28px;right:28px;background:#1E293B;color:#fff;padding:12px 20px;border-radius:10px;font-size:0.87rem;font-weight:500;opacity:0;transition:opacity .3s;z-index:9999;max-width:340px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+#toast.show{opacity:1}
+#toast.t-success{background:var(--verde)}
+#toast.t-error{background:var(--rojo)}
+#toast.t-warn{background:var(--naranja)}
+
+/* Loading overlay */
+.loading-row td{text-align:center;padding:32px;color:var(--gris);font-size:0.9rem}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--borde);border-top-color:var(--azul);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.zona-card{background:#fff;border:1px solid var(--borde);border-radius:var(--radio);overflow:hidden;margin-bottom:16px}
+.zona-card-header{background:linear-gradient(90deg,var(--azul-xs),#fff);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--borde)}
+.zona-card-header h3{font-size:1rem;font-weight:700;color:var(--azul)}
+.zona-pills{display:flex;gap:8px}
+.zona-pills span{font-size:0.75rem;font-weight:600;padding:3px 9px;border-radius:20px}
+.pill-total{background:var(--azul-cl);color:var(--azul)}
+.pill-activo{background:var(--verde-cl);color:var(--verde)}
+.pill-cortado{background:var(--rojo-cl);color:var(--rojo)}
+
+.io-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.io-grid{grid-template-columns:1fr}}
+.io-card{border:2px dashed var(--borde);border-radius:12px;padding:24px;text-align:center;transition:border-color .2s}
+.io-card:hover{border-color:var(--azul)}
+.io-card .io-icon{font-size:2.5rem;margin-bottom:10px}
+.io-card h4{font-size:1rem;font-weight:700;margin-bottom:6px}
+.io-card p{font-size:0.82rem;color:var(--gris);margin-bottom:14px;line-height:1.5}
+
+.empty-state{text-align:center;padding:40px;color:var(--gris)}
+.empty-state .e-icon{font-size:2.5rem;margin-bottom:10px}
+hr{border:none;border-top:1px solid var(--borde);margin:20px 0}
+.mt-16{margin-top:16px}.mt-20{margin-top:20px}
+code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4px;font-size:0.82rem;font-family:monospace}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <span class="icon">📡</span>
+    <h1>LEYTRIX ISP</h1>
+    <p>Gestión de Clientes Internet</p>
+  </div>
+  <hr class="sidebar-sep">
+  <div class="nav-item active" data-page="inicio"><span class="nav-icon">🏠</span> Inicio</div>
+  <div class="nav-item" data-page="clientes"><span class="nav-icon">👥</span> Clientes</div>
+  <div class="nav-item" data-page="agregar"><span class="nav-icon">➕</span> Agregar Cliente</div>
+  <div class="nav-item" data-page="pagos"><span class="nav-icon">💰</span> Registrar Pago</div>
+  <div class="nav-item" data-page="cortes"><span class="nav-icon">✂️</span> Cortes &amp; Reconexión</div>
+  <div class="nav-item" data-page="zonas"><span class="nav-icon">🗺️</span> Vista por Zona</div>
+  <div class="nav-item" data-page="pendientes"><span class="nav-icon">📅</span> Pendientes del Mes</div>
+  <div class="nav-item" data-page="importexport"><span class="nav-icon">📊</span> Importar / Exportar</div>
+  <div class="sidebar-stats" id="sidebarStats"><p>Cargando...</p></div>
+</nav>
+
+<!-- ══ MAIN ═════════════════════════════════════════════ -->
+<main id="main">
+
+<!-- INICIO -->
+<section class="page active" id="page-inicio">
+  <div class="page-header"><h2>📡 Panel de Control — Leytrix ISP</h2><p>Resumen general del servicio</p></div>
+  <div class="kpi-grid" id="kpiGrid"><div class="kpi kpi-blue"><div class="val">—</div><div class="lbl">Cargando</div></div></div>
+  <div class="two-col">
+    <div class="card"><div class="card-title">🗺️ Clientes por Zona</div><div id="tablaZonasDash"></div></div>
+    <div class="card"><div class="card-title">📅 Sin pago este mes</div><div id="sinPagoDash"></div></div>
+  </div>
+</section>
+
+<!-- CLIENTES -->
+<section class="page" id="page-clientes">
+  <div class="page-header"><h2>👥 Clientes Registrados</h2><p>Consulta, edita y gestiona todos los abonados</p></div>
+  <div class="filters">
+    <div class="form-group"><label>Zona</label>
+      <select id="filtZona"><option value="">Todas las zonas</option></select>
+    </div>
+    <div class="form-group"><label>Estado</label>
+      <select id="filtEstado">
+        <option value="">Todos</option>
+        <option>ACTIVO</option><option>CORTADO</option><option>PENDIENTE</option><option>RETIRADO</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Plan</label>
+      <select id="filtPlan">
+        <option value="">Todos</option><option value="50">S/. 50</option><option value="60">S/. 60</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Buscar</label>
+      <input id="filtBus" placeholder="Nombre, IP, DNI, celular..." maxlength="80"/>
+    </div>
+  </div>
+  <div id="contadorClientes" style="font-size:0.85rem;color:var(--gris);margin-bottom:10px"></div>
+  <div class="table-wrap">
+    <table id="tablaClientes">
+      <thead><tr><th>#ID</th><th>Nombre</th><th>Zona</th><th>IP</th><th>Plan</th><th>Cable</th><th>Estado</th><th>Celular</th><th>Acciones</th></tr></thead>
+      <tbody id="bodyClientes"><tr class="loading-row"><td colspan="9"><span class="spinner"></span>Cargando...</td></tr></tbody>
+    </table>
+    <div class="pagination" id="paginacionClientes" style="display:none">
+      <span class="info" id="paginfoClientes"></span>
+      <div class="pg-btns" id="pgBtnsClientes"></div>
+    </div>
+  </div>
+</section>
+
+<!-- AGREGAR CLIENTE -->
+<section class="page" id="page-agregar">
+  <div class="page-header"><h2>➕ Agregar Nuevo Cliente</h2><p>Registre un nuevo abonado al servicio de internet</p></div>
+  <div class="card">
+    <form id="formAgregar" novalidate>
+      <div class="card-title">👤 Datos Personales</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input id="aNombre" maxlength="100" placeholder="Ej: Juan Pérez Ramírez"/>
+          <span class="field-error" id="errNombre"></span>
+        </div>
+        <div class="form-group">
+          <label>DNI</label>
+          <input id="aDni" maxlength="8" placeholder="Ej: 45678901" pattern="\d{8}"/>
+          <span class="field-error" id="errDni"></span>
+        </div>
+        <div class="form-group">
+          <label>Celular</label>
+          <input id="aCelular" maxlength="15" placeholder="Ej: 987654321"/>
+        </div>
+        <div class="form-group">
+          <label>Dirección IP *</label>
+          <input id="aIp" maxlength="15" placeholder="Ej: 192.168.1.100"/>
+          <span class="field-error" id="errIp"></span>
+        </div>
+        <div class="form-group form-full">
+          <label>Dirección / Referencia</label>
+          <input id="aDireccion" maxlength="200" placeholder="Ej: Jr. Los Pinos 123, al fondo"/>
+        </div>
+      </div>
+      <hr>
+      <div class="card-title">🗺️ Zona de Servicio *</div>
+      <div class="zonas-grid" id="zonasGrid"></div>
+      <span class="field-error" id="errZona" style="margin-top:6px;display:block"></span>
+      <hr>
+      <div class="card-title">📶 Plan de Internet *</div>
+      <div class="plan-options">
+        <div class="plan-card" id="plan50" role="button" tabindex="0">
+          <div style="font-size:1.8rem">🌐</div>
+          <div class="precio">S/. 50</div>
+          <div class="nombre">Plan Básico</div>
+        </div>
+        <div class="plan-card" id="plan60" role="button" tabindex="0">
+          <div style="font-size:1.8rem">🚀</div>
+          <div class="precio" style="color:var(--verde)">S/. 60</div>
+          <div class="nombre">Plan Plus</div>
+        </div>
+      </div>
+      <span class="field-error" id="errPlan" style="margin-top:6px;display:block"></span>
+      <hr>
+      <div class="card-title">🔌 Cable de Servicio</div>
+      <div class="cable-toggle" id="cableToggle" role="button" tabindex="0" aria-pressed="false">
+        <div class="toggle-switch" id="cableSwitch"></div>
+        <div>
+          <div class="cable-lbl" id="cableLbl">Sin cable</div>
+          <div style="font-size:0.78rem;color:var(--gris)">Toca para indicar si el cliente tiene cable instalado</div>
+        </div>
+      </div>
+      <hr>
+      <div class="form-group">
+        <label>Observaciones (opcional)</label>
+        <textarea id="aObs" rows="2" maxlength="400" placeholder="Ej: Casa al fondo, portón azul..."></textarea>
+      </div>
+      <div class="mt-20">
+        <button type="submit" class="btn btn-primary btn-full" style="font-size:1rem;padding:13px" id="btnGuardarCliente">
+          ✅ Registrar Cliente
+        </button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- PAGOS -->
+<section class="page" id="page-pagos">
+  <div class="page-header"><h2>💰 Registrar Pago</h2><p>Registre el pago mensual de un cliente</p></div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">💳 Nuevo Pago</div>
+      <form id="formPago" novalidate>
+        <div class="form-group"><label>Cliente *</label><select id="pCliente" required></select></div>
+        <div class="form-group mt-16"><label>Mes a pagar *</label><input type="month" id="pMes" required/></div>
+        <div class="form-group mt-16"><label>Monto S/. *</label><input type="number" id="pMonto" step="0.01" min="1" max="9999" required placeholder="50.00"/></div>
+        <div class="form-group mt-16"><label>Método de pago</label>
+          <select id="pMetodo"><option>Efectivo</option><option>Yape</option><option>Plin</option><option>Transferencia</option><option>Otro</option></select>
+        </div>
+        <div class="form-group mt-16"><label>Observación</label><input id="pObs" maxlength="200" placeholder="Opcional..."/></div>
+        <div id="pagoAlert"></div>
+        <button type="submit" class="btn btn-success btn-full mt-16">💾 Registrar Pago</button>
+      </form>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Últimos 20 pagos</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Cliente</th><th>Mes</th><th>S/.</th><th>Método</th><th>Fecha</th></tr></thead>
+        <tbody id="bodyUltPagos"><tr class="loading-row"><td colspan="5"><span class="spinner"></span>Cargando...</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<!-- CORTES -->
+<section class="page" id="page-cortes">
+  <div class="page-header"><h2>✂️ Cortes &amp; Reconexión</h2><p>Gestione cortes y reconexiones de servicio</p></div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">✂️ Cortar Servicio</div>
+      <div class="form-group"><label>Cliente activo</label><select id="cCorteCliente"></select></div>
+      <div class="form-group mt-16"><label>Motivo</label>
+        <select id="cCortMotivo"><option>Falta de pago</option><option>Solicitud del cliente</option><option>Mantenimiento de red</option><option>Otro</option></select>
+      </div>
+      <button class="btn btn-danger btn-full mt-16" id="btnCortar">✂️ Registrar Corte</button>
+    </div>
+    <div class="card">
+      <div class="card-title">🔄 Reconectar</div>
+      <div class="form-group"><label>Cliente cortado</label><select id="cReconCliente"></select></div>
+      <button class="btn btn-success btn-full mt-16" id="btnReconectar">🔄 Reconectar Servicio</button>
+    </div>
+  </div>
+  <div class="card mt-20">
+    <div class="card-title">📋 Historial de Cortes</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Cliente</th><th>Zona</th><th>Motivo</th><th>Fecha Corte</th><th>Reconexión</th><th>Estado</th></tr></thead>
+      <tbody id="bodyCortes"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ZONAS -->
+<section class="page" id="page-zonas">
+  <div class="page-header"><h2>🗺️ Vista por Zona</h2><p>Clientes agrupados por sector de servicio</p></div>
+  <div id="zonasContainer"></div>
+</section>
+
+<!-- PENDIENTES -->
+<section class="page" id="page-pendientes">
+  <div class="page-header"><h2>📅 Pendientes del Mes</h2><p>Clientes sin pago en el mes seleccionado</p></div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="filters">
+      <div class="form-group"><label>Mes</label><input type="month" id="mesPend"/></div>
+      <div class="form-group"><label>Zona</label>
+        <select id="zonaPend"><option value="">Todas</option></select>
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" id="btnConsultarPend">🔍 Consultar</button>
+      </div>
+    </div>
+  </div>
+  <div id="pendientesResult"></div>
+</section>
+
+<!-- IMPORTAR / EXPORTAR -->
+<section class="page" id="page-importexport">
+  <div class="page-header"><h2>📊 Importar / Exportar Excel</h2><p>Descargue o cargue datos en formato Excel (.xlsx)</p></div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">📤 Exportar datos</div>
+    <div class="io-grid">
+      <div class="io-card"><div class="io-icon">👥</div><h4>Clientes</h4><p>Todos los clientes con zona, plan, cable y estado</p><button class="btn btn-primary" id="btnExpClientes">📥 Descargar Clientes.xlsx</button></div>
+      <div class="io-card"><div class="io-icon">💰</div><h4>Pagos</h4><p>Historial completo de pagos</p><button class="btn btn-success" id="btnExpPagos">📥 Descargar Pagos.xlsx</button></div>
+      <div class="io-card"><div class="io-icon">✂️</div><h4>Cortes</h4><p>Historial de cortes y reconexiones</p><button class="btn btn-danger" id="btnExpCortes">📥 Descargar Cortes.xlsx</button></div>
+      <div class="io-card"><div class="io-icon">📊</div><h4>Exportar Todo</h4><p>Un archivo con todas las hojas</p><button class="btn btn-warning" id="btnExpTodo">📥 Descargar Completo.xlsx</button></div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">📥 Importar desde Excel</div>
+    <div class="alert alert-warning">⚠️ Los registros importados se agregan sin borrar los existentes. Verifique el formato antes de importar.</div>
+    <div class="io-grid">
+      <div class="io-card"><div class="io-icon">👥</div><h4>Importar Clientes</h4>
+        <p>Columnas requeridas: <strong>nombre, ip, zona, plan</strong><br>Opcionales: dni, celular, direccion, cable, estado, observaciones</p>
+        <input type="file" id="fileClientes" accept=".xlsx,.xls" style="display:none"/>
+        <button class="btn btn-outline" id="btnImpClientes">📂 Seleccionar archivo</button>
+      </div>
+      <div class="io-card"><div class="io-icon">💰</div><h4>Importar Pagos</h4>
+        <p>Columnas requeridas: <strong>nombre_cliente, mes, monto</strong><br>Opcionales: metodo, observaciones</p>
+        <input type="file" id="filePagos" accept=".xlsx,.xls" style="display:none"/>
+        <button class="btn btn-outline" id="btnImpPagos">📂 Seleccionar archivo</button>
+      </div>
+    </div>
+    <div id="importResult" class="mt-16"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 Plantillas</div>
+    <p style="font-size:0.85rem;color:var(--gris);margin-bottom:14px">Descargue una plantilla vacía para completar e importar.</p>
+    <div class="btn-group">
+      <button class="btn btn-ghost" id="btnPlantCli">📄 Plantilla Clientes</button>
+      <button class="btn btn-ghost" id="btnPlantPag">📄 Plantilla Pagos</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- MODAL EDITAR -->
+<div class="modal-bg" id="modalEditar" role="dialog" aria-modal="true" aria-labelledby="modalEditarTit">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalEditarTit">✏️ Editar Cliente</h3>
+      <button class="modal-close" id="closeModalEditar" aria-label="Cerrar">✕</button>
+    </div>
+    <form id="formEditar" novalidate>
+      <div class="form-grid">
+        <div class="form-group"><label>Nombre *</label><input id="eNombre" maxlength="100" required/><span class="field-error" id="errENombre"></span></div>
+        <div class="form-group"><label>DNI</label><input id="eDni" maxlength="8"/><span class="field-error" id="errEDni"></span></div>
+        <div class="form-group"><label>Celular</label><input id="eCelular" maxlength="15"/></div>
+        <div class="form-group"><label>Dirección IP *</label><input id="eIp" maxlength="15" required/><span class="field-error" id="errEIp"></span></div>
+        <div class="form-group form-full"><label>Dirección</label><input id="eDireccion" maxlength="200"/></div>
+        <div class="form-group"><label>Zona</label>
+          <select id="eZona"><option>Loboyacu</option><option>Huayranga</option><option>Pacotillo</option><option>Ramal de Cachiyacu</option><option>Palmeras</option></select>
+        </div>
+        <div class="form-group"><label>Plan S/.</label>
+          <select id="ePlan"><option value="50">S/. 50 — Plan Básico</option><option value="60">S/. 60 — Plan Plus</option></select>
+        </div>
+        <div class="form-group"><label>Cable instalado</label>
+          <select id="eCable"><option value="false">❌ Sin cable</option><option value="true">✅ Con cable</option></select>
+        </div>
+        <div class="form-group"><label>Estado</label>
+          <select id="eEstado"><option>ACTIVO</option><option>CORTADO</option><option>PENDIENTE</option><option>RETIRADO</option></select>
+        </div>
+        <div class="form-group form-full"><label>Observaciones</label><textarea id="eObs" rows="2" maxlength="400"></textarea></div>
+      </div>
+      <input type="hidden" id="eId"/>
+      <div class="btn-group mt-20">
+        <button type="submit" class="btn btn-primary">💾 Guardar</button>
+        <button type="button" class="btn btn-ghost" id="cancelModalEditar">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL VER PAGOS -->
+<div class="modal-bg" id="modalPagos" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>💰 Historial de pagos</h3>
+      <button class="modal-close" id="closeModalPagos" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="modalPagosBody"></div>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+// ══════════════════════════════════════════════════════
+//  CONSTANTES Y CONFIGURACIÓN
+// ══════════════════════════════════════════════════════
+const ZONAS   = ['Loboyacu','Huayranga','Pacotillo','Ramal de Cachiyacu','Palmeras'];
+const PLANES  = [50, 60];
+const ESTADOS = ['ACTIVO','CORTADO','PENDIENTE','RETIRADO'];
+const PAGE_SIZE = 50;
+const DB_NAME   = 'leytrix_isp_v1';
+const DB_VER    = 1;
+
+// ══════════════════════════════════════════════════════
+//  SEGURIDAD: ESCAPE HTML (previene XSS almacenado)
+// ══════════════════════════════════════════════════════
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"'`]/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;','`':'&#x60;'
+  }[c]));
+}
+function safe(str, maxLen = 200) {
+  return String(str ?? '').trim().slice(0, maxLen);
+}
+
+// ══════════════════════════════════════════════════════
+//  VALIDACIÓN
+// ══════════════════════════════════════════════════════
+const V = {
+  ip(v) {
+    if (!v) return false;
+    const parts = v.trim().split('.');
+    if (parts.length !== 4) return false;
+    return parts.every(p => /^\d{1,3}$/.test(p) && +p >= 0 && +p <= 255);
+  },
+  dni(v)    { return !v || /^\d{8}$/.test(v.trim()); },
+  cel(v)    { return !v || /^[0-9+\s\-]{7,15}$/.test(v.trim()); },
+  nombre(v) { return v && v.trim().length >= 2 && v.trim().length <= 100; },
+  plan(v)   { return PLANES.includes(Number(v)); },
+  zona(v)   { return ZONAS.includes(v); },
+  mes(v)    { return v && /^\d{4}-\d{2}$/.test(v); },
+  monto(v)  { const n = Number(v); return !isNaN(n) && n >= 1 && n <= 9999; },
+};
+
+function fieldErr(id, msg) {
+  const el = document.getElementById(id);
+  if (el) { el.textContent = msg; }
+}
+function clearFieldErrs(...ids) {
+  ids.forEach(id => { const el = document.getElementById(id); if(el) el.textContent = ''; });
+}
+function setInputErr(inputId, msg) {
+  const el = document.getElementById(inputId);
+  if (el) { el.classList.toggle('error', !!msg); }
+}
+
+// ══════════════════════════════════════════════════════
+//  BASE DE DATOS (IndexedDB)
+//  Sin límite de almacenamiento, soporta millones de registros
+// ══════════════════════════════════════════════════════
+const IDB = (() => {
+  let _db = null;
+
+  function open() {
+    return new Promise((res, rej) => {
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('clientes')) {
+          const cs = db.createObjectStore('clientes', { keyPath: 'id', autoIncrement: true });
+          cs.createIndex('zona',   'zona',   { unique: false });
+          cs.createIndex('estado', 'estado', { unique: false });
+          cs.createIndex('plan',   'plan',   { unique: false });
+        }
+        if (!db.objectStoreNames.contains('pagos')) {
+          const ps = db.createObjectStore('pagos', { keyPath: 'id', autoIncrement: true });
+          ps.createIndex('id_cliente', 'id_cliente', { unique: false });
+          ps.createIndex('mes',        'mes',        { unique: false });
+          ps.createIndex('cli_mes',    ['id_cliente','mes'], { unique: false });
+        }
+        if (!db.objectStoreNames.contains('cortes')) {
+          const ks = db.createObjectStore('cortes', { keyPath: 'id', autoIncrement: true });
+          ks.createIndex('id_cliente', 'id_cliente', { unique: false });
+          ks.createIndex('estado',     'estado',     { unique: false });
+        }
+      };
+      req.onsuccess = e => { _db = e.target.result; res(_db); };
+      req.onerror   = e => rej(e.target.error);
+    });
+  }
+
+  async function db() { return _db || (_db = await open()); }
+
+  return {
+    async add(store, data) {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const tx  = d.transaction([store], 'readwrite');
+        const req = tx.objectStore(store).add(data);
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+    },
+
+    async put(store, data) {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const tx  = d.transaction([store], 'readwrite');
+        const req = tx.objectStore(store).put(data);
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+    },
+
+    async get(store, id) {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const tx  = d.transaction([store], 'readonly');
+        const req = tx.objectStore(store).get(id);
+        req.onsuccess = e => res(e.target.result || null);
+        req.onerror   = e => rej(e.target.error);
+      });
+    },
+
+    async delete(store, id) {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const tx  = d.transaction([store], 'readwrite');
+        const req = tx.objectStore(store).delete(id);
+        req.onsuccess = () => res();
+        req.onerror   = e => rej(e.target.error);
+      });
+    },
+
+    async count(store) {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const req = d.transaction([store], 'readonly').objectStore(store).count();
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+    },
+
+    async countByIndex(store, idx, key) {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const req = d.transaction([store], 'readonly').objectStore(store).index(idx).count(key);
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+    },
+
+    // Cursor paginado con filtro opcional — soporta 1M+ registros
+    async query(store, { filter = null, limit = PAGE_SIZE, offset = 0 } = {}) {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const results = [];
+        let total = 0, skipped = 0;
+        const req = d.transaction([store], 'readonly').objectStore(store).openCursor();
+        req.onsuccess = e => {
+          const cursor = e.target.result;
+          if (!cursor) { res({ results, total }); return; }
+          const val = cursor.value;
+          if (!filter || filter(val)) {
+            total++;
+            if (skipped < offset)         skipped++;
+            else if (results.length < limit) results.push(val);
+          }
+          cursor.continue();
+        };
+        req.onerror = e => rej(e.target.error);
+      });
+    },
+
+    // Obtener todos (para exports y joins ligeros)
+    async getAll(store) {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const req = d.transaction([store], 'readonly').objectStore(store).getAll();
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+    },
+
+    // Obtener por índice
+    async getByIndex(store, idx, key) {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const req = d.transaction([store], 'readonly').objectStore(store).index(idx).getAll(key);
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+    },
+
+    // Inserción masiva en una sola transacción (para importación)
+    async bulkAdd(store, items) {
+      if (!items.length) return 0;
+      const d = await db();
+      return new Promise((res, rej) => {
+        const tx = d.transaction([store], 'readwrite');
+        const os = tx.objectStore(store);
+        let ok = 0;
+        tx.oncomplete = () => res(ok);
+        tx.onerror    = e => rej(e.target.error);
+        items.forEach(item => {
+          const r = os.add(item);
+          r.onsuccess = () => ok++;
+        });
+      });
+    },
+  };
+})();
+
+// ══════════════════════════════════════════════════════
+//  HELPERS UI
+// ══════════════════════════════════════════════════════
+function mesActual() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+}
+function fechaHora() {
+  return new Date().toLocaleString('es-PE', { hour12: false });
+}
+
+function badgeEstado(e) {
+  const safe_e = esc(e);
+  const cls = { ACTIVO:'activo', CORTADO:'cortado', PENDIENTE:'pendiente', RETIRADO:'retirado' };
+  return `<span class="badge badge-${cls[e] || 'pendiente'}">${safe_e}</span>`;
+}
+function badgeCable(c) {
+  return (c === true || c === 'true')
+    ? '<span class="badge badge-cable">✅ Con cable</span>'
+    : '<span class="badge badge-nocable">— Sin cable</span>';
+}
+
+// Cache de clientes para joins (se actualiza periódicamente)
+let _clientesCache = new Map();
+async function refreshClientesCache() {
+  const todos = await IDB.getAll('clientes');
+  _clientesCache = new Map(todos.map(c => [c.id, c]));
+}
+function nombreCliente(id) {
+  const c = _clientesCache.get(id);
+  return c ? esc(c.nombre) : '(desconocido)';
+}
+
+// ══════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════
+let _toastTimer;
+function toast(msg, tipo = 'success') {
+  const t = document.getElementById('toast');
+  // Sanitizamos el mensaje para el toast (solo texto, no HTML)
+  t.textContent = String(msg).slice(0, 120);
+  t.className = `show t-${tipo}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.className = '', 3500);
+}
+
+// ══════════════════════════════════════════════════════
+//  PAGINACIÓN
+// ══════════════════════════════════════════════════════
+// Estado de paginación por sección
+const _pg = {
+  clientes: { page: 0, total: 0 },
+};
+
+function renderPagination(containerId, infId, state, onPage) {
+  const container = document.getElementById(containerId);
+  const inf       = document.getElementById(infId);
+  const pages     = Math.max(1, Math.ceil(state.total / PAGE_SIZE));
+  const cur       = state.page;
+
+  if (!container) return;
+  container.style.display = state.total > PAGE_SIZE ? 'flex' : 'none';
+  if (inf) inf.textContent = `Mostrando ${cur*PAGE_SIZE+1}–${Math.min((cur+1)*PAGE_SIZE, state.total)} de ${state.total.toLocaleString()}`;
+
+  const btns = document.getElementById(containerId.replace('paginacion','pgBtns'));
+  if (!btns) return;
+
+  let html = `<button class="pg-btn" ${cur===0?'disabled':''} data-pg="${cur-1}">◀</button>`;
+  const start = Math.max(0, cur - 2);
+  const end   = Math.min(pages - 1, cur + 2);
+  if (start > 0) html += `<button class="pg-btn" data-pg="0">1</button>${start>1?'<span style="padding:0 4px;color:var(--gris)">…</span>':''}`;
+  for (let i = start; i <= end; i++)
+    html += `<button class="pg-btn${i===cur?' active':''}" data-pg="${i}">${i+1}</button>`;
+  if (end < pages-1) html += `${end<pages-2?'<span style="padding:0 4px;color:var(--gris)">…</span>':''}<button class="pg-btn" data-pg="${pages-1}">${pages}</button>`;
+  html += `<button class="pg-btn" ${cur===pages-1?'disabled':''} data-pg="${cur+1}">▶</button>`;
+
+  btns.innerHTML = html;
+  btns.querySelectorAll('.pg-btn:not(:disabled)').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = Number(btn.dataset.pg);
+      if (!isNaN(p)) onPage(p);
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  NAVEGACIÓN
+// ══════════════════════════════════════════════════════
+const PAGE_HANDLERS = {
+  inicio:       renderInicio,
+  clientes:     () => renderClientes(0),
+  agregar:      resetFormAgregar,
+  pagos:        renderPagos,
+  cortes:       renderCortes,
+  zonas:        renderZonas,
+  pendientes:   initPendientes,
+  importexport: () => {},
+};
+
+function goTo(page) {
+  if (!PAGE_HANDLERS[page]) return;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.dataset.page === page) n.classList.add('active');
+  });
+  PAGE_HANDLERS[page]();
+  updateSidebar();
+}
+
+// ══════════════════════════════════════════════════════
+//  SIDEBAR
+// ══════════════════════════════════════════════════════
+async function updateSidebar() {
+  try {
+    const [total, activos, cortados] = await Promise.all([
+      IDB.count('clientes'),
+      IDB.countByIndex('clientes', 'estado', 'ACTIVO'),
+      IDB.countByIndex('clientes', 'estado', 'CORTADO'),
+    ]);
+    const pagos  = await IDB.getByIndex('pagos', 'mes', mesActual());
+    const cobrado = pagos.reduce((s, p) => s + Number(p.monto), 0);
+    document.getElementById('sidebarStats').innerHTML = `
+      <p>📡 <strong>Total:</strong> ${total.toLocaleString()}</p>
+      <p>✅ <strong>Activos:</strong> ${activos.toLocaleString()}</p>
+      <p>✂️ <strong>Cortados:</strong> ${cortados.toLocaleString()}</p>
+      <p>💰 <strong>Cobrado este mes:</strong> S/. ${cobrado.toFixed(2)}</p>`;
+  } catch(err) {
+    console.error('sidebar:', err);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  INICIO
+// ══════════════════════════════════════════════════════
+async function renderInicio() {
+  try {
+    const [total, activos, cortados, conCable] = await Promise.all([
+      IDB.count('clientes'),
+      IDB.countByIndex('clientes','estado','ACTIVO'),
+      IDB.countByIndex('clientes','estado','CORTADO'),
+      IDB.query('clientes', { filter: c => c.cable === true }),
+    ]);
+    const mes   = mesActual();
+    const pagos = await IDB.getByIndex('pagos','mes',mes);
+    const cobrado = pagos.reduce((s,p) => s + Number(p.monto), 0);
+
+    document.getElementById('kpiGrid').innerHTML = `
+      <div class="kpi kpi-blue"><div class="val">${total.toLocaleString()}</div><div class="lbl">Total Clientes</div></div>
+      <div class="kpi kpi-green"><div class="val">${activos.toLocaleString()}</div><div class="lbl">Activos</div></div>
+      <div class="kpi kpi-red"><div class="val">${cortados.toLocaleString()}</div><div class="lbl">Cortados</div></div>
+      <div class="kpi kpi-orange"><div class="val">S/. ${cobrado.toFixed(0)}</div><div class="lbl">Cobrado este mes</div></div>
+      <div class="kpi kpi-blue"><div class="val">${conCable.total.toLocaleString()}</div><div class="lbl">Con cable</div></div>`;
+
+    // Zonas
+    const zonaRows = await Promise.all(ZONAS.map(async z => {
+      const [tot, act, cort] = await Promise.all([
+        IDB.countByIndex('clientes','zona',z),
+        IDB.query('clientes', { filter: c => c.zona===z && c.estado==='ACTIVO' }),
+        IDB.query('clientes', { filter: c => c.zona===z && c.estado==='CORTADO' }),
+      ]);
+      return `<tr><td><strong>${esc(z)}</strong></td><td>${tot}</td><td>${act.total}</td><td>${cort.total}</td></tr>`;
+    }));
+    document.getElementById('tablaZonasDash').innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Zona</th><th>Total</th><th>Activos</th><th>Cortados</th></tr></thead>
+        <tbody>${zonaRows.join('') || '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--gris)">Sin datos</td></tr>'}</tbody>
+      </table></div>`;
+
+    // Sin pago este mes
+    const conPago = new Set(pagos.map(p => p.id_cliente));
+    const { results: sinPago, total: totalSP } = await IDB.query('clientes', {
+      filter: c => c.estado === 'ACTIVO' && !conPago.has(c.id),
+      limit: 8
+    });
+    if (totalSP === 0) {
+      document.getElementById('sinPagoDash').innerHTML = '<div class="alert alert-success">✅ Todos al día este mes.</div>';
+    } else {
+      const rows = sinPago.map(c => `<tr><td>${esc(c.nombre)}</td><td>${esc(c.zona)}</td><td>S/. ${Number(c.plan)}</td></tr>`).join('');
+      document.getElementById('sinPagoDash').innerHTML = `
+        <div class="alert alert-warning">⚠️ <strong>${totalSP.toLocaleString()}</strong> cliente(s) sin pago en ${mes}</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Nombre</th><th>Zona</th><th>Plan</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>`;
+    }
+  } catch(err) {
+    console.error('renderInicio:', err);
+    toast('Error cargando datos de inicio', 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  CLIENTES — LISTA CON PAGINACIÓN Y DEBOUNCE
+// ══════════════════════════════════════════════════════
+let _busTimer = null;
+function debouncedBusqueda() {
+  clearTimeout(_busTimer);
+  _busTimer = setTimeout(() => renderClientes(0), 300);
+}
+
+async function renderClientes(page = 0) {
+  _pg.clientes.page = page;
+  const zona   = document.getElementById('filtZona').value;
+  const estado = document.getElementById('filtEstado').value;
+  const plan   = document.getElementById('filtPlan').value;
+  const bus    = safe(document.getElementById('filtBus').value).toLowerCase();
+
+  const tbody = document.getElementById('bodyClientes');
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="9"><span class="spinner"></span>Cargando...</td></tr>';
+
+  try {
+    const filter = c => {
+      if (zona   && c.zona   !== zona)           return false;
+      if (estado && c.estado !== estado)          return false;
+      if (plan   && String(c.plan) !== plan)      return false;
+      if (bus) {
+        const haystack = [c.nombre, c.ip, c.dni, c.celular, c.direccion]
+          .map(v => (v || '').toLowerCase()).join(' ');
+        if (!haystack.includes(bus)) return false;
+      }
+      return true;
+    };
+
+    const { results, total } = await IDB.query('clientes', { filter, limit: PAGE_SIZE, offset: page * PAGE_SIZE });
+    _pg.clientes.total = total;
+
+    document.getElementById('contadorClientes').textContent =
+      `👥 ${total.toLocaleString()} cliente(s) encontrado(s)`;
+
+    if (!results.length) {
+      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="e-icon">👥</div>Sin clientes con ese filtro</div></td></tr>';
+    } else {
+      tbody.innerHTML = results.map(c => `
+        <tr class="${c.estado==='CORTADO'?'row-cortado':''}">
+          <td>${c.id}</td>
+          <td><strong>${esc(c.nombre)}</strong></td>
+          <td>${esc(c.zona)}</td>
+          <td><code>${esc(c.ip) || '—'}</code></td>
+          <td><strong>S/. ${Number(c.plan)}</strong></td>
+          <td>${badgeCable(c.cable)}</td>
+          <td>${badgeEstado(c.estado)}</td>
+          <td>${esc(c.celular) || '—'}</td>
+          <td>
+            <div class="btn-group">
+              <button class="btn btn-outline btn-sm" data-action="editar" data-id="${c.id}" title="Editar">✏️</button>
+              <button class="btn btn-ghost btn-sm"   data-action="pagos"  data-id="${c.id}" title="Ver pagos">💰</button>
+              <button class="btn btn-danger btn-sm"  data-action="delete" data-id="${c.id}" title="Eliminar">🗑️</button>
+            </div>
+          </td>
+        </tr>`).join('');
+    }
+
+    renderPagination('paginacionClientes','paginfoClientes', _pg.clientes, renderClientes);
+  } catch(err) {
+    console.error('renderClientes:', err);
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes</td></tr>';
+  }
+}
+
+// Delegación de eventos en la tabla (sin onclick con user data)
+document.getElementById('bodyClientes').addEventListener('click', async e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const id     = Number(btn.dataset.id);
+  const action = btn.dataset.action;
+  if (!id || isNaN(id)) return;
+
+  if (action === 'editar') { await abrirEditar(id); }
+  if (action === 'pagos')  { await verPagosCliente(id); }
+  if (action === 'delete') { await eliminarCliente(id); }
+});
+
+async function eliminarCliente(id) {
+  const c = await IDB.get('clientes', id);
+  if (!c) return;
+  if (!confirm(`¿Eliminar a "${c.nombre}"? También se borrarán sus pagos y cortes.`)) return;
+  try {
+    const [pagos, cortes] = await Promise.all([
+      IDB.getByIndex('pagos',  'id_cliente', id),
+      IDB.getByIndex('cortes', 'id_cliente', id),
+    ]);
+    await Promise.all([
+      IDB.delete('clientes', id),
+      ...pagos.map(p  => IDB.delete('pagos',  p.id)),
+      ...cortes.map(co => IDB.delete('cortes', co.id)),
+    ]);
+    toast('Cliente eliminado', 'warn');
+    await refreshClientesCache();
+    renderClientes(_pg.clientes.page);
+    updateSidebar();
+  } catch(err) {
+    console.error(err);
+    toast('Error al eliminar', 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  AGREGAR CLIENTE
+// ══════════════════════════════════════════════════════
+let _newPlan = null, _newZona = null, _newCable = false;
+
+function resetFormAgregar() {
+  document.getElementById('formAgregar').reset();
+  _newPlan = null; _newZona = null; _newCable = false;
+  document.querySelectorAll('.plan-card').forEach(p => p.classList.remove('selected'));
+  document.querySelectorAll('.zona-opt').forEach(z => z.classList.remove('selected'));
+  const tog = document.getElementById('cableToggle');
+  tog.classList.remove('on');
+  tog.setAttribute('aria-pressed','false');
+  document.getElementById('cableLbl').textContent = 'Sin cable';
+  clearFieldErrs('errNombre','errDni','errIp','errZona','errPlan');
+  ['aNombre','aIp'].forEach(id => setInputErr(id, false));
+  document.getElementById('btnGuardarCliente').disabled = false;
+}
+
+function selPlan(p) {
+  _newPlan = Number(p);
+  document.getElementById('plan50').classList.toggle('selected', _newPlan === 50);
+  document.getElementById('plan60').classList.toggle('selected', _newPlan === 60);
+  fieldErr('errPlan', '');
+}
+
+function selZona(z, el) {
+  if (!V.zona(z)) return;
+  _newZona = z;
+  document.querySelectorAll('.zona-opt').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+  fieldErr('errZona', '');
+}
+
+function toggleCable() {
+  _newCable = !_newCable;
+  const tog = document.getElementById('cableToggle');
+  tog.classList.toggle('on', _newCable);
+  tog.setAttribute('aria-pressed', String(_newCable));
+  document.getElementById('cableLbl').textContent = _newCable ? 'Con cable instalado' : 'Sin cable';
+}
+
+async function guardarCliente(e) {
+  e.preventDefault();
+  clearFieldErrs('errNombre','errDni','errIp','errZona','errPlan');
+  ['aNombre','aDni','aIp'].forEach(id => setInputErr(id, false));
+
+  const nombre    = safe(document.getElementById('aNombre').value, 100);
+  const dni       = safe(document.getElementById('aDni').value, 8);
+  const celular   = safe(document.getElementById('aCelular').value, 15);
+  const direccion = safe(document.getElementById('aDireccion').value, 200);
+  const ip        = safe(document.getElementById('aIp').value, 15);
+  const obs       = safe(document.getElementById('aObs').value, 400);
+
+  let valid = true;
+  if (!V.nombre(nombre)) { fieldErr('errNombre','Nombre requerido (2-100 caracteres)'); setInputErr('aNombre',true); valid=false; }
+  if (!V.ip(ip))         { fieldErr('errIp','IP inválida. Ej: 192.168.1.100');           setInputErr('aIp',true);     valid=false; }
+  if (dni && !V.dni(dni)){ fieldErr('errDni','DNI debe tener 8 dígitos');               setInputErr('aDni',true);    valid=false; }
+  if (!_newZona)         { fieldErr('errZona','Seleccione una zona'); valid=false; }
+  if (!_newPlan)         { fieldErr('errPlan','Seleccione un plan'); valid=false; }
+  if (!valid) return;
+
+  const btn = document.getElementById('btnGuardarCliente');
+  btn.disabled = true;
+  btn.textContent = '⏳ Guardando...';
+
+  try {
+    const newId = await IDB.add('clientes', {
+      nombre, dni, celular, direccion, ip,
+      zona: _newZona,
+      plan: _newPlan,
+      cable: _newCable,
+      estado: 'ACTIVO',
+      fecha_registro: fechaHora(),
+      observaciones: obs,
+    });
+    await refreshClientesCache();
+    toast(`✅ Cliente "${nombre}" registrado #${newId}`);
+    resetFormAgregar();
+    updateSidebar();
+  } catch(err) {
+    console.error(err);
+    toast('Error al guardar cliente', 'error');
+    btn.disabled = false;
+    btn.textContent = '✅ Registrar Cliente';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  EDITAR CLIENTE
+// ══════════════════════════════════════════════════════
+async function abrirEditar(id) {
+  const c = await IDB.get('clientes', id);
+  if (!c) { toast('Cliente no encontrado', 'error'); return; }
+  clearFieldErrs('errENombre','errEDni','errEIp');
+  document.getElementById('eId').value       = c.id;
+  document.getElementById('eNombre').value   = c.nombre || '';
+  document.getElementById('eDni').value      = c.dni || '';
+  document.getElementById('eCelular').value  = c.celular || '';
+  document.getElementById('eIp').value       = c.ip || '';
+  document.getElementById('eDireccion').value= c.direccion || '';
+  document.getElementById('eZona').value     = V.zona(c.zona) ? c.zona : 'Loboyacu';
+  document.getElementById('ePlan').value     = V.plan(c.plan) ? String(c.plan) : '50';
+  document.getElementById('eCable').value    = String(!!c.cable);
+  document.getElementById('eEstado').value   = ESTADOS.includes(c.estado) ? c.estado : 'ACTIVO';
+  document.getElementById('eObs').value      = c.observaciones || '';
+  abrirModal('modalEditar');
+}
+
+async function guardarEdicion(e) {
+  e.preventDefault();
+  clearFieldErrs('errENombre','errEDni','errEIp');
+  ['eNombre','eDni','eIp'].forEach(id => setInputErr(id, false));
+
+  const id        = Number(document.getElementById('eId').value);
+  const nombre    = safe(document.getElementById('eNombre').value, 100);
+  const dni       = safe(document.getElementById('eDni').value, 8);
+  const celular   = safe(document.getElementById('eCelular').value, 15);
+  const ip        = safe(document.getElementById('eIp').value, 15);
+  const direccion = safe(document.getElementById('eDireccion').value, 200);
+  const zona      = document.getElementById('eZona').value;
+  const plan      = Number(document.getElementById('ePlan').value);
+  const cable     = document.getElementById('eCable').value === 'true';
+  const estado    = document.getElementById('eEstado').value;
+  const obs       = safe(document.getElementById('eObs').value, 400);
+
+  let valid = true;
+  if (!V.nombre(nombre)) { fieldErr('errENombre','Nombre requerido'); setInputErr('eNombre',true); valid=false; }
+  if (!V.ip(ip))         { fieldErr('errEIp','IP inválida'); setInputErr('eIp',true); valid=false; }
+  if (dni && !V.dni(dni)){ fieldErr('errEDni','DNI debe tener 8 dígitos'); setInputErr('eDni',true); valid=false; }
+  if (!V.zona(zona))     { valid=false; }
+  if (!V.plan(plan))     { valid=false; }
+  if (!valid) return;
+
+  try {
+    const original = await IDB.get('clientes', id);
+    if (!original) { toast('Cliente no encontrado', 'error'); return; }
+    await IDB.put('clientes', { ...original, nombre, dni, celular, ip, direccion, zona, plan, cable, estado, observaciones: obs });
+    await refreshClientesCache();
+    cerrarModal('modalEditar');
+    renderClientes(_pg.clientes.page);
+    updateSidebar();
+    toast('Cliente actualizado ✅');
+  } catch(err) {
+    console.error(err);
+    toast('Error al actualizar', 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  PAGOS
+// ══════════════════════════════════════════════════════
+async function renderPagos() {
+  try {
+    const clientes = await IDB.getAll('clientes');
+    const pCliente = document.getElementById('pCliente');
+    pCliente.innerHTML = clientes.length
+      ? clientes.map(c => `<option value="${c.id}">${esc(c.nombre)} · ${esc(c.zona)} · S/.${c.plan}</option>`).join('')
+      : '<option value="">Sin clientes registrados</option>';
+    document.getElementById('pMes').value = mesActual();
+
+    // Ultimos 20 pagos
+    const allPagos = await IDB.getAll('pagos');
+    const ultimos  = allPagos.slice(-20).reverse();
+    document.getElementById('bodyUltPagos').innerHTML = ultimos.length
+      ? ultimos.map(p => `<tr>
+          <td>${nombreCliente(p.id_cliente)}</td>
+          <td>${esc(p.mes)}</td>
+          <td><strong>S/. ${Number(p.monto).toFixed(2)}</strong></td>
+          <td>${esc(p.metodo)}</td>
+          <td style="font-size:0.78rem;color:var(--gris)">${esc(p.fecha)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--gris)">Sin pagos</td></tr>';
+  } catch(err) {
+    console.error(err);
+  }
+}
+
+async function guardarPago(e) {
+  e.preventDefault();
+  document.getElementById('pagoAlert').innerHTML = '';
+
+  const id_cliente = Number(document.getElementById('pCliente').value);
+  const mes        = document.getElementById('pMes').value;
+  const monto      = Number(document.getElementById('pMonto').value);
+  const metodo     = document.getElementById('pMetodo').value;
+  const obs        = safe(document.getElementById('pObs').value, 200);
+
+  if (!id_cliente)    { toast('Seleccione un cliente','error'); return; }
+  if (!V.mes(mes))    { toast('Seleccione un mes válido','error'); return; }
+  if (!V.monto(monto)){ toast('Monto inválido (1 – 9999)','error'); return; }
+
+  // Verificar pago duplicado
+  const existentes = await IDB.getByIndex('pagos','cli_mes',[id_cliente, mes]);
+  if (existentes.length > 0) {
+    const cli = await IDB.get('clientes', id_cliente);
+    document.getElementById('pagoAlert').innerHTML = `
+      <div class="alert alert-warning" style="margin-top:10px">
+        ⚠️ Ya existe un pago de ${esc(cli?.nombre || '')} para <strong>${mes}</strong> (S/. ${existentes[0].monto}). ¿Deseas registrar uno adicional?
+        <div class="btn-group" style="margin-top:8px">
+          <button class="btn btn-warning btn-sm" id="btnForzarPago">Sí, registrar igualmente</button>
+          <button class="btn btn-ghost btn-sm" id="btnCancelarDupPago">Cancelar</button>
+        </div>
+      </div>`;
+    document.getElementById('btnForzarPago').addEventListener('click', () => realizarPago(id_cliente, mes, monto, metodo, obs));
+    document.getElementById('btnCancelarDupPago').addEventListener('click', () => document.getElementById('pagoAlert').innerHTML = '');
+    return;
+  }
+  await realizarPago(id_cliente, mes, monto, metodo, obs);
+}
+
+async function realizarPago(id_cliente, mes, monto, metodo, obs) {
+  try {
+    document.getElementById('pagoAlert').innerHTML = '';
+    await IDB.add('pagos', { id_cliente, mes, monto, metodo, observaciones: obs, fecha: fechaHora() });
+    // Reactivar si estaba CORTADO
+    const c = await IDB.get('clientes', id_cliente);
+    if (c && c.estado === 'CORTADO') await IDB.put('clientes', { ...c, estado: 'ACTIVO' });
+    await refreshClientesCache();
+    document.getElementById('pObs').value = '';
+    renderPagos();
+    updateSidebar();
+    toast('Pago registrado ✅');
+  } catch(err) {
+    console.error(err);
+    toast('Error al registrar pago','error');
+  }
+}
+
+async function verPagosCliente(id) {
+  const c = await IDB.get('clientes', id);
+  if (!c) return;
+  const pagos = await IDB.getByIndex('pagos','id_cliente', id);
+  const total = pagos.reduce((s,p) => s + Number(p.monto), 0);
+  const rows  = [...pagos].reverse().map(p => `<tr>
+    <td>${esc(p.mes)}</td>
+    <td><strong>S/. ${Number(p.monto).toFixed(2)}</strong></td>
+    <td>${esc(p.metodo)}</td>
+    <td style="font-size:0.78rem">${esc(p.fecha)}</td>
+  </tr>`).join('');
+
+  document.getElementById('modalPagosBody').innerHTML = `
+    <div class="alert alert-info" style="margin-bottom:12px">
+      <strong>${esc(c.nombre)}</strong> · ${esc(c.zona)} · Plan S/. ${c.plan}<br>
+      Total pagado: <strong>S/. ${total.toFixed(2)}</strong> en ${pagos.length} pago(s)
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Mes</th><th>S/.</th><th>Método</th><th>Fecha</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--gris)">Sin pagos</td></tr>'}</tbody>
+    </table></div>`;
+  abrirModal('modalPagos');
+}
+
+// ══════════════════════════════════════════════════════
+//  CORTES
+// ══════════════════════════════════════════════════════
+async function renderCortes() {
+  try {
+    const [activos, cortados, cortes] = await Promise.all([
+      IDB.getByIndex('clientes','estado','ACTIVO'),
+      IDB.getByIndex('clientes','estado','CORTADO'),
+      IDB.getAll('cortes'),
+    ]);
+
+    document.getElementById('cCorteCliente').innerHTML = activos.length
+      ? activos.map(c => `<option value="${c.id}">${esc(c.nombre)} · ${esc(c.zona)} · ${esc(c.ip||'—')}</option>`).join('')
+      : '<option>Sin clientes activos</option>';
+
+    document.getElementById('cReconCliente').innerHTML = cortados.length
+      ? cortados.map(c => `<option value="${c.id}">${esc(c.nombre)} · ${esc(c.zona)} · ${esc(c.ip||'—')}</option>`).join('')
+      : '<option>Sin clientes cortados</option>';
+
+    const rows = [...cortes].reverse().slice(0,50).map(co => {
+      const cli = _clientesCache.get(co.id_cliente);
+      return `<tr>
+        <td><strong>${cli ? esc(cli.nombre) : esc(co.id_cliente)}</strong></td>
+        <td>${cli ? esc(cli.zona) : '—'}</td>
+        <td>${esc(co.motivo)}</td>
+        <td style="font-size:0.8rem">${esc(co.fecha_corte)}</td>
+        <td style="font-size:0.8rem;color:${co.fecha_recon?'var(--verde)':'var(--gris)'}">${co.fecha_recon ? esc(co.fecha_recon) : '—'}</td>
+        <td>${badgeEstado(co.estado === 'RECONECTADO' ? 'ACTIVO' : 'CORTADO')}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('bodyCortes').innerHTML = rows ||
+      '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--gris)">Sin historial</td></tr>';
+  } catch(err) {
+    console.error(err);
+  }
+}
+
+async function cortarServicio() {
+  const id     = Number(document.getElementById('cCorteCliente').value);
+  const motivo = document.getElementById('cCortMotivo').value;
+  if (!id) { toast('Seleccione un cliente','error'); return; }
+  const c = await IDB.get('clientes', id);
+  if (!c) return;
+  if (!confirm(`¿Cortar servicio de "${c.nombre}"?`)) return;
+  try {
+    await IDB.put('clientes', { ...c, estado: 'CORTADO' });
+    await IDB.add('cortes', { id_cliente: id, motivo, fecha_corte: fechaHora(), fecha_recon: null, estado: 'CORTADO' });
+    await refreshClientesCache();
+    renderCortes(); updateSidebar();
+    toast(`Servicio de ${c.nombre} cortado`, 'warn');
+  } catch(err) { toast('Error','error'); }
+}
+
+async function reconectarServicio() {
+  const id = Number(document.getElementById('cReconCliente').value);
+  if (!id) { toast('Seleccione un cliente','error'); return; }
+  const c = await IDB.get('clientes', id);
+  if (!c) return;
+  try {
+    await IDB.put('clientes', { ...c, estado: 'ACTIVO' });
+    const cortes = await IDB.getByIndex('cortes','id_cliente',id);
+    const pendientes = cortes.filter(co => co.estado === 'CORTADO');
+    await Promise.all(pendientes.map(co => IDB.put('cortes', { ...co, fecha_recon: fechaHora(), estado: 'RECONECTADO' })));
+    await refreshClientesCache();
+    renderCortes(); updateSidebar();
+    toast(`${c.nombre} reconectado ✅`);
+  } catch(err) { toast('Error','error'); }
+}
+
+// ══════════════════════════════════════════════════════
+//  ZONAS
+// ══════════════════════════════════════════════════════
+async function renderZonas() {
+  const container = document.getElementById('zonasContainer');
+  container.innerHTML = '<div class="empty-state"><span class="spinner"></span> Cargando zonas...</div>';
+  try {
+    const html = await Promise.all(ZONAS.map(async z => {
+      const clientes = await IDB.getByIndex('clientes','zona',z);
+      const act  = clientes.filter(c => c.estado==='ACTIVO').length;
+      const cort = clientes.filter(c => c.estado==='CORTADO').length;
+      const rows = clientes.map(c => `<tr class="${c.estado==='CORTADO'?'row-cortado':''}">
+        <td><strong>${esc(c.nombre)}</strong></td>
+        <td><code>${esc(c.ip)||'—'}</code></td>
+        <td>S/. ${Number(c.plan)}</td>
+        <td>${badgeCable(c.cable)}</td>
+        <td>${badgeEstado(c.estado)}</td>
+        <td>${esc(c.celular)||'—'}</td>
+      </tr>`).join('');
+      return `
+      <div class="zona-card">
+        <div class="zona-card-header">
+          <h3>📍 ${esc(z)}</h3>
+          <div class="zona-pills">
+            <span class="pill-total">${clientes.length} total</span>
+            <span class="pill-activo">✅ ${act}</span>
+            ${cort ? `<span class="pill-cortado">✂️ ${cort}</span>` : ''}
+          </div>
+        </div>
+        ${clientes.length
+          ? `<div class="table-wrap"><table>
+               <thead><tr><th>Nombre</th><th>IP</th><th>Plan</th><th>Cable</th><th>Estado</th><th>Celular</th></tr></thead>
+               <tbody>${rows}</tbody>
+             </table></div>`
+          : '<p style="padding:20px;color:var(--gris);text-align:center">Sin clientes</p>'}
+      </div>`;
+    }));
+    container.innerHTML = html.join('');
+  } catch(err) {
+    console.error(err);
+    container.innerHTML = '<div class="alert alert-danger">Error cargando zonas</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  PENDIENTES
+// ══════════════════════════════════════════════════════
+function initPendientes() {
+  document.getElementById('mesPend').value = mesActual();
+  renderPendientes();
+}
+
+// IDs de la consulta actual (para corte masivo sin pasar JSON en onclick)
+let _pendientesActuales = [];
+
+async function renderPendientes() {
+  const mes   = document.getElementById('mesPend').value || mesActual();
+  const zona  = document.getElementById('zonaPend').value;
+
+  if (!V.mes(mes)) { toast('Ingrese un mes válido','error'); return; }
+
+  document.getElementById('pendientesResult').innerHTML =
+    '<div class="empty-state"><span class="spinner"></span> Consultando...</div>';
+
+  try {
+    const pagos   = await IDB.getByIndex('pagos','mes',mes);
+    const conPago = new Set(pagos.map(p => p.id_cliente));
+
+    const filter = c =>
+      c.estado === 'ACTIVO' &&
+      !conPago.has(c.id) &&
+      (zona ? c.zona === zona : true);
+
+    const { results: pendientes, total } = await IDB.query('clientes', { filter, limit: 200 });
+    _pendientesActuales = pendientes;
+
+    const el = document.getElementById('pendientesResult');
+    if (!pendientes.length) {
+      el.innerHTML = `<div class="alert alert-success">✅ Todos los clientes ${zona?'de '+esc(zona):''} tienen pago en <strong>${mes}</strong>.</div>`;
+      return;
+    }
+
+    const totalMonto = pendientes.reduce((s,c) => s + Number(c.plan), 0);
+    const rows = pendientes.map(c => `
+      <tr class="row-pendiente">
+        <td><strong>${esc(c.nombre)}</strong></td>
+        <td>${esc(c.zona)}</td>
+        <td><code>${esc(c.ip)||'—'}</code></td>
+        <td>S/. ${Number(c.plan)}</td>
+        <td>${badgeCable(c.cable)}</td>
+        <td>${esc(c.celular)||'—'}</td>
+        <td><button class="btn btn-danger btn-sm" data-pend-id="${c.id}">✂️</button></td>
+      </tr>`).join('');
+
+    el.innerHTML = `
+      <div class="alert alert-warning">⚠️ <strong>${total.toLocaleString()}</strong> cliente(s) sin pago en <strong>${mes}</strong> · Pendiente: <strong>S/. ${totalMonto.toFixed(2)}</strong></div>
+      <div class="card">
+        <div class="btn-group" style="margin-bottom:14px">
+          <button class="btn btn-danger" id="btnCortarTodos">✂️ Cortar todos (${pendientes.length})</button>
+          <button class="btn btn-ghost" id="btnExpPend">📥 Exportar lista</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Nombre</th><th>Zona</th><th>IP</th><th>Plan</th><th>Cable</th><th>Celular</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+      </div>`;
+
+    // Event delegation — NO se serializa user data en onclick
+    el.querySelector('#btnCortarTodos').addEventListener('click', cortarTodosPendientes);
+    el.querySelector('#btnExpPend').addEventListener('click', exportarPendientes);
+    el.querySelectorAll('[data-pend-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.dataset.pendId);
+        await cortarRapido(id);
+      });
+    });
+  } catch(err) {
+    console.error(err);
+    document.getElementById('pendientesResult').innerHTML = '<div class="alert alert-danger">Error consultando pendientes</div>';
+  }
+}
+
+async function cortarRapido(id) {
+  const c = await IDB.get('clientes', id);
+  if (!c) return;
+  if (!confirm(`¿Cortar servicio de "${c.nombre}"?`)) return;
+  await IDB.put('clientes', { ...c, estado: 'CORTADO' });
+  await IDB.add('cortes', { id_cliente: id, motivo: 'Falta de pago', fecha_corte: fechaHora(), fecha_recon: null, estado: 'CORTADO' });
+  await refreshClientesCache();
+  updateSidebar();
+  renderPendientes();
+  toast(`Cortado: ${c.nombre}`, 'warn');
+}
+
+async function cortarTodosPendientes() {
+  if (!_pendientesActuales.length) return;
+  if (!confirm(`¿Cortar ${_pendientesActuales.length} cliente(s)?`)) return;
+  try {
+    await Promise.all(_pendientesActuales.map(async c => {
+      await IDB.put('clientes', { ...c, estado: 'CORTADO' });
+      await IDB.add('cortes', { id_cliente: c.id, motivo: 'Falta de pago — corte masivo', fecha_corte: fechaHora(), fecha_recon: null, estado: 'CORTADO' });
+    }));
+    await refreshClientesCache();
+    updateSidebar();
+    toast(`${_pendientesActuales.length} clientes cortados`, 'warn');
+    renderPendientes();
+  } catch(err) { toast('Error en corte masivo','error'); }
+}
+
+function exportarPendientes() {
+  if (!_pendientesActuales.length) return;
+  const datos = _pendientesActuales.map(c => ({
+    Nombre: c.nombre, Zona: c.zona, IP: c.ip,
+    'Plan S/.': c.plan, Cable: c.cable ? 'Sí' : 'No', Celular: c.celular || ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(datos);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pendientes');
+  XLSX.writeFile(wb, `Pendientes_${document.getElementById('mesPend').value}.xlsx`);
+  toast('Archivo descargado');
+}
+
+// ══════════════════════════════════════════════════════
+//  IMPORTAR / EXPORTAR EXCEL
+// ══════════════════════════════════════════════════════
+async function exportarExcel(tipo) {
+  const wb = XLSX.utils.book_new();
+  try {
+    if (tipo === 'clientes' || tipo === 'todo') {
+      const cli = await IDB.getAll('clientes');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cli.map(c => ({
+        ID: c.id, Nombre: c.nombre, DNI: c.dni, Celular: c.celular,
+        Dirección: c.direccion, IP: c.ip, Zona: c.zona,
+        'Plan S/.': c.plan, Cable: c.cable ? 'Sí' : 'No',
+        Estado: c.estado, 'Fecha Registro': c.fecha_registro, Observaciones: c.observaciones
+      }))), 'Clientes');
+    }
+    if (tipo === 'pagos' || tipo === 'todo') {
+      const pags = await IDB.getAll('pagos');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pags.map(p => ({
+        ID: p.id, 'ID Cliente': p.id_cliente,
+        Cliente: _clientesCache.get(p.id_cliente)?.nombre || '',
+        Mes: p.mes, 'Monto S/.': p.monto,
+        Método: p.metodo, Observaciones: p.observaciones, Fecha: p.fecha
+      }))), 'Pagos');
+    }
+    if (tipo === 'cortes' || tipo === 'todo') {
+      const cortes = await IDB.getAll('cortes');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cortes.map(co => ({
+        ID: co.id, 'ID Cliente': co.id_cliente,
+        Cliente: _clientesCache.get(co.id_cliente)?.nombre || '',
+        Motivo: co.motivo, 'Fecha Corte': co.fecha_corte,
+        Reconexión: co.fecha_recon || '', Estado: co.estado
+      }))), 'Cortes');
+    }
+    const nombres = { clientes:'Clientes_Leytrix', pagos:'Pagos_Leytrix', cortes:'Cortes_Leytrix', todo:'Leytrix_Completo' };
+    XLSX.writeFile(wb, `${nombres[tipo]}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast('Excel descargado ✅');
+  } catch(err) {
+    console.error(err);
+    toast('Error exportando','error');
+  }
+}
+
+async function importarExcel(tipo, fileInput) {
+  const file = fileInput.files[0];
+  if (!file) return;
+  if (file.size > 50 * 1024 * 1024) { toast('Archivo demasiado grande (máx 50 MB)','error'); return; }
+
+  const resEl = document.getElementById('importResult');
+  resEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> Procesando archivo...</div>';
+
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const wb   = XLSX.read(e.target.result, { type: 'array' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      let ok = 0, err = 0;
+
+      if (tipo === 'clientes') {
+        const items = [];
+        for (const r of rows) {
+          // Detección robusta de columnas (insensible a mayúsculas y tildes)
+          const get = (...keys) => {
+            for (const k of keys) {
+              const found = Object.keys(r).find(rk => rk.toLowerCase().replace(/[áéíóú]/g,'a') === k.toLowerCase());
+              if (found !== undefined && r[found] !== '') return String(r[found]).trim();
+            }
+            return '';
+          };
+          const nombre = get('nombre','name');
+          const ip     = get('ip','dirección ip','direccion ip');
+          const zona   = get('zona','zone');
+          const plan   = Number(get('plan','plan s/.','precio'));
+          const cable  = get('cable') === 'Sí' || get('cable') === '1' || get('cable') === 'true';
+
+          if (!V.nombre(nombre) || !V.ip(ip) || !V.zona(zona) || !V.plan(plan)) { err++; continue; }
+          items.push({
+            nombre: safe(nombre,100),
+            dni: safe(get('dni'),8),
+            celular: safe(get('celular','telefono'),15),
+            direccion: safe(get('direccion','dirección'),200),
+            ip: safe(ip,15), zona, plan, cable,
+            estado: ESTADOS.includes(get('estado').toUpperCase()) ? get('estado').toUpperCase() : 'ACTIVO',
+            fecha_registro: fechaHora(),
+            observaciones: safe(get('observaciones'),400),
+          });
+          ok++;
+        }
+        await IDB.bulkAdd('clientes', items);
+        await refreshClientesCache();
+      }
+
+      if (tipo === 'pagos') {
+        const clientes = await IDB.getAll('clientes');
+        const byNombre = new Map(clientes.map(c => [c.nombre.toLowerCase(), c]));
+        const items    = [];
+        for (const r of rows) {
+          const get = (...keys) => {
+            for (const k of keys) {
+              const found = Object.keys(r).find(rk => rk.toLowerCase() === k.toLowerCase());
+              if (found !== undefined && r[found] !== '') return String(r[found]).trim();
+            }
+            return '';
+          };
+          const nombre_cli = get('nombre_cliente','cliente','nombre');
+          const mes        = get('mes','month');
+          const monto      = Number(get('monto','monto s/.'));
+          const cli        = byNombre.get(nombre_cli.toLowerCase());
+          if (!cli || !V.mes(mes) || !V.monto(monto)) { err++; continue; }
+          items.push({
+            id_cliente: cli.id, mes, monto,
+            metodo: get('metodo','método') || 'Efectivo',
+            observaciones: safe(get('observaciones'),200),
+            fecha: fechaHora(),
+          });
+          ok++;
+        }
+        await IDB.bulkAdd('pagos', items);
+      }
+
+      updateSidebar();
+      fileInput.value = '';
+      resEl.innerHTML = `<div class="alert alert-success">✅ Importación completada: <strong>${ok}</strong> registros agregados${err ? `, <strong>${err}</strong> omitidos por datos inválidos` : ''}.</div>`;
+      toast(`${ok} registros importados`);
+    } catch(ex) {
+      console.error(ex);
+      resEl.innerHTML = `<div class="alert alert-danger">❌ Error leyendo el archivo: ${esc(ex.message)}</div>`;
+      toast('Error al importar','error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function descargarPlantilla(tipo) {
+  const wb = XLSX.utils.book_new();
+  let ws, nombre;
+  if (tipo === 'clientes') {
+    ws = XLSX.utils.json_to_sheet([{
+      nombre: 'Juan Pérez', dni: '45678901', celular: '987654321',
+      direccion: 'Jr. Los Pinos 123', ip: '192.168.1.100',
+      zona: 'Loboyacu', plan: 50, cable: 'Sí',
+      estado: 'ACTIVO', observaciones: ''
+    }]);
+    nombre = 'Plantilla_Clientes_Leytrix.xlsx';
+  } else {
+    ws = XLSX.utils.json_to_sheet([{
+      nombre_cliente: 'Juan Pérez', mes: '2026-09', monto: 50,
+      metodo: 'Efectivo', observaciones: ''
+    }]);
+    nombre = 'Plantilla_Pagos_Leytrix.xlsx';
+  }
+  XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+  XLSX.writeFile(wb, nombre);
+  toast('Plantilla descargada');
+}
+
+// ══════════════════════════════════════════════════════
+//  MODAL
+// ══════════════════════════════════════════════════════
+function abrirModal(id) {
+  const m = document.getElementById(id);
+  if (m) { m.classList.add('open'); m.querySelector('[id^=close],[id^=cancel]')?.focus(); }
+}
+function cerrarModal(id) {
+  const m = document.getElementById(id);
+  if (m) m.classList.remove('open');
+}
+
+// Cerrar modales con ESC o clic en fondo
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+});
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ══════════════════════════════════════════════════════
+//  INICIALIZACIÓN
+// ══════════════════════════════════════════════════════
+async function init() {
+  // Poblar zonas en formulario y filtros
+  const zg = document.getElementById('zonasGrid');
+  if (zg) zg.innerHTML = ZONAS.map(z =>
+    `<div class="zona-opt" data-zona="${esc(z)}">${esc(z)}</div>`
+  ).join('');
+
+  const filtZona  = document.getElementById('filtZona');
+  const zonaPend  = document.getElementById('zonaPend');
+  ZONAS.forEach(z => {
+    [filtZona, zonaPend].forEach(sel => {
+      if (!sel) return;
+      const opt = document.createElement('option');
+      opt.value = z; opt.textContent = z;
+      // Evitar duplicados (hay un option vacío ya)
+      if (![...sel.options].some(o => o.value === z)) sel.appendChild(opt);
+    });
+  });
+
+  // Cargar cache inicial
+  await IDB.getAll('clientes').then(todos => {
+    _clientesCache = new Map(todos.map(c => [c.id, c]));
+  }).catch(()=>{});
+
+  // Nav items
+  document.querySelectorAll('.nav-item[data-page]').forEach(n => {
+    n.addEventListener('click', () => goTo(n.dataset.page));
+  });
+
+  // Plan cards
+  document.getElementById('plan50').addEventListener('click', () => selPlan(50));
+  document.getElementById('plan60').addEventListener('click', () => selPlan(60));
+  document.getElementById('plan50').addEventListener('keydown', e => e.key==='Enter' && selPlan(50));
+  document.getElementById('plan60').addEventListener('keydown', e => e.key==='Enter' && selPlan(60));
+
+  // Zona opts (delegación)
+  document.getElementById('zonasGrid').addEventListener('click', e => {
+    const opt = e.target.closest('.zona-opt');
+    if (opt) selZona(opt.dataset.zona, opt);
+  });
+
+  // Cable toggle
+  const ct = document.getElementById('cableToggle');
+  ct.addEventListener('click', toggleCable);
+  ct.addEventListener('keydown', e => e.key === 'Enter' && toggleCable());
+
+  // Formularios
+  document.getElementById('formAgregar').addEventListener('submit', guardarCliente);
+  document.getElementById('formEditar').addEventListener('submit',  guardarEdicion);
+  document.getElementById('formPago').addEventListener('submit',    guardarPago);
+
+  // Botones editar modal
+  document.getElementById('closeModalEditar').addEventListener('click',  () => cerrarModal('modalEditar'));
+  document.getElementById('cancelModalEditar').addEventListener('click', () => cerrarModal('modalEditar'));
+  document.getElementById('closeModalPagos').addEventListener('click',   () => cerrarModal('modalPagos'));
+
+  // Cortes
+  document.getElementById('btnCortar').addEventListener('click',     cortarServicio);
+  document.getElementById('btnReconectar').addEventListener('click', reconectarServicio);
+
+  // Pendientes
+  document.getElementById('btnConsultarPend').addEventListener('click', renderPendientes);
+
+  // Filtros clientes con debounce
+  ['filtZona','filtEstado','filtPlan'].forEach(id =>
+    document.getElementById(id).addEventListener('change', () => renderClientes(0)));
+  document.getElementById('filtBus').addEventListener('input', debouncedBusqueda);
+
+  // Import/Export
+  document.getElementById('btnExpClientes').addEventListener('click', () => exportarExcel('clientes'));
+  document.getElementById('btnExpPagos').addEventListener('click',    () => exportarExcel('pagos'));
+  document.getElementById('btnExpCortes').addEventListener('click',   () => exportarExcel('cortes'));
+  document.getElementById('btnExpTodo').addEventListener('click',     () => exportarExcel('todo'));
+  document.getElementById('btnImpClientes').addEventListener('click', () => document.getElementById('fileClientes').click());
+  document.getElementById('btnImpPagos').addEventListener('click',    () => document.getElementById('filePagos').click());
+  document.getElementById('fileClientes').addEventListener('change',  e => importarExcel('clientes', e.target));
+  document.getElementById('filePagos').addEventListener('change',     e => importarExcel('pagos',    e.target));
+  document.getElementById('btnPlantCli').addEventListener('click',   () => descargarPlantilla('clientes'));
+  document.getElementById('btnPlantPag').addEventListener('click',   () => descargarPlantilla('pagos'));
+
+  // Render inicial
+  await renderInicio();
+  updateSidebar();
+}
+
+// Arrancar
+init().catch(err => {
+  console.error('Error de arranque:', err);
+  document.getElementById('main').innerHTML =
+    '<div style="padding:40px;text-align:center;color:#DC2626">❌ Error iniciando la aplicación. Intente recargar la página.</div>';
+});
+</script>
+</body>
+</html>
