@@ -303,7 +303,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
         <div class="plan-card" id="plan65" role="button" tabindex="0">
           <div style="font-size:1.8rem">⚡</div>
           <div class="precio" style="color:var(--naranja)">S/. 65</div>
-          <div class="nombre">Plan Premium</div>
+          <div class="nombre">Plan Normal</div>
         </div>
       </div>
       <span class="field-error" id="errPlan" style="margin-top:6px;display:block"></span>
@@ -469,7 +469,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
           <select id="eZona"><option>Loboyacu</option><option>Huayranga</option><option>Pacotillo</option><option>Ramal de Cachiyacu</option><option>Palmeras</option></select>
         </div>
         <div class="form-group"><label>Plan S/.</label>
-          <select id="ePlan"><option value="50">S/. 50 — Plan Básico</option><option value="60">S/. 60 — Plan Plus</option><option value="65">S/. 65 — Plan Premium</option></select>
+          <select id="ePlan"><option value="50">S/. 50 — Plan Básico</option><option value="60">S/. 60 — Plan Plus</option><option value="65">S/. 65 — Plan Normal</option></select>
         </div>
         <div class="form-group"><label>Cable instalado</label>
           <select id="eCable"><option value="false">❌ Sin cable</option><option value="true">✅ Con cable</option></select>
@@ -1008,6 +1008,7 @@ async function renderClientes(page = 0) {
           <td>${esc(c.celular) || '—'}</td>
           <td>
             <div class="btn-group">
+              <button class="btn btn-success btn-sm" data-action="pagar"  data-id="${c.id}" title="Registrar pago">💳</button>
               <button class="btn btn-outline btn-sm" data-action="editar" data-id="${c.id}" title="Editar">✏️</button>
               <button class="btn btn-ghost btn-sm"   data-action="pagos"  data-id="${c.id}" title="Ver pagos">💰</button>
               <button class="btn btn-danger btn-sm"  data-action="delete" data-id="${c.id}" title="Eliminar">🗑️</button>
@@ -1031,6 +1032,7 @@ document.getElementById('bodyClientes').addEventListener('click', async e => {
   const action = btn.dataset.action;
   if (!id || isNaN(id)) return;
 
+  if (action === 'pagar')  { irAPagarCliente(id); }
   if (action === 'editar') { await abrirEditar(id); }
   if (action === 'pagos')  { await verPagosCliente(id); }
   if (action === 'delete') { await eliminarCliente(id); }
@@ -1216,8 +1218,14 @@ async function guardarEdicion(e) {
 // ══════════════════════════════════════════════════════
 //  PAGOS
 // ══════════════════════════════════════════════════════
-// ID del cliente recién creado para pre-seleccionarlo en pagos
+// ID del cliente para pre-seleccionarlo en pagos
 let _preSelectCliente = null;
+
+function irAPagarCliente(id) {
+  cerrarModal('modalPagos');
+  _preSelectCliente = Number(id);
+  goTo('pagos');
+}
 
 async function renderPagos() {
   try {
@@ -1228,20 +1236,25 @@ async function renderPagos() {
       : '<option value="">Sin clientes registrados</option>';
     document.getElementById('pMes').value = mesActual();
 
-    // Pre-seleccionar cliente recién creado y sugerir monto del plan
+    // Pre-seleccionar cliente y sugerir monto del plan
     if (_preSelectCliente !== null) {
       pCliente.value = String(_preSelectCliente);
       const cli = clientes.find(c => c.id === _preSelectCliente);
       if (cli) {
         document.getElementById('pMonto').value = cli.plan;
-        // Banner de bienvenida
+        // Banner informativo
         document.getElementById('pagoAlert').innerHTML = `
           <div class="alert alert-success" style="margin-top:10px">
-            🎉 Cliente <strong>${esc(cli.nombre)}</strong> registrado con ID <strong>#${cli.id}</strong>.<br>
+            👤 Pago para cliente: <strong>${esc(cli.nombre)}</strong> (ID #${cli.id})<br>
             Zona: ${esc(cli.zona)} · Plan: S/. ${cli.plan} · IP: ${esc(cli.ip)}
           </div>`;
       }
       _preSelectCliente = null;
+    } else if (pCliente.value) {
+      const cli = clientes.find(c => c.id === Number(pCliente.value));
+      if (cli && !document.getElementById('pMonto').value) {
+        document.getElementById('pMonto').value = cli.plan;
+      }
     }
 
     // Ultimos 20 pagos
@@ -1328,14 +1341,18 @@ async function verPagosCliente(id) {
   </tr>`).join('');
 
   document.getElementById('modalPagosBody').innerHTML = `
-    <div class="alert alert-info" style="margin-bottom:12px">
-      <strong>${esc(c.nombre)}</strong> · ${esc(c.zona)} · Plan S/. ${c.plan}<br>
-      Total pagado: <strong>S/. ${total.toFixed(2)}</strong> en ${pagos.length} pago(s)
+    <div class="alert alert-info" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div>
+        <strong>${esc(c.nombre)}</strong> · ${esc(c.zona)} · Plan S/. ${c.plan}<br>
+        Total pagado: <strong>S/. ${total.toFixed(2)}</strong> en ${pagos.length} pago(s)
+      </div>
+      <button class="btn btn-success btn-sm" id="btnPagarDesdeHistorial">💳 Registrar Pago</button>
     </div>
     <div class="table-wrap"><table>
       <thead><tr><th>Mes</th><th>S/.</th><th>Método</th><th>Fecha</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--gris)">Sin pagos</td></tr>'}</tbody>
     </table></div>`;
+  document.getElementById('btnPagarDesdeHistorial')?.addEventListener('click', () => irAPagarCliente(id));
   abrirModal('modalPagos');
 }
 
@@ -1368,7 +1385,7 @@ async function generarRecibo(pagoId) {
     const cli  = await IDB.get('clientes', pago.id_cliente);
 
     // Nombre del plan
-    const planNombre = { 50:'Plan Básico', 60:'Plan Plus', 65:'Plan Premium' }[Number(cli?.plan)] || `Plan S/. ${cli?.plan}`;
+    const planNombre = { 50:'Plan Básico', 60:'Plan Plus', 65:'Plan Normal' }[Number(cli?.plan)] || `Plan S/. ${cli?.plan}`;
 
     // Mes formateado: 2026-09 → septiembre 2026
     let mesTexto = pago.mes;
@@ -1951,6 +1968,18 @@ async function init() {
   document.getElementById('formAgregar').addEventListener('submit', guardarCliente);
   document.getElementById('formEditar').addEventListener('submit',  guardarEdicion);
   document.getElementById('formPago').addEventListener('submit',    guardarPago);
+  document.getElementById('pCliente').addEventListener('change', async e => {
+    const id = Number(e.target.value);
+    if (!id) return;
+    const cli = await IDB.get('clientes', id);
+    if (cli && cli.plan) {
+      document.getElementById('pMonto').value = cli.plan;
+      document.getElementById('pagoAlert').innerHTML = `
+        <div class="alert alert-info" style="margin-top:10px">
+          👤 Cliente: <strong>${esc(cli.nombre)}</strong> · Zona: ${esc(cli.zona)} · Plan: S/. ${cli.plan} · IP: ${esc(cli.ip)}
+        </div>`;
+    }
+  });
 
   // Botones editar modal
   document.getElementById('closeModalEditar').addEventListener('click',  () => cerrarModal('modalEditar'));

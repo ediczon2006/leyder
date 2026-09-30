@@ -29,7 +29,15 @@ Doble clic en `index.html` — se abre directamente en el navegador.
 ## Planes
 - S/. 50 — Plan Básico
 - S/. 60 — Plan Plus
+- S/. 65 — Plan Normal
+
+## Recibos y Pagos
+- Generación de comprobante estilo banca móvil con N° de operación único
+- Exportación e impresión de recibo en imagen PNG
+- Compartir recibo directamente por WhatsApp / redes sociales
+- Registro directo de pagos por cliente con auto-completado de plan
 
 ## Datos
-Los datos se guardan en el navegador (localStorage). Úsalo en el mismo dispositivo
-o exporta a Excel para respaldo y comparte el archivo.
+Los datos se guardan en el navegador mediante IndexedDB de alta capacidad (sin límite de 5MB).
+Soporta miles de registros y funciona 100% offline o en GitHub Pages.
+
