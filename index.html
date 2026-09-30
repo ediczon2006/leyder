@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <!-- CSP: bloquea scripts externos no autorizados -->
 <meta http-equiv="Content-Security-Policy"
-  content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'"/>
+  content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.sheetjs.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'"/>
 <title>Leytrix ISP — Gestión de Clientes</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
 :root{
   --azul:#1E40AF;--azul2:#1D4ED8;--azul-cl:#DBEAFE;--azul-xs:#EFF6FF;
@@ -226,7 +227,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
     </div>
     <div class="form-group"><label>Plan</label>
       <select id="filtPlan">
-        <option value="">Todos</option><option value="50">S/. 50</option><option value="60">S/. 60</option>
+        <option value="">Todos</option><option value="50">S/. 50</option><option value="60">S/. 60</option><option value="65">S/. 65</option>
       </select>
     </div>
     <div class="form-group"><label>Buscar</label>
@@ -288,7 +289,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
       <span class="field-error" id="errZona" style="margin-top:6px;display:block"></span>
       <hr>
       <div class="card-title">📶 Plan de Internet *</div>
-      <div class="plan-options">
+      <div class="plan-options" style="grid-template-columns:1fr 1fr 1fr">
         <div class="plan-card" id="plan50" role="button" tabindex="0">
           <div style="font-size:1.8rem">🌐</div>
           <div class="precio">S/. 50</div>
@@ -298,6 +299,11 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
           <div style="font-size:1.8rem">🚀</div>
           <div class="precio" style="color:var(--verde)">S/. 60</div>
           <div class="nombre">Plan Plus</div>
+        </div>
+        <div class="plan-card" id="plan65" role="button" tabindex="0">
+          <div style="font-size:1.8rem">⚡</div>
+          <div class="precio" style="color:var(--naranja)">S/. 65</div>
+          <div class="nombre">Plan Premium</div>
         </div>
       </div>
       <span class="field-error" id="errPlan" style="margin-top:6px;display:block"></span>
@@ -345,8 +351,8 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
     <div class="card">
       <div class="card-title">📋 Últimos 20 pagos</div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Cliente</th><th>Mes</th><th>S/.</th><th>Método</th><th>Fecha</th></tr></thead>
-        <tbody id="bodyUltPagos"><tr class="loading-row"><td colspan="5"><span class="spinner"></span>Cargando...</td></tr></tbody>
+        <thead><tr><th>Cliente</th><th>Mes</th><th>S/.</th><th>Método</th><th>Fecha</th><th></th></tr></thead>
+        <tbody id="bodyUltPagos"><tr class="loading-row"><td colspan="6"><span class="spinner"></span>Cargando...</td></tr></tbody>
       </table></div>
     </div>
   </div>
@@ -463,7 +469,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
           <select id="eZona"><option>Loboyacu</option><option>Huayranga</option><option>Pacotillo</option><option>Ramal de Cachiyacu</option><option>Palmeras</option></select>
         </div>
         <div class="form-group"><label>Plan S/.</label>
-          <select id="ePlan"><option value="50">S/. 50 — Plan Básico</option><option value="60">S/. 60 — Plan Plus</option></select>
+          <select id="ePlan"><option value="50">S/. 50 — Plan Básico</option><option value="60">S/. 60 — Plan Plus</option><option value="65">S/. 65 — Plan Premium</option></select>
         </div>
         <div class="form-group"><label>Cable instalado</label>
           <select id="eCable"><option value="false">❌ Sin cable</option><option value="true">✅ Con cable</option></select>
@@ -493,7 +499,55 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
   </div>
 </div>
 
+<!-- MODAL RECIBO ESTILO BANCA MÓVIL -->
+<div class="modal-bg" id="modalRecibo" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:400px;padding:0;overflow:hidden;border-radius:20px">
+    <!-- Cabecera azul degradado -->
+    <div id="reciboHeader" style="background:linear-gradient(160deg,#0F172A 0%,#1E40AF 60%,#3B82F6 100%);padding:28px 24px 40px;text-align:center;position:relative">
+      <button class="modal-close" id="closeModalRecibo" aria-label="Cerrar"
+        style="position:absolute;top:12px;right:16px;color:rgba(255,255,255,.7);font-size:1.3rem">✕</button>
+      <div style="font-size:2.6rem;margin-bottom:4px">📡</div>
+      <div style="color:#BFDBFE;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">LEYTRIX ISP</div>
+      <div style="color:#fff;font-size:0.72rem;opacity:.7">Comprobante de Pago</div>
+      <!-- Círculo decorativo -->
+      <div style="position:absolute;bottom:-32px;left:50%;transform:translateX(-50%);width:64px;height:64px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.18);font-size:1.8rem">✅</div>
+    </div>
+    <!-- Cuerpo del recibo -->
+    <div style="padding:52px 28px 24px;background:#fff">
+      <div style="text-align:center;margin-bottom:20px">
+        <div id="reciboMonto" style="font-size:2.8rem;font-weight:900;color:#1E40AF;line-height:1">S/. 00.00</div>
+        <div style="color:#64748B;font-size:0.82rem;margin-top:4px">Pago de mensualidad</div>
+      </div>
+      <!-- Línea punteada -->
+      <div style="border-top:2px dashed #E2E8F0;margin:16px 0"></div>
+      <!-- Detalles -->
+      <div id="reciboDetalles" style="display:flex;flex-direction:column;gap:12px"></div>
+      <!-- Línea punteada -->
+      <div style="border-top:2px dashed #E2E8F0;margin:16px 0"></div>
+      <!-- Código de operación -->
+      <div style="background:#EFF6FF;border-radius:10px;padding:12px 16px;text-align:center;margin-bottom:20px">
+        <div style="font-size:0.72rem;color:#64748B;text-transform:uppercase;letter-spacing:1px">N° Operación</div>
+        <div id="reciboOperacion" style="font-size:1.1rem;font-weight:800;color:#1E40AF;letter-spacing:2px;margin-top:2px">—</div>
+      </div>
+      <!-- Botones -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <button class="btn btn-primary" id="btnImprimirRecibo" style="justify-content:center;font-size:0.82rem">🖨️ Imprimir</button>
+        <button class="btn btn-success" id="btnGuardarImgRecibo" style="justify-content:center;font-size:0.82rem">📸 Guardar imagen</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn btn-outline" id="btnCompartirRecibo" style="justify-content:center;font-size:0.82rem">📤 Compartir</button>
+        <button class="btn btn-ghost" id="closeModalRecibo2" style="justify-content:center;font-size:0.82rem">Cerrar</button>
+      </div>
+      <p style="text-align:center;font-size:0.72rem;color:#94A3B8;margin-top:16px;line-height:1.5">
+        Leytrix ISP · Servicio de Internet<br>
+        Este comprobante es válido como constancia de pago.
+      </p>
+    </div>
+  </div>
+</div>
+
 <div id="toast" role="status" aria-live="polite"></div>
+
 
 <script>
 'use strict';
@@ -501,7 +555,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 //  CONSTANTES Y CONFIGURACIÓN
 // ══════════════════════════════════════════════════════
 const ZONAS   = ['Loboyacu','Huayranga','Pacotillo','Ramal de Cachiyacu','Palmeras'];
-const PLANES  = [50, 60];
+const PLANES  = [50, 60, 65];
 const ESTADOS = ['ACTIVO','CORTADO','PENDIENTE','RETIRADO'];
 const PAGE_SIZE = 50;
 const DB_NAME   = 'leytrix_isp_v1';
@@ -1029,6 +1083,7 @@ function selPlan(p) {
   _newPlan = Number(p);
   document.getElementById('plan50').classList.toggle('selected', _newPlan === 50);
   document.getElementById('plan60').classList.toggle('selected', _newPlan === 60);
+  document.getElementById('plan65').classList.toggle('selected', _newPlan === 65);
   fieldErr('errPlan', '');
 }
 
@@ -1083,9 +1138,12 @@ async function guardarCliente(e) {
       observaciones: obs,
     });
     await refreshClientesCache();
-    toast(`✅ Cliente "${nombre}" registrado #${newId}`);
+    toast(`✅ Cliente "${nombre}" registrado con ID #${newId}`);
     resetFormAgregar();
     updateSidebar();
+    // Redirigir a Pagos con el nuevo cliente pre-seleccionado
+    _preSelectCliente = newId;
+    goTo('pagos');
   } catch(err) {
     console.error(err);
     toast('Error al guardar cliente', 'error');
@@ -1158,6 +1216,9 @@ async function guardarEdicion(e) {
 // ══════════════════════════════════════════════════════
 //  PAGOS
 // ══════════════════════════════════════════════════════
+// ID del cliente recién creado para pre-seleccionarlo en pagos
+let _preSelectCliente = null;
+
 async function renderPagos() {
   try {
     const clientes = await IDB.getAll('clientes');
@@ -1166,6 +1227,22 @@ async function renderPagos() {
       ? clientes.map(c => `<option value="${c.id}">${esc(c.nombre)} · ${esc(c.zona)} · S/.${c.plan}</option>`).join('')
       : '<option value="">Sin clientes registrados</option>';
     document.getElementById('pMes').value = mesActual();
+
+    // Pre-seleccionar cliente recién creado y sugerir monto del plan
+    if (_preSelectCliente !== null) {
+      pCliente.value = String(_preSelectCliente);
+      const cli = clientes.find(c => c.id === _preSelectCliente);
+      if (cli) {
+        document.getElementById('pMonto').value = cli.plan;
+        // Banner de bienvenida
+        document.getElementById('pagoAlert').innerHTML = `
+          <div class="alert alert-success" style="margin-top:10px">
+            🎉 Cliente <strong>${esc(cli.nombre)}</strong> registrado con ID <strong>#${cli.id}</strong>.<br>
+            Zona: ${esc(cli.zona)} · Plan: S/. ${cli.plan} · IP: ${esc(cli.ip)}
+          </div>`;
+      }
+      _preSelectCliente = null;
+    }
 
     // Ultimos 20 pagos
     const allPagos = await IDB.getAll('pagos');
@@ -1177,8 +1254,9 @@ async function renderPagos() {
           <td><strong>S/. ${Number(p.monto).toFixed(2)}</strong></td>
           <td>${esc(p.metodo)}</td>
           <td style="font-size:0.78rem;color:var(--gris)">${esc(p.fecha)}</td>
+          <td><button class="btn btn-outline btn-sm" data-action="recibo" data-id="${p.id}" title="Ver recibo">🧾</button></td>
         </tr>`).join('')
-      : '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--gris)">Sin pagos</td></tr>';
+      : '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--gris)">Sin pagos</td></tr>';
   } catch(err) {
     console.error(err);
   }
@@ -1220,7 +1298,7 @@ async function guardarPago(e) {
 async function realizarPago(id_cliente, mes, monto, metodo, obs) {
   try {
     document.getElementById('pagoAlert').innerHTML = '';
-    await IDB.add('pagos', { id_cliente, mes, monto, metodo, observaciones: obs, fecha: fechaHora() });
+    const pagoId = await IDB.add('pagos', { id_cliente, mes, monto, metodo, observaciones: obs, fecha: fechaHora() });
     // Reactivar si estaba CORTADO
     const c = await IDB.get('clientes', id_cliente);
     if (c && c.estado === 'CORTADO') await IDB.put('clientes', { ...c, estado: 'ACTIVO' });
@@ -1229,6 +1307,8 @@ async function realizarPago(id_cliente, mes, monto, metodo, obs) {
     renderPagos();
     updateSidebar();
     toast('Pago registrado ✅');
+    // Mostrar recibo automáticamente
+    await generarRecibo(pagoId);
   } catch(err) {
     console.error(err);
     toast('Error al registrar pago','error');
@@ -1262,6 +1342,70 @@ async function verPagosCliente(id) {
 // ══════════════════════════════════════════════════════
 //  CORTES
 // ══════════════════════════════════════════════════════
+// ── RECIBO ESTILO BANCA MÓVIL ─────────────────────────
+// Genera N° de operación pseudo-único: año+mes+día+pagoId
+function _codigoOp(pagoId, fecha) {
+  const d = fecha ? new Date(fecha.split(' ')[0].split('/').reverse().join('-')) : new Date();
+  const yy = String(d.getFullYear()).slice(2);
+  const mm  = String(d.getMonth()+1).padStart(2,'0');
+  const dd  = String(d.getDate()).padStart(2,'0');
+  return `LYX-${yy}${mm}${dd}-${String(pagoId).padStart(5,'0')}`;
+}
+
+function _fila(label, value, opts = {}) {
+  const color = opts.highlight ? '#1E40AF' : '#374151';
+  const fw    = opts.highlight ? '700' : '500';
+  return `<div style="display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:0.82rem;color:#64748B">${esc(label)}</span>
+    <span style="font-size:0.86rem;color:${color};font-weight:${fw}">${esc(String(value))}</span>
+  </div>`;
+}
+
+async function generarRecibo(pagoId) {
+  try {
+    const pago = await IDB.get('pagos', pagoId);
+    if (!pago) return;
+    const cli  = await IDB.get('clientes', pago.id_cliente);
+
+    // Nombre del plan
+    const planNombre = { 50:'Plan Básico', 60:'Plan Plus', 65:'Plan Premium' }[Number(cli?.plan)] || `Plan S/. ${cli?.plan}`;
+
+    // Mes formateado: 2026-09 → septiembre 2026
+    let mesTexto = pago.mes;
+    try {
+      const [ay,am] = pago.mes.split('-');
+      mesTexto = new Date(+ay, +am-1, 1).toLocaleString('es-PE',{month:'long',year:'numeric'});
+    } catch(_) {}
+
+    // Rellenar modal
+    document.getElementById('reciboMonto').textContent = `S/. ${Number(pago.monto).toFixed(2)}`;
+    document.getElementById('reciboOperacion').textContent = _codigoOp(pagoId, pago.fecha);
+    document.getElementById('reciboDetalles').innerHTML = [
+      _fila('Nombre del cliente',  cli?.nombre || '—'),
+      _fila('Zona de servicio',    cli?.zona   || '—'),
+      _fila('Plan contratado',     planNombre,       { highlight: true }),
+      _fila('Período pagado',      mesTexto,         { highlight: true }),
+      _fila('Método de pago',      pago.metodo),
+      _fila('Dirección IP',        cli?.ip     || '—'),
+      _fila('Fecha de pago',       pago.fecha  || '—'),
+      pago.observaciones ? _fila('Nota', pago.observaciones) : '',
+    ].join('');
+
+    abrirModal('modalRecibo');
+  } catch(err) {
+    console.error('recibo:', err);
+    toast('No se pudo generar el recibo', 'error');
+  }
+}
+
+// Delegación de eventos en tabla de pagos — botón 🧾
+document.getElementById('bodyUltPagos').addEventListener('click', async e => {
+  const btn = e.target.closest('[data-action="recibo"]');
+  if (!btn) return;
+  const id = Number(btn.dataset.id);
+  if (!isNaN(id)) await generarRecibo(id);
+});
+
 async function renderCortes() {
   try {
     const [activos, cortados, cortes] = await Promise.all([
@@ -1648,6 +1792,91 @@ function descargarPlantilla(tipo) {
 }
 
 // ══════════════════════════════════════════════════════
+//  RECIBO → IMAGEN Y COMPARTIR
+// ══════════════════════════════════════════════════════
+async function _capturarReciboCanvas() {
+  const el = document.querySelector('#modalRecibo .modal');
+  // Ocultar botones temporalmente para la captura
+  const btnZone = el.querySelectorAll('.btn');
+  btnZone.forEach(b => b.style.visibility = 'hidden');
+  const footer = el.querySelector('p:last-of-type');
+  try {
+    const canvas = await html2canvas(el, {
+      scale: 2.5,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+    });
+    return canvas;
+  } finally {
+    btnZone.forEach(b => b.style.visibility = '');
+  }
+}
+
+async function descargarReciboImagen() {
+  const btn = document.getElementById('btnGuardarImgRecibo');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando...';
+  try {
+    const canvas = await _capturarReciboCanvas();
+    const codigo = document.getElementById('reciboOperacion').textContent || 'recibo';
+    const link   = document.createElement('a');
+    link.download = `Recibo_${codigo}.png`;
+    link.href     = canvas.toDataURL('image/png');
+    link.click();
+    toast('📸 Imagen guardada');
+  } catch(err) {
+    console.error(err);
+    toast('Error generando imagen', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📸 Guardar imagen';
+  }
+}
+
+async function compartirRecibo() {
+  const btn = document.getElementById('btnCompartirRecibo');
+  btn.disabled = true;
+  btn.textContent = '⏳ Preparando...';
+  try {
+    const canvas = await _capturarReciboCanvas();
+    const codigo = document.getElementById('reciboOperacion').textContent || 'recibo';
+    const nombre = `Recibo_${codigo}.png`;
+
+    // Convertir canvas a Blob
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    const file  = new File([blob], nombre, { type: 'image/png' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      // Web Share API (móviles y Chrome 89+)
+      await navigator.share({
+        files: [file],
+        title: 'Recibo de pago — Leytrix ISP',
+        text:  `Comprobante de pago ${codigo}`,
+      });
+      toast('Recibo compartido ✅');
+    } else {
+      // Fallback: descarga directa
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href     = url;
+      link.download = nombre;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      toast('📥 Imagen descargada (compartir no disponible en este navegador)');
+    }
+  } catch(err) {
+    if (err.name !== 'AbortError') {
+      console.error(err);
+      toast('Error al compartir', 'error');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 Compartir';
+  }
+}
+
+// ══════════════════════════════════════════════════════
 //  MODAL
 // ══════════════════════════════════════════════════════
 function abrirModal(id) {
@@ -1702,8 +1931,10 @@ async function init() {
   // Plan cards
   document.getElementById('plan50').addEventListener('click', () => selPlan(50));
   document.getElementById('plan60').addEventListener('click', () => selPlan(60));
+  document.getElementById('plan65').addEventListener('click', () => selPlan(65));
   document.getElementById('plan50').addEventListener('keydown', e => e.key==='Enter' && selPlan(50));
   document.getElementById('plan60').addEventListener('keydown', e => e.key==='Enter' && selPlan(60));
+  document.getElementById('plan65').addEventListener('keydown', e => e.key==='Enter' && selPlan(65));
 
   // Zona opts (delegación)
   document.getElementById('zonasGrid').addEventListener('click', e => {
@@ -1725,6 +1956,25 @@ async function init() {
   document.getElementById('closeModalEditar').addEventListener('click',  () => cerrarModal('modalEditar'));
   document.getElementById('cancelModalEditar').addEventListener('click', () => cerrarModal('modalEditar'));
   document.getElementById('closeModalPagos').addEventListener('click',   () => cerrarModal('modalPagos'));
+
+  // Recibo
+  document.getElementById('closeModalRecibo').addEventListener('click',  () => cerrarModal('modalRecibo'));
+  document.getElementById('closeModalRecibo2').addEventListener('click', () => cerrarModal('modalRecibo'));
+  document.getElementById('btnGuardarImgRecibo').addEventListener('click', descargarReciboImagen);
+  document.getElementById('btnCompartirRecibo').addEventListener('click',  compartirRecibo);
+  document.getElementById('btnImprimirRecibo').addEventListener('click', () => {
+    // Imprime solo el contenido del modal usando ventana emergente
+    const modalEl = document.querySelector('#modalRecibo .modal');
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+      <title>Recibo Leytrix ISP</title>
+      <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;display:flex;justify-content:center;padding:20px}
+        @media print{body{padding:0}}
+      </style></head><body>${modalEl.innerHTML}</body></html>`;
+    const w = window.open('','_blank','width=440,height=700');
+    if (w) { w.document.write(html); w.document.close(); w.focus(); setTimeout(() => { w.print(); w.close(); }, 400); }
+  });
 
   // Cortes
   document.getElementById('btnCortar').addEventListener('click',     cortarServicio);
