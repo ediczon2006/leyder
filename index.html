@@ -236,8 +236,8 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
   <div id="contadorClientes" style="font-size:0.85rem;color:var(--gris);margin-bottom:10px"></div>
   <div class="table-wrap">
     <table id="tablaClientes">
-      <thead><tr><th>#ID</th><th>Nombre</th><th>Zona</th><th>IP</th><th>Plan</th><th>Cable</th><th>Estado</th><th>Celular</th><th>Acciones</th></tr></thead>
-      <tbody id="bodyClientes"><tr class="loading-row"><td colspan="9"><span class="spinner"></span>Cargando...</td></tr></tbody>
+      <thead><tr><th>#ID</th><th>Nombre</th><th>Zona</th><th>IP</th><th>Plan</th><th>Cable</th><th>Estado</th><th>F. Inicio</th><th>Celular</th><th>Acciones</th></tr></thead>
+      <tbody id="bodyClientes"><tr class="loading-row"><td colspan="10"><span class="spinner"></span>Cargando...</td></tr></tbody>
     </table>
     <div class="pagination" id="paginacionClientes" style="display:none">
       <span class="info" id="paginfoClientes"></span>
@@ -268,11 +268,16 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
           <input id="aCelular" maxlength="15" placeholder="Ej: 987654321"/>
         </div>
         <div class="form-group">
+          <label>Fecha de Inicio *</label>
+          <input type="date" id="aFechaInicio"/>
+          <span class="field-error" id="errFechaInicio"></span>
+        </div>
+        <div class="form-group">
           <label>Dirección IP *</label>
           <input id="aIp" maxlength="15" placeholder="Ej: 192.168.1.100"/>
           <span class="field-error" id="errIp"></span>
         </div>
-        <div class="form-group form-full">
+        <div class="form-group">
           <label>Dirección / Referencia</label>
           <input id="aDireccion" maxlength="200" placeholder="Ej: Jr. Los Pinos 123, al fondo"/>
         </div>
@@ -415,7 +420,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
     <div class="alert alert-warning">⚠️ Los registros importados se agregan sin borrar los existentes. Verifique el formato antes de importar.</div>
     <div class="io-grid">
       <div class="io-card"><div class="io-icon">👥</div><h4>Importar Clientes</h4>
-        <p>Columnas requeridas: <strong>nombre, ip, zona, plan</strong><br>Opcionales: dni, celular, direccion, cable, estado, observaciones</p>
+        <p>Columnas requeridas: <strong>nombre, ip, zona, plan</strong><br>Opcionales: dni, celular, fecha_inicio, direccion, cable, estado, observaciones</p>
         <input type="file" id="fileClientes" accept=".xlsx,.xls" style="display:none"/>
         <button class="btn btn-outline" id="btnImpClientes">📂 Seleccionar archivo</button>
       </div>
@@ -451,8 +456,9 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
         <div class="form-group"><label>Nombre *</label><input id="eNombre" maxlength="100" required/><span class="field-error" id="errENombre"></span></div>
         <div class="form-group"><label>DNI</label><input id="eDni" maxlength="8"/><span class="field-error" id="errEDni"></span></div>
         <div class="form-group"><label>Celular</label><input id="eCelular" maxlength="15"/></div>
+        <div class="form-group"><label>Fecha de Inicio</label><input type="date" id="eFechaInicio"/><span class="field-error" id="errEFechaInicio"></span></div>
         <div class="form-group"><label>Dirección IP *</label><input id="eIp" maxlength="15" required/><span class="field-error" id="errEIp"></span></div>
-        <div class="form-group form-full"><label>Dirección</label><input id="eDireccion" maxlength="200"/></div>
+        <div class="form-group"><label>Dirección</label><input id="eDireccion" maxlength="200"/></div>
         <div class="form-group"><label>Zona</label>
           <select id="eZona"><option>Loboyacu</option><option>Huayranga</option><option>Pacotillo</option><option>Ramal de Cachiyacu</option><option>Palmeras</option></select>
         </div>
