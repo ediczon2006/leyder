@@ -474,6 +474,17 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
     <div id="backupResult" class="mt-16"></div>
   </div>
 
+  <!-- MYSQL & BASE DE DATOS SQL -->
+  <div class="card" style="margin-bottom:20px;border-left:4px solid #00758F;background:#F0F9FF">
+    <div class="card-title">🐬 Base de Datos MySQL / SQL Server</div>
+    <p style="font-size:0.85rem;color:var(--gris);margin-bottom:14px">
+      Descargue un script oficial <strong>.sql</strong> con la estructura de tablas y todos sus datos listo para importar en cualquier servidor <strong>MySQL, MariaDB, XAMPP o phpMyAdmin</strong>:
+    </p>
+    <div class="btn-group">
+      <button class="btn btn-primary" id="btnExpMySQL" style="background:#00758F;border-color:#00758F">🐬 Descargar Script MySQL (.sql)</button>
+    </div>
+  </div>
+
   <div class="card" style="margin-bottom:20px">
     <div class="card-title">📤 Exportar datos a Excel</div>
     <div class="io-grid">
@@ -946,78 +957,101 @@ function goTo(page) {
 // ══════════════════════════════════════════════════════
 //  SIDEBAR
 // ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+//  SIDEBAR
+// ══════════════════════════════════════════════════════
 async function updateSidebar() {
   try {
-    const [total, activos, cortados] = await Promise.all([
-      IDB.count('clientes'),
-      IDB.countByIndex('clientes', 'estado', 'ACTIVO'),
-      IDB.countByIndex('clientes', 'estado', 'CORTADO'),
-    ]);
-    const pagos  = await IDB.getByIndex('pagos', 'mes', mesActual());
-    const cobrado = pagos.reduce((s, p) => s + Number(p.monto), 0);
-    document.getElementById('sidebarStats').innerHTML = `
-      <p>📡 <strong>Total:</strong> ${total.toLocaleString()}</p>
-      <p>✅ <strong>Activos:</strong> ${activos.toLocaleString()}</p>
-      <p>✂️ <strong>Cortados:</strong> ${cortados.toLocaleString()}</p>
-      <p>💰 <strong>Cobrado este mes:</strong> S/. ${cobrado.toFixed(2)}</p>`;
+    const clientes = _clientesCache && _clientesCache.size > 0 
+      ? Array.from(_clientesCache.values()) 
+      : await IDB.getAll('clientes');
+    
+    const total = clientes.length;
+    const activos = clientes.filter(c => c.estado === 'ACTIVO').length;
+    const cortados = clientes.filter(c => c.estado === 'CORTADO').length;
+    
+    const pagos = await IDB.getByIndex('pagos', 'mes', mesActual());
+    const cobrado = pagos.reduce((s, p) => s + Number(p.monto || 0), 0);
+
+    const statsEl = document.getElementById('sidebarStats');
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <p>📡 <strong>Total:</strong> ${total.toLocaleString()}</p>
+        <p>✅ <strong>Activos:</strong> ${activos.toLocaleString()}</p>
+        <p>✂️ <strong>Cortados:</strong> ${cortados.toLocaleString()}</p>
+        <p>💰 <strong>Cobrado este mes:</strong> S/. ${cobrado.toFixed(2)}</p>`;
+    }
   } catch(err) {
     console.error('sidebar:', err);
   }
 }
 
 // ══════════════════════════════════════════════════════
-//  INICIO
+//  INICIO (Optimizado de alta velocidad - Carga instantánea)
 // ══════════════════════════════════════════════════════
 async function renderInicio() {
   try {
-    const [total, activos, cortados, conCable] = await Promise.all([
-      IDB.count('clientes'),
-      IDB.countByIndex('clientes','estado','ACTIVO'),
-      IDB.countByIndex('clientes','estado','CORTADO'),
-      IDB.query('clientes', { filter: c => c.cable === true }),
+    const mes = mesActual();
+    const [clientes, pagos] = await Promise.all([
+      IDB.getAll('clientes'),
+      IDB.getByIndex('pagos', 'mes', mes)
     ]);
-    const mes   = mesActual();
-    const pagos = await IDB.getByIndex('pagos','mes',mes);
-    const cobrado = pagos.reduce((s,p) => s + Number(p.monto), 0);
 
-    document.getElementById('kpiGrid').innerHTML = `
-      <div class="kpi kpi-blue"><div class="val">${total.toLocaleString()}</div><div class="lbl">Total Clientes</div></div>
-      <div class="kpi kpi-green"><div class="val">${activos.toLocaleString()}</div><div class="lbl">Activos</div></div>
-      <div class="kpi kpi-red"><div class="val">${cortados.toLocaleString()}</div><div class="lbl">Cortados</div></div>
-      <div class="kpi kpi-orange"><div class="val">S/. ${cobrado.toFixed(0)}</div><div class="lbl">Cobrado este mes</div></div>
-      <div class="kpi kpi-blue"><div class="val">${conCable.total.toLocaleString()}</div><div class="lbl">Con cable</div></div>`;
+    // Actualizar cache en memoria
+    _clientesCache = new Map(clientes.map(c => [c.id, c]));
 
-    // Zonas
-    const zonaRows = await Promise.all(ZONAS.map(async z => {
-      const [tot, act, cort] = await Promise.all([
-        IDB.countByIndex('clientes','zona',z),
-        IDB.query('clientes', { filter: c => c.zona===z && c.estado==='ACTIVO' }),
-        IDB.query('clientes', { filter: c => c.zona===z && c.estado==='CORTADO' }),
-      ]);
-      return `<tr><td><strong>${esc(z)}</strong></td><td>${tot}</td><td>${act.total}</td><td>${cort.total}</td></tr>`;
-    }));
-    document.getElementById('tablaZonasDash').innerHTML = `
-      <div class="table-wrap"><table>
-        <thead><tr><th>Zona</th><th>Total</th><th>Activos</th><th>Cortados</th></tr></thead>
-        <tbody>${zonaRows.join('') || '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--gris)">Sin datos</td></tr>'}</tbody>
-      </table></div>`;
+    const total = clientes.length;
+    const activos = clientes.filter(c => c.estado === 'ACTIVO').length;
+    const cortados = clientes.filter(c => c.estado === 'CORTADO').length;
+    const conCable = clientes.filter(c => c.cable === true).length;
+    const cobrado = pagos.reduce((s, p) => s + Number(p.monto || 0), 0);
+
+    const kpiEl = document.getElementById('kpiGrid');
+    if (kpiEl) {
+      kpiEl.innerHTML = `
+        <div class="kpi kpi-blue"><div class="val">${total.toLocaleString()}</div><div class="lbl">Total Clientes</div></div>
+        <div class="kpi kpi-green"><div class="val">${activos.toLocaleString()}</div><div class="lbl">Activos</div></div>
+        <div class="kpi kpi-red"><div class="val">${cortados.toLocaleString()}</div><div class="lbl">Cortados</div></div>
+        <div class="kpi kpi-orange"><div class="val">S/. ${cobrado.toFixed(0)}</div><div class="lbl">Cobrado este mes</div></div>
+        <div class="kpi kpi-blue"><div class="val">${conCable.toLocaleString()}</div><div class="lbl">Con cable</div></div>`;
+    }
+
+    // Tabla de zonas calculada al instante en memoria RAM sin 15 cursores lentos
+    const zonaRows = ZONAS.map(z => {
+      const enZona = clientes.filter(c => c.zona === z);
+      const tot = enZona.length;
+      const act = enZona.filter(c => c.estado === 'ACTIVO').length;
+      const cort = enZona.filter(c => c.estado === 'CORTADO').length;
+      return `<tr><td><strong>${esc(z)}</strong></td><td>${tot}</td><td>${act}</td><td>${cort}</td></tr>`;
+    });
+
+    const tablaZonasEl = document.getElementById('tablaZonasDash');
+    if (tablaZonasEl) {
+      tablaZonasEl.innerHTML = `
+        <div class="table-wrap"><table>
+          <thead><tr><th>Zona</th><th>Total</th><th>Activos</th><th>Cortados</th></tr></thead>
+          <tbody>${zonaRows.join('') || '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--gris)">Sin datos</td></tr>'}</tbody>
+        </table></div>`;
+    }
 
     // Sin pago este mes
     const conPago = new Set(pagos.map(p => p.id_cliente));
-    const { results: sinPago, total: totalSP } = await IDB.query('clientes', {
-      filter: c => c.estado === 'ACTIVO' && !conPago.has(c.id),
-      limit: 8
-    });
-    if (totalSP === 0) {
-      document.getElementById('sinPagoDash').innerHTML = '<div class="alert alert-success">✅ Todos al día este mes.</div>';
-    } else {
-      const rows = sinPago.map(c => `<tr><td>${esc(c.nombre)}</td><td>${esc(c.zona)}</td><td>S/. ${Number(c.plan)}</td></tr>`).join('');
-      document.getElementById('sinPagoDash').innerHTML = `
-        <div class="alert alert-warning">⚠️ <strong>${totalSP.toLocaleString()}</strong> cliente(s) sin pago en ${mes}</div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Nombre</th><th>Zona</th><th>Plan</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table></div>`;
+    const sinPago = clientes.filter(c => c.estado === 'ACTIVO' && !conPago.has(c.id));
+    const sinPagoDashEl = document.getElementById('sinPagoDash');
+
+    if (sinPagoDashEl) {
+      if (sinPago.length === 0) {
+        sinPagoDashEl.innerHTML = '<div class="alert alert-success">✅ Todos al día este mes.</div>';
+      } else {
+        const muestra = sinPago.slice(0, 8);
+        const rows = muestra.map(c => `<tr><td>${esc(c.nombre)}</td><td>${esc(c.zona)}</td><td>S/. ${Number(c.plan)}</td></tr>`).join('');
+        sinPagoDashEl.innerHTML = `
+          <div class="alert alert-warning">⚠️ <strong>${sinPago.length.toLocaleString()}</strong> cliente(s) sin pago en ${mes}</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Nombre</th><th>Zona</th><th>Plan</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table></div>`;
+      }
     }
   } catch(err) {
     console.error('renderInicio:', err);
@@ -2185,6 +2219,110 @@ async function restaurarBackupCompleto(fileInput) {
 }
 
 // ══════════════════════════════════════════════════════
+//  EXPORTAR A SCRIPT MYSQL (.sql)
+// ══════════════════════════════════════════════════════
+async function exportarMySQL() {
+  const btn = document.getElementById('btnExpMySQL');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando script SQL...'; }
+  try {
+    const [clientes, pagos, cortes] = await Promise.all([
+      IDB.getAll('clientes'),
+      IDB.getAll('pagos'),
+      IDB.getAll('cortes'),
+    ]);
+
+    const fecha = new Date().toISOString();
+    let sql = `-- ========================================================\n`;
+    sql += `-- LEYTRIX ISP - BASE DE DATOS COMPATIBLE CON MYSQL\n`;
+    sql += `-- Generado: ${fecha}\n`;
+    sql += `-- Compatible con MySQL 5.7+ / MySQL 8.0+ / MariaDB / phpMyAdmin\n`;
+    sql += `-- ========================================================\n\n`;
+    sql += `CREATE DATABASE IF NOT EXISTS \`leytrix_isp\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n`;
+    sql += `USE \`leytrix_isp\`;\n\n`;
+
+    // Tabla Clientes
+    sql += `-- Estructura de tabla para \`clientes\`\n`;
+    sql += `CREATE TABLE IF NOT EXISTS \`clientes\` (\n`;
+    sql += `  \`id\` int(11) NOT NULL AUTO_INCREMENT,\n`;
+    sql += `  \`nombre\` varchar(150) NOT NULL,\n`;
+    sql += `  \`dni\` varchar(10) DEFAULT NULL,\n`;
+    sql += `  \`celular\` varchar(20) DEFAULT NULL,\n`;
+    sql += `  \`fecha_inicio\` varchar(20) DEFAULT NULL,\n`;
+    sql += `  \`direccion\` varchar(255) DEFAULT NULL,\n`;
+    sql += `  \`ip\` varchar(45) NOT NULL,\n`;
+    sql += `  \`zona\` varchar(100) NOT NULL,\n`;
+    sql += `  \`plan\` decimal(10,2) NOT NULL,\n`;
+    sql += `  \`cable\` tinyint(1) NOT NULL DEFAULT 0,\n`;
+    sql += `  \`estado\` varchar(30) NOT NULL DEFAULT 'ACTIVO',\n`;
+    sql += `  \`fecha_registro\` varchar(30) DEFAULT NULL,\n`;
+    sql += `  \`observaciones\` text DEFAULT NULL,\n`;
+    sql += `  PRIMARY KEY (\`id\`)\n`;
+    sql += `) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n\n`;
+
+    if (clientes.length) {
+      sql += `INSERT INTO \`clientes\` (\`id\`, \`nombre\`, \`dni\`, \`celular\`, \`fecha_inicio\`, \`direccion\`, \`ip\`, \`zona\`, \`plan\`, \`cable\`, \`estado\`, \`fecha_registro\`, \`observaciones\`) VALUES\n`;
+      const escSql = s => s == null ? 'NULL' : `'${String(s).replace(/'/g, "''").replace(/\\/g, "\\\\")}'`;
+      const vals = clientes.map(c => `(${c.id}, ${escSql(c.nombre)}, ${escSql(c.dni)}, ${escSql(c.celular)}, ${escSql(c.fecha_inicio)}, ${escSql(c.direccion)}, ${escSql(c.ip)}, ${escSql(c.zona)}, ${Number(c.plan)}, ${c.cable ? 1 : 0}, ${escSql(c.estado)}, ${escSql(c.fecha_registro)}, ${escSql(c.observaciones)})`);
+      sql += vals.join(',\n') + ';\n\n';
+    }
+
+    // Tabla Pagos
+    sql += `-- Estructura de tabla para \`pagos\`\n`;
+    sql += `CREATE TABLE IF NOT EXISTS \`pagos\` (\n`;
+    sql += `  \`id\` int(11) NOT NULL AUTO_INCREMENT,\n`;
+    sql += `  \`id_cliente\` int(11) NOT NULL,\n`;
+    sql += `  \`mes\` varchar(20) NOT NULL,\n`;
+    sql += `  \`monto\` decimal(10,2) NOT NULL,\n`;
+    sql += `  \`metodo\` varchar(50) DEFAULT 'Efectivo',\n`;
+    sql += `  \`fecha\` varchar(30) DEFAULT NULL,\n`;
+    sql += `  \`observaciones\` text DEFAULT NULL,\n`;
+    sql += `  PRIMARY KEY (\`id\`),\n`;
+    sql += `  KEY \`fk_cliente_pago\` (\`id_cliente\`)\n`;
+    sql += `) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n\n`;
+
+    if (pagos.length) {
+      sql += `INSERT INTO \`pagos\` (\`id\`, \`id_cliente\`, \`mes\`, \`monto\`, \`metodo\`, \`fecha\`, \`observaciones\`) VALUES\n`;
+      const escSql = s => s == null ? 'NULL' : `'${String(s).replace(/'/g, "''").replace(/\\/g, "\\\\")}'`;
+      const pVals = pagos.map(p => `(${p.id}, ${p.id_cliente}, ${escSql(p.mes)}, ${Number(p.monto)}, ${escSql(p.metodo)}, ${escSql(p.fecha)}, ${escSql(p.observaciones)})`);
+      sql += pVals.join(',\n') + ';\n\n';
+    }
+
+    // Tabla Cortes
+    sql += `-- Estructura de tabla para \`cortes\`\n`;
+    sql += `CREATE TABLE IF NOT EXISTS \`cortes\` (\n`;
+    sql += `  \`id\` int(11) NOT NULL AUTO_INCREMENT,\n`;
+    sql += `  \`id_cliente\` int(11) NOT NULL,\n`;
+    sql += `  \`motivo\` varchar(255) DEFAULT NULL,\n`;
+    sql += `  \`fecha_corte\` varchar(30) DEFAULT NULL,\n`;
+    sql += `  \`fecha_recon\` varchar(30) DEFAULT NULL,\n`;
+    sql += `  \`estado\` varchar(30) DEFAULT 'CORTADO',\n`;
+    sql += `  PRIMARY KEY (\`id\`)\n`;
+    sql += `) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n\n`;
+
+    if (cortes.length) {
+      sql += `INSERT INTO \`cortes\` (\`id\`, \`id_cliente\`, \`motivo\`, \`fecha_corte\`, \`fecha_recon\`, \`estado\`) VALUES\n`;
+      const escSql = s => s == null ? 'NULL' : `'${String(s).replace(/'/g, "''").replace(/\\/g, "\\\\")}'`;
+      const cVals = cortes.map(co => `(${co.id}, ${co.id_cliente}, ${escSql(co.motivo)}, ${escSql(co.fecha_corte)}, ${escSql(co.fecha_recon)}, ${escSql(co.estado)})`);
+      sql += cVals.join(',\n') + ';\n\n';
+    }
+
+    const blob = new Blob([sql], { type: 'application/sql' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leytrix_isp_mysql_${new Date().toISOString().slice(0,10)}.sql`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast('🐬 Script MySQL (.sql) descargado exitosamente');
+  } catch(err) {
+    console.error(err);
+    toast('Error exportando a MySQL', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🐬 Descargar Script MySQL (.sql)'; }
+  }
+}
+
+// ══════════════════════════════════════════════════════
 //  MODAL
 // ══════════════════════════════════════════════════════
 function abrirModal(id) {
@@ -2314,10 +2452,11 @@ async function init() {
     document.getElementById(id).addEventListener('change', () => renderClientes(0)));
   document.getElementById('filtBus').addEventListener('input', debouncedBusqueda);
 
-  // Import/Export & Respaldo
+  // Import/Export & Respaldo & MySQL
   document.getElementById('btnDescargarBackup')?.addEventListener('click', descargarBackupCompleto);
   document.getElementById('btnCargarBackup')?.addEventListener('click', () => document.getElementById('fileBackup').click());
   document.getElementById('fileBackup')?.addEventListener('change', e => restaurarBackupCompleto(e.target));
+  document.getElementById('btnExpMySQL')?.addEventListener('click', exportarMySQL);
 
   document.getElementById('btnExpClientes').addEventListener('click', () => exportarExcel('clientes'));
   document.getElementById('btnExpPagos').addEventListener('click',    () => exportarExcel('pagos'));

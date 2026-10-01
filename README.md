@@ -42,9 +42,11 @@ Doble clic en `index.html` — se abre directamente en el navegador.
 - 🛡️ **Almacenamiento Persistente**: Los datos se almacenan en **IndexedDB persistente** del navegador. No se borran al cerrar el navegador o reiniciar el equipo.
 - 📦 **Copia de Seguridad Completa (.json)**: En la pestaña *Importar / Exportar*, puedes descargar un respaldo con todos los clientes, pagos y cortes.
 - 🔄 **Compartir Base de Datos**: Para pasar los datos a otra laptop o celular, descarga el archivo de respaldo (`.json`) y cárgalo con un solo clic en el otro equipo mediante *Restaurar Respaldo*.
+- 🐬 **Exportar a MySQL (.sql)**: Genera un script SQL con la estructura de tablas (`clientes`, `pagos`, `cortes`) y todos los datos en sentencias `INSERT` para importar directamente en **MySQL, MariaDB, XAMPP o phpMyAdmin**.
 - 📊 **Excel (.xlsx)**: También puedes importar y exportar en formato Excel en cualquier momento.
 
 > **Nota sobre MySQL / Servidores Cloud:**
-> GitHub Pages es un hosting estático (no ejecuta servidores MySQL directamente). Gracias a IndexedDB y al sistema de Respaldo JSON/Excel, el sistema funciona de forma 100% gratuita, rápida y sin depender de un servidor externo de pago. Si en el futuro necesitas sincronización simultánea en tiempo real entre múltiples sedes por internet, se puede conectar a un backend API o Firebase Firestore.
+> GitHub Pages es un hosting estático (no ejecuta servidores de backend como `mysqld.exe` directamente). Por eso, el sistema almacena todo en **IndexedDB persistente local** (sin límite de capacidad) y te permite **descargar tu base de datos en formato MySQL (.sql)** en cualquier momento para usarla en cualquier servidor MySQL.
+
 
 
