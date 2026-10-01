@@ -176,6 +176,38 @@ tr:hover td{background:#FAFBFF}
 hr{border:none;border-top:1px solid var(--borde);margin:20px 0}
 .mt-16{margin-top:16px}.mt-20{margin-top:20px}
 code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4px;font-size:0.82rem;font-family:monospace}
+
+/* Estilos de impresión profesionales para el recibo */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  #sidebar, #main, #toast { display: none !important; }
+  #modalRecibo {
+    display: flex !important;
+    position: static !important;
+    background: transparent !important;
+    inset: auto !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  #modalRecibo .modal {
+    box-shadow: none !important;
+    border: 1.5px solid #CBD5E1 !important;
+    margin: 10px auto !important;
+    max-width: 380px !important;
+    page-break-inside: avoid !important;
+    background: #fff !important;
+  }
+  #modalRecibo .modal-close,
+  #modalRecibo button,
+  #modalRecibo .btn,
+  #modalRecibo .btn-group {
+    display: none !important;
+  }
+  #reciboHeader {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -411,9 +443,35 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 
 <!-- IMPORTAR / EXPORTAR -->
 <section class="page" id="page-importexport">
-  <div class="page-header"><h2>📊 Importar / Exportar Excel</h2><p>Descargue o cargue datos en formato Excel (.xlsx)</p></div>
+  <div class="page-header"><h2>📊 Importar / Exportar &amp; Respaldo</h2><p>Respalde, comparta, descargue o cargue datos en Excel (.xlsx) y formato seguro (.json)</p></div>
+
+  <!-- COPIA DE SEGURIDAD & COMPARTIR -->
+  <div class="card" style="margin-bottom:20px;border-left:4px solid var(--azul2);background:#FAFCFF">
+    <div class="card-title">💾 Respaldo Completo &amp; Compartir Base de Datos</div>
+    <div class="alert alert-info" style="margin-bottom:16px">
+      🛡️ <strong>Tus datos están guardados de forma segura en tu navegador (IndexedDB persistente).</strong><br>
+      Para <strong>no perder tus datos nunca</strong> y poder <strong>compartirlos con otra computadora, teléfono o enviárselos a otra persona</strong>, descarga o restaura tu copia de seguridad aquí:
+    </div>
+    <div class="io-grid">
+      <div class="io-card" style="background:#F0FDF4;border-color:var(--verde)">
+        <div class="io-icon">📦</div>
+        <h4>Descargar Respaldo Total</h4>
+        <p>Genera un archivo <strong>.json</strong> con todos los clientes, pagos y cortes. Guárdalo para respaldo o para compartirlo.</p>
+        <button class="btn btn-success btn-full" id="btnDescargarBackup">💾 Descargar Respaldo (.json)</button>
+      </div>
+      <div class="io-card" style="background:#EFF6FF;border-color:var(--azul)">
+        <div class="io-icon">📥</div>
+        <h4>Restaurar / Cargar Respaldo</h4>
+        <p>Carga un archivo de respaldo en cualquier dispositivo para restaurar o sincronizar todos los datos inmediatamente.</p>
+        <input type="file" id="fileBackup" accept=".json" style="display:none"/>
+        <button class="btn btn-primary btn-full" id="btnCargarBackup">📂 Seleccionar Archivo (.json)</button>
+      </div>
+    </div>
+    <div id="backupResult" class="mt-16"></div>
+  </div>
+
   <div class="card" style="margin-bottom:20px">
-    <div class="card-title">📤 Exportar datos</div>
+    <div class="card-title">📤 Exportar datos a Excel</div>
     <div class="io-grid">
       <div class="io-card"><div class="io-icon">👥</div><h4>Clientes</h4><p>Todos los clientes con zona, plan, cable y estado</p><button class="btn btn-primary" id="btnExpClientes">📥 Descargar Clientes.xlsx</button></div>
       <div class="io-card"><div class="io-icon">💰</div><h4>Pagos</h4><p>Historial completo de pagos</p><button class="btn btn-success" id="btnExpPagos">📥 Descargar Pagos.xlsx</button></div>
@@ -530,6 +588,9 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
         <div id="reciboOperacion" style="font-size:1.1rem;font-weight:800;color:#1E40AF;letter-spacing:2px;margin-top:2px">—</div>
       </div>
       <!-- Botones -->
+      <button class="btn btn-full" id="btnWhatsappRecibo" style="background:#25D366;color:#fff;font-weight:700;justify-content:center;margin-bottom:10px;padding:12px;font-size:0.92rem;box-shadow:0 3px 10px rgba(37,211,102,0.3)">
+        💬 Enviar por WhatsApp al Cliente
+      </button>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <button class="btn btn-primary" id="btnImprimirRecibo" style="justify-content:center;font-size:0.82rem">🖨️ Imprimir</button>
         <button class="btn btn-success" id="btnGuardarImgRecibo" style="justify-content:center;font-size:0.82rem">📸 Guardar imagen</button>
@@ -1372,6 +1433,8 @@ async function verPagosCliente(id) {
 //  CORTES
 // ══════════════════════════════════════════════════════
 // ── RECIBO ESTILO BANCA MÓVIL ─────────────────────────
+let _reciboActual = null;
+
 // Genera N° de operación pseudo-único: año+mes+día+pagoId
 function _codigoOp(pagoId, fecha) {
   const d = fecha ? new Date(fecha.split(' ')[0].split('/').reverse().join('-')) : new Date();
@@ -1406,9 +1469,20 @@ async function generarRecibo(pagoId) {
       mesTexto = new Date(+ay, +am-1, 1).toLocaleString('es-PE',{month:'long',year:'numeric'});
     } catch(_) {}
 
+    const codigoOp = _codigoOp(pagoId, pago.fecha);
+    _reciboActual = { pago, cli, planNombre, codigoOp, mesTexto };
+
+    // Configurar botón WhatsApp con datos del cliente
+    const btnWa = document.getElementById('btnWhatsappRecibo');
+    if (btnWa) {
+      btnWa.textContent = cli?.celular 
+        ? `💬 Enviar por WhatsApp (${cli.celular})` 
+        : '💬 Enviar por WhatsApp al Cliente';
+    }
+
     // Rellenar modal
     document.getElementById('reciboMonto').textContent = `S/. ${Number(pago.monto).toFixed(2)}`;
-    document.getElementById('reciboOperacion').textContent = _codigoOp(pagoId, pago.fecha);
+    document.getElementById('reciboOperacion').textContent = codigoOp;
     document.getElementById('reciboDetalles').innerHTML = [
       _fila('Nombre del cliente',  cli?.nombre || '—'),
       _fila('Zona de servicio',    cli?.zona   || '—'),
@@ -1904,11 +1978,143 @@ async function compartirRecibo() {
     if (err.name !== 'AbortError') {
       console.error(err);
       toast('Error al compartir', 'error');
-    }
   } finally {
     btn.disabled = false;
     btn.textContent = '📤 Compartir';
   }
+}
+
+async function enviarWhatsappRecibo() {
+  if (!_reciboActual) {
+    toast('No hay comprobante activo', 'error');
+    return;
+  }
+  const { pago, cli, planNombre, codigoOp, mesTexto } = _reciboActual;
+
+  let tel = (cli?.celular || '').replace(/\D/g, '');
+  if (!tel || tel.length < 8) {
+    tel = prompt(`El cliente "${cli?.nombre || ''}" no tiene número de celular registrado.\nIngrese el número de WhatsApp (ej: 987654321):`, '');
+    if (!tel) return;
+    tel = tel.replace(/\D/g, '');
+  }
+
+  // Si tiene 9 dígitos (Perú), agregar código de país 51
+  if (tel.length === 9) tel = '51' + tel;
+
+  const texto = 
+`📡 *LEYTRIX ISP - COMPROBANTE DE PAGO*
+━━━━━━━━━━━━━━━━━━━━━
+👤 *Cliente:* ${cli?.nombre || 'Cliente'}
+💰 *Monto Cancelado:* S/. ${Number(pago.monto).toFixed(2)}
+📅 *Período:* ${mesTexto}
+📶 *Plan:* ${planNombre}
+🔢 *N° Operación:* ${codigoOp}
+🕒 *Fecha:* ${pago.fecha}
+💳 *Método de Pago:* ${pago.metodo}
+${cli?.ip ? '🌐 *IP:* ' + cli.ip : ''}
+━━━━━━━━━━━━━━━━━━━━━
+✅ *¡Servicio ACTIVO! Muchas gracias por su pago puntual.*`;
+
+  // Descarga automáticamente la imagen del recibo para que el usuario pueda adjuntarla fácilmente
+  try {
+    toast('Generando imagen del recibo...', 'info');
+    await descargarReciboImagen();
+  } catch(e) {
+    console.error(e);
+  }
+
+  const url = `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
+  window.open(url, '_blank');
+  toast('Abriendo chat de WhatsApp...');
+}
+
+// ══════════════════════════════════════════════════════
+//  RESPALDO & COMPARTIR BASE DE DATOS
+// ══════════════════════════════════════════════════════
+async function descargarBackupCompleto() {
+  const btn = document.getElementById('btnDescargarBackup');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando...'; }
+  try {
+    const [clientes, pagos, cortes] = await Promise.all([
+      IDB.getAll('clientes'),
+      IDB.getAll('pagos'),
+      IDB.getAll('cortes'),
+    ]);
+    const data = {
+      app: 'Leytrix ISP',
+      version: 1,
+      fecha_backup: fechaHora(),
+      total_clientes: clientes.length,
+      total_pagos: pagos.length,
+      total_cortes: cortes.length,
+      clientes,
+      pagos,
+      cortes,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Leytrix_Respaldo_Completo_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast('💾 Respaldo guardado exitosamente');
+  } catch(err) {
+    console.error(err);
+    toast('Error generando respaldo', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Descargar Respaldo (.json)'; }
+  }
+}
+
+async function restaurarBackupCompleto(fileInput) {
+  const file = fileInput.files[0];
+  if (!file) return;
+  const resEl = document.getElementById('backupResult');
+  if (resEl) resEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> Restaurando respaldo completo...</div>';
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data || (!data.clientes && !data.pagos)) {
+        throw new Error('El archivo no tiene el formato de respaldo de Leytrix.');
+      }
+      const numCli = Array.isArray(data.clientes) ? data.clientes.length : 0;
+      const numPag = Array.isArray(data.pagos) ? data.pagos.length : 0;
+      if (!confirm(`¿Restaurar copia de seguridad?\nSe importarán ${numCli} clientes y ${numPag} pagos.\nLos datos se guardarán de forma permanente en este navegador.`)) {
+        if (resEl) resEl.innerHTML = '';
+        fileInput.value = '';
+        return;
+      }
+
+      let cliOk = 0, pagOk = 0, corOk = 0;
+      if (Array.isArray(data.clientes) && data.clientes.length) {
+        cliOk = await IDB.bulkAdd('clientes', data.clientes);
+      }
+      if (Array.isArray(data.pagos) && data.pagos.length) {
+        pagOk = await IDB.bulkAdd('pagos', data.pagos);
+      }
+      if (Array.isArray(data.cortes) && data.cortes.length) {
+        corOk = await IDB.bulkAdd('cortes', data.cortes);
+      }
+
+      await refreshClientesCache();
+      updateSidebar();
+      fileInput.value = '';
+      if (resEl) {
+        resEl.innerHTML = `<div class="alert alert-success">✅ Respaldo restaurado con éxito: <strong>${cliOk}</strong> clientes, <strong>${pagOk}</strong> pagos, <strong>${corOk}</strong> cortes agregados permanentemente.</div>`;
+      }
+      toast('Respaldo restaurado correctamente ✅');
+      if (document.getElementById('page-clientes')?.classList.contains('active')) {
+        renderClientes(0);
+      }
+    } catch(err) {
+      console.error(err);
+      if (resEl) resEl.innerHTML = `<div class="alert alert-danger">❌ Error restaurando el respaldo: ${esc(err.message)}</div>`;
+      toast('Error al restaurar respaldo', 'error');
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ══════════════════════════════════════════════════════
@@ -2020,20 +2226,12 @@ async function init() {
   // Recibo
   document.getElementById('closeModalRecibo').addEventListener('click',  () => cerrarModal('modalRecibo'));
   document.getElementById('closeModalRecibo2').addEventListener('click', () => cerrarModal('modalRecibo'));
+  document.getElementById('btnWhatsappRecibo')?.addEventListener('click', enviarWhatsappRecibo);
   document.getElementById('btnGuardarImgRecibo').addEventListener('click', descargarReciboImagen);
   document.getElementById('btnCompartirRecibo').addEventListener('click',  compartirRecibo);
   document.getElementById('btnImprimirRecibo').addEventListener('click', () => {
-    // Imprime solo el contenido del modal usando ventana emergente
-    const modalEl = document.querySelector('#modalRecibo .modal');
-    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-      <title>Recibo Leytrix ISP</title>
-      <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;display:flex;justify-content:center;padding:20px}
-        @media print{body{padding:0}}
-      </style></head><body>${modalEl.innerHTML}</body></html>`;
-    const w = window.open('','_blank','width=440,height=700');
-    if (w) { w.document.write(html); w.document.close(); w.focus(); setTimeout(() => { w.print(); w.close(); }, 400); }
+    // Impresión limpia del recibo mediante @media print
+    window.print();
   });
 
   // Cortes
@@ -2048,7 +2246,11 @@ async function init() {
     document.getElementById(id).addEventListener('change', () => renderClientes(0)));
   document.getElementById('filtBus').addEventListener('input', debouncedBusqueda);
 
-  // Import/Export
+  // Import/Export & Respaldo
+  document.getElementById('btnDescargarBackup')?.addEventListener('click', descargarBackupCompleto);
+  document.getElementById('btnCargarBackup')?.addEventListener('click', () => document.getElementById('fileBackup').click());
+  document.getElementById('fileBackup')?.addEventListener('change', e => restaurarBackupCompleto(e.target));
+
   document.getElementById('btnExpClientes').addEventListener('click', () => exportarExcel('clientes'));
   document.getElementById('btnExpPagos').addEventListener('click',    () => exportarExcel('pagos'));
   document.getElementById('btnExpCortes').addEventListener('click',   () => exportarExcel('cortes'));
@@ -2059,6 +2261,15 @@ async function init() {
   document.getElementById('filePagos').addEventListener('change',     e => importarExcel('pagos',    e.target));
   document.getElementById('btnPlantCli').addEventListener('click',   () => descargarPlantilla('clientes'));
   document.getElementById('btnPlantPag').addEventListener('click',   () => descargarPlantilla('pagos'));
+
+  // Solicitar almacenamiento persistente al navegador
+  if (navigator.storage && navigator.storage.persist) {
+    try {
+      navigator.storage.persist().then(granted => {
+        if (granted) console.log('Almacenamiento persistente garantizado en el navegador');
+      });
+    } catch (_) {}
+  }
 
   // Render inicial
   await renderInicio();

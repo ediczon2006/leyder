@@ -31,13 +31,20 @@ Doble clic en `index.html` — se abre directamente en el navegador.
 - S/. 60 — Plan Plus
 - S/. 65 — Plan Normal
 
-## Recibos y Pagos
-- Generación de comprobante estilo banca móvil con N° de operación único
-- Exportación e impresión de recibo en imagen PNG
-- Compartir recibo directamente por WhatsApp / redes sociales
-- Registro directo de pagos por cliente con auto-completado de plan
+## Recibos, Impresión y WhatsApp
+- 🧾 **Comprobante estilo banca móvil** con N° de operación único y diseño profesional.
+- 💬 **Enviar por WhatsApp al Cliente**: Abre directamente el chat con el número del cliente (`wa.me`), mensaje detallado del pago y descarga automática de la imagen para adjuntar.
+- 🖨️ **Impresión nativa**: Optimizado con `@media print` para imprimir directo en impresora o guardar como PDF en PC y móvil sin bloqueos de popups.
+- 📸 **Descargar imagen PNG**: Comprobante en alta resolución para enviar por cualquier red social o correo.
+- 📤 **Compartir nativo**: Web Share API en teléfonos móviles.
 
-## Datos
-Los datos se guardan en el navegador mediante IndexedDB de alta capacidad (sin límite de 5MB).
-Soporta miles de registros y funciona 100% offline o en GitHub Pages.
+## Guardado de Datos y Cómo Compartir entre Dispositivos
+- 🛡️ **Almacenamiento Persistente**: Los datos se almacenan en **IndexedDB persistente** del navegador. No se borran al cerrar el navegador o reiniciar el equipo.
+- 📦 **Copia de Seguridad Completa (.json)**: En la pestaña *Importar / Exportar*, puedes descargar un respaldo con todos los clientes, pagos y cortes.
+- 🔄 **Compartir Base de Datos**: Para pasar los datos a otra laptop o celular, descarga el archivo de respaldo (`.json`) y cárgalo con un solo clic en el otro equipo mediante *Restaurar Respaldo*.
+- 📊 **Excel (.xlsx)**: También puedes importar y exportar en formato Excel en cualquier momento.
+
+> **Nota sobre MySQL / Servidores Cloud:**
+> GitHub Pages es un hosting estático (no ejecuta servidores MySQL directamente). Gracias a IndexedDB y al sistema de Respaldo JSON/Excel, el sistema funciona de forma 100% gratuita, rápida y sin depender de un servidor externo de pago. Si en el futuro necesitas sincronización simultánea en tiempo real entre múltiples sedes por internet, se puede conectar a un backend API o Firebase Firestore.
+
 
