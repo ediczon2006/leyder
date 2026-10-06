@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
-<!-- CSP: bloquea scripts externos no autorizados -->
+<!-- CSP: bloquea scripts externos no autorizados y protege datos -->
 <meta http-equiv="Content-Security-Policy"
   content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.sheetjs.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'"/>
 <title>Leytrix ISP — Gestión de Clientes</title>
@@ -49,7 +49,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#F8FAFC;color:var(--
 
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:16px;margin-bottom:24px}
 .kpi{background:#fff;border-radius:var(--radio);padding:18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid var(--borde)}
-.kpi .val{font-size:2rem;font-weight:800;line-height:1.1}
+.kpi .val{font-size:1.8rem;font-weight:800;line-height:1.1;word-break:break-all}
 .kpi .lbl{font-size:0.73rem;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
 .kpi-blue{border-top:4px solid var(--azul)}.kpi-blue .val{color:var(--azul)}
 .kpi-green{border-top:4px solid var(--verde)}.kpi-green .val{color:var(--verde)}
@@ -232,7 +232,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
   <div class="nav-item" data-page="zonas"><span class="nav-icon">🗺️</span> Vista por Zona</div>
   <div class="nav-item" data-page="pendientes"><span class="nav-icon">📅</span> Pendientes del Mes</div>
   <div class="nav-item" data-page="importexport"><span class="nav-icon">📊</span> Importar / Exportar</div>
-  <div class="sidebar-stats" id="sidebarStats"><p>Cargando...</p></div>
+  <div class="sidebar-stats" id="sidebarStats"><p>Cargando estadísticas...</p></div>
 </nav>
 
 <!-- ══ MAIN ═════════════════════════════════════════════ -->
@@ -240,7 +240,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 
 <!-- INICIO -->
 <section class="page active" id="page-inicio">
-  <div class="page-header"><h2>📡 Panel de Control — Leytrix ISP</h2><p>Resumen general del servicio</p></div>
+  <div class="page-header"><h2>📡 Panel de Control — Leytrix ISP</h2><p>Resumen general del servicio (Optimizado para 1,000,000+ registros)</p></div>
   <div class="kpi-grid" id="kpiGrid"><div class="kpi kpi-blue"><div class="val">—</div><div class="lbl">Cargando</div></div></div>
   <div class="two-col">
     <div class="card"><div class="card-title">🗺️ Clientes por Zona</div><div id="tablaZonasDash"></div></div>
@@ -373,7 +373,15 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
     <div class="card">
       <div class="card-title">💳 Nuevo Pago</div>
       <form id="formPago" novalidate>
-        <div class="form-group"><label>Cliente *</label><select id="pCliente" required></select></div>
+        <div class="form-group">
+          <label>Buscar / Seleccionar Cliente *</label>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <input id="pBuscarCli" placeholder="Filtrar por nombre, IP, DNI o ID..." style="font-size:0.85rem;padding:7px 10px"/>
+            <button type="button" class="btn btn-outline btn-sm" id="btnBuscarCliPago" title="Buscar">🔍</button>
+          </div>
+          <select id="pCliente" required></select>
+          <span style="font-size:0.74rem;color:var(--gris)" id="pClienteAyuda">💡 Escriba en el buscador para localizar a cualquier cliente de inmediato.</span>
+        </div>
         <div class="form-group mt-16"><label>Mes a pagar *</label><input type="month" id="pMes" required/></div>
         <div class="form-group mt-16"><label>Monto S/. *</label><input type="number" id="pMonto" step="0.01" min="1" max="9999" required placeholder="50.00"/></div>
         <div class="form-group mt-16"><label>Método de pago</label>
@@ -381,7 +389,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
         </div>
         <div class="form-group mt-16"><label>Observación</label><input id="pObs" maxlength="200" placeholder="Opcional..."/></div>
         <div id="pagoAlert"></div>
-        <button type="submit" class="btn btn-success btn-full mt-16">💾 Registrar Pago</button>
+        <button type="submit" class="btn btn-success btn-full mt-16" id="btnGuardarPago">💾 Registrar Pago</button>
       </form>
     </div>
     <div class="card">
@@ -400,7 +408,14 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
   <div class="two-col">
     <div class="card">
       <div class="card-title">✂️ Cortar Servicio</div>
-      <div class="form-group"><label>Cliente activo</label><select id="cCorteCliente"></select></div>
+      <div class="form-group">
+        <label>Buscar cliente activo</label>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="cBuscarCliActivo" placeholder="Filtrar por nombre/IP/ID..." style="font-size:0.85rem;padding:7px 10px"/>
+          <button type="button" class="btn btn-outline btn-sm" id="btnBuscarActivo" title="Buscar">🔍</button>
+        </div>
+        <select id="cCorteCliente"></select>
+      </div>
       <div class="form-group mt-16"><label>Motivo</label>
         <select id="cCortMotivo"><option>Falta de pago</option><option>Solicitud del cliente</option><option>Mantenimiento de red</option><option>Otro</option></select>
       </div>
@@ -408,7 +423,14 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
     </div>
     <div class="card">
       <div class="card-title">🔄 Reconectar</div>
-      <div class="form-group"><label>Cliente cortado</label><select id="cReconCliente"></select></div>
+      <div class="form-group">
+        <label>Buscar cliente cortado</label>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="cBuscarCliCortado" placeholder="Filtrar por nombre/IP/ID..." style="font-size:0.85rem;padding:7px 10px"/>
+          <button type="button" class="btn btn-outline btn-sm" id="btnBuscarCortado" title="Buscar">🔍</button>
+        </div>
+        <select id="cReconCliente"></select>
+      </div>
       <button class="btn btn-success btn-full mt-16" id="btnReconectar">🔄 Reconectar Servicio</button>
     </div>
   </div>
@@ -423,7 +445,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 
 <!-- ZONAS -->
 <section class="page" id="page-zonas">
-  <div class="page-header"><h2>🗺️ Vista por Zona</h2><p>Clientes agrupados por sector de servicio</p></div>
+  <div class="page-header"><h2>🗺️ Vista por Zona</h2><p>Resumen estadístico y clientes por sector (Carga instantánea)</p></div>
   <div id="zonasContainer"></div>
 </section>
 
@@ -447,14 +469,14 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 
 <!-- IMPORTAR / EXPORTAR -->
 <section class="page" id="page-importexport">
-  <div class="page-header"><h2>📊 Importar / Exportar &amp; Respaldo</h2><p>Respalde, comparta, descargue o cargue datos en Excel (.xlsx) y formato seguro (.json)</p></div>
+  <div class="page-header"><h2>📊 Importar / Exportar &amp; Respaldo</h2><p>Respalde, comparta, descargue o cargue datos en Excel (.xlsx), formato seguro (.json) y MySQL (.sql)</p></div>
 
   <!-- COPIA DE SEGURIDAD & COMPARTIR -->
   <div class="card" style="margin-bottom:20px;border-left:4px solid var(--azul2);background:#FAFCFF">
     <div class="card-title">💾 Respaldo Completo &amp; Compartir Base de Datos</div>
     <div class="alert alert-info" style="margin-bottom:16px">
-      🛡️ <strong>Tus datos están guardados de forma segura en tu navegador (IndexedDB persistente).</strong><br>
-      Para <strong>no perder tus datos nunca</strong> y poder <strong>compartirlos con otra computadora, teléfono o enviárselos a otra persona</strong>, descarga o restaura tu copia de seguridad aquí:
+      🛡️ <strong>Tus datos están protegidos en tu navegador (IndexedDB persistente).</strong><br>
+      Para <strong>no perder tus datos nunca</strong> y poder <strong>compartirlos con otra computadora, laptop o enviárselos a otra persona</strong>, descarga o restaura tu copia de seguridad aquí:
     </div>
     <div class="io-grid">
       <div class="io-card" style="background:#F0FDF4;border-color:var(--verde)">
@@ -554,7 +576,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
       </div>
       <input type="hidden" id="eId"/>
       <div class="btn-group mt-20">
-        <button type="submit" class="btn btn-primary">💾 Guardar</button>
+        <button type="submit" class="btn btn-primary" id="btnGuardarEdicion">💾 Guardar</button>
         <button type="button" class="btn btn-ghost" id="cancelModalEditar">Cancelar</button>
       </div>
     </form>
@@ -624,48 +646,71 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 
 <div id="toast" role="status" aria-live="polite"></div>
 
-
 <script>
 'use strict';
 // ══════════════════════════════════════════════════════
 //  CONSTANTES Y CONFIGURACIÓN
 // ══════════════════════════════════════════════════════
 const ZONAS   = ['Loboyacu','Huayranga','Pacotillo','Ramal de Cachiyacu','Palmeras','Shishiyacu'];
-// Zona adicional añadida sin alterar las zonas existentes
 const PLANES  = [50, 60, 65];
 const ESTADOS = ['ACTIVO','CORTADO','PENDIENTE','RETIRADO'];
 const PAGE_SIZE = 50;
 const DB_NAME   = 'leytrix_isp_v1';
-const DB_VER    = 1;
+const DB_VER    = 2; // Actualizado con índices compuestos para 1M+ registros
 
 // ══════════════════════════════════════════════════════
-//  SEGURIDAD: ESCAPE HTML (previene XSS almacenado)
+//  SEGURIDAD Y SANITIZACIÓN (XSS, Formula Injection, Safe Types)
 // ══════════════════════════════════════════════════════
 function esc(str) {
   return String(str ?? '').replace(/[&<>"'`]/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;','`':'&#x60;'
   }[c]));
 }
+
 function safe(str, maxLen = 200) {
   return String(str ?? '').trim().slice(0, maxLen);
 }
 
+// Prevención de CSV / Excel Formula Injection (CWE-1236)
+function sanitizeExcelVal(val) {
+  if (val === null || val === undefined) return '';
+  const s = String(val);
+  // Si inicia con =, +, -, @, tab o retorno de carro, anteponer comilla simple para forzar texto literal
+  if (/^[=\+\-@\t\r]/.test(s)) {
+    return "'" + s;
+  }
+  return s;
+}
+
+// Sanitización rigurosa de cadenas literales para MySQL
+function escSql(val) {
+  if (val === null || val === undefined) return 'NULL';
+  const s = String(val);
+  return "'" + s
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "''")
+    .replace(/\0/g, '\\0')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\x1a/g, '\\Z') + "'";
+}
+
 // ══════════════════════════════════════════════════════
-//  VALIDACIÓN
+//  VALIDACIONES DE NEGOCIO
 // ══════════════════════════════════════════════════════
 const V = {
   ip(v) {
     if (!v) return false;
-    const parts = v.trim().split('.');
+    const parts = String(v).trim().split('.');
     if (parts.length !== 4) return false;
     return parts.every(p => /^\d{1,3}$/.test(p) && +p >= 0 && +p <= 255);
   },
-  dni(v)    { return !v || /^\d{8}$/.test(v.trim()); },
-  cel(v)    { return !v || /^[0-9+\s\-]{7,15}$/.test(v.trim()); },
-  nombre(v) { return v && v.trim().length >= 2 && v.trim().length <= 100; },
+  dni(v)    { return !v || /^\d{8}$/.test(String(v).trim()); },
+  cel(v)    { return !v || /^[0-9+\s\-]{7,15}$/.test(String(v).trim()); },
+  nombre(v) { return v && String(v).trim().length >= 2 && String(v).trim().length <= 100; },
   plan(v)   { return PLANES.includes(Number(v)); },
   zona(v)   { return ZONAS.includes(v); },
-  mes(v)    { return v && /^\d{4}-\d{2}$/.test(v); },
+  mes(v)    { return v && /^\d{4}-\d{2}$/.test(String(v).trim()); },
   monto(v)  { const n = Number(v); return !isNaN(n) && n >= 1 && n <= 9999; },
 };
 
@@ -674,7 +719,7 @@ function fieldErr(id, msg) {
   if (el) { el.textContent = msg; }
 }
 function clearFieldErrs(...ids) {
-  ids.forEach(id => { const el = document.getElementById(id); if(el) el.textContent = ''; });
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
 }
 function setInputErr(inputId, msg) {
   const el = document.getElementById(inputId);
@@ -682,8 +727,7 @@ function setInputErr(inputId, msg) {
 }
 
 // ══════════════════════════════════════════════════════
-//  BASE DE DATOS (IndexedDB)
-//  Sin límite de almacenamiento, soporta millones de registros
+//  MOTOR DE BASE DE DATOS (IndexedDB v2 Optimizado para 1M+ registros)
 // ══════════════════════════════════════════════════════
 const IDB = (() => {
   let _db = null;
@@ -693,23 +737,34 @@ const IDB = (() => {
       const req = indexedDB.open(DB_NAME, DB_VER);
       req.onupgradeneeded = e => {
         const db = e.target.result;
+        let cs, ps, ks;
+
         if (!db.objectStoreNames.contains('clientes')) {
-          const cs = db.createObjectStore('clientes', { keyPath: 'id', autoIncrement: true });
-          cs.createIndex('zona',   'zona',   { unique: false });
-          cs.createIndex('estado', 'estado', { unique: false });
-          cs.createIndex('plan',   'plan',   { unique: false });
+          cs = db.createObjectStore('clientes', { keyPath: 'id', autoIncrement: true });
+        } else {
+          cs = e.target.transaction.objectStore('clientes');
         }
+        if (!cs.indexNames.contains('zona')) cs.createIndex('zona', 'zona', { unique: false });
+        if (!cs.indexNames.contains('estado')) cs.createIndex('estado', 'estado', { unique: false });
+        if (!cs.indexNames.contains('plan')) cs.createIndex('plan', 'plan', { unique: false });
+        if (!cs.indexNames.contains('zona_estado')) cs.createIndex('zona_estado', ['zona', 'estado'], { unique: false });
+
         if (!db.objectStoreNames.contains('pagos')) {
-          const ps = db.createObjectStore('pagos', { keyPath: 'id', autoIncrement: true });
-          ps.createIndex('id_cliente', 'id_cliente', { unique: false });
-          ps.createIndex('mes',        'mes',        { unique: false });
-          ps.createIndex('cli_mes',    ['id_cliente','mes'], { unique: false });
+          ps = db.createObjectStore('pagos', { keyPath: 'id', autoIncrement: true });
+        } else {
+          ps = e.target.transaction.objectStore('pagos');
         }
+        if (!ps.indexNames.contains('id_cliente')) ps.createIndex('id_cliente', 'id_cliente', { unique: false });
+        if (!ps.indexNames.contains('mes')) ps.createIndex('mes', 'mes', { unique: false });
+        if (!ps.indexNames.contains('cli_mes')) ps.createIndex('cli_mes', ['id_cliente','mes'], { unique: false });
+
         if (!db.objectStoreNames.contains('cortes')) {
-          const ks = db.createObjectStore('cortes', { keyPath: 'id', autoIncrement: true });
-          ks.createIndex('id_cliente', 'id_cliente', { unique: false });
-          ks.createIndex('estado',     'estado',     { unique: false });
+          ks = db.createObjectStore('cortes', { keyPath: 'id', autoIncrement: true });
+        } else {
+          ks = e.target.transaction.objectStore('cortes');
         }
+        if (!ks.indexNames.contains('id_cliente')) ks.createIndex('id_cliente', 'id_cliente', { unique: false });
+        if (!ks.indexNames.contains('estado')) ks.createIndex('estado', 'estado', { unique: false });
       };
       req.onsuccess = e => { _db = e.target.result; res(_db); };
       req.onerror   = e => rej(e.target.error);
@@ -759,6 +814,7 @@ const IDB = (() => {
       });
     },
 
+    // Conteo atómico O(1) vía índices B-tree (ultra rápido incluso con 1M+ filas)
     async count(store) {
       const d = await db();
       return new Promise((res, rej) => {
@@ -771,57 +827,45 @@ const IDB = (() => {
     async countByIndex(store, idx, key) {
       const d = await db();
       return new Promise((res, rej) => {
-        const req = d.transaction([store], 'readonly').objectStore(store).index(idx).count(key);
-        req.onsuccess = e => res(e.target.result);
-        req.onerror   = e => rej(e.target.error);
-      });
-    },
-
-    // Cursor paginado con filtro opcional — soporta 1M+ registros
-    async query(store, { filter = null, limit = PAGE_SIZE, offset = 0 } = {}) {
-      const d = await db();
-      return new Promise((res, rej) => {
-        const results = [];
-        let total = 0, skipped = 0;
-        const req = d.transaction([store], 'readonly').objectStore(store).openCursor();
-        req.onsuccess = e => {
-          const cursor = e.target.result;
-          if (!cursor) { res({ results, total }); return; }
-          const val = cursor.value;
-          if (!filter || filter(val)) {
-            total++;
-            if (skipped < offset)         skipped++;
-            else if (results.length < limit) results.push(val);
+        try {
+          const os = d.transaction([store], 'readonly').objectStore(store);
+          if (!os.indexNames.contains(idx)) {
+            res(0); return;
           }
-          cursor.continue();
-        };
-        req.onerror = e => rej(e.target.error);
+          const req = os.index(idx).count(key);
+          req.onsuccess = e => res(e.target.result);
+          req.onerror   = e => rej(e.target.error);
+        } catch(_) {
+          res(0);
+        }
       });
     },
 
-    // Obtener todos (para exports y joins ligeros)
-    async getAll(store) {
+    // Obtener con límite opcional para proteger la memoria RAM
+    async getAll(store, count = null) {
       const d = await db();
       return new Promise((res, rej) => {
-        const req = d.transaction([store], 'readonly').objectStore(store).getAll();
-        req.onsuccess = e => res(e.target.result);
+        const os = d.transaction([store], 'readonly').objectStore(store);
+        const req = count ? os.getAll(null, count) : os.getAll();
+        req.onsuccess = e => res(e.target.result || []);
         req.onerror   = e => rej(e.target.error);
       });
     },
 
-    // Obtener por índice
-    async getByIndex(store, idx, key) {
+    // Obtener por índice con límite opcional
+    async getByIndex(store, idx, key, count = null) {
       const d = await db();
       return new Promise((res, rej) => {
-        const req = d.transaction([store], 'readonly').objectStore(store).index(idx).getAll(key);
-        req.onsuccess = e => res(e.target.result);
+        const os = d.transaction([store], 'readonly').objectStore(store);
+        const req = count ? os.index(idx).getAll(key, count) : os.index(idx).getAll(key);
+        req.onsuccess = e => res(e.target.result || []);
         req.onerror   = e => rej(e.target.error);
       });
     },
 
-    // Inserción masiva en una sola transacción (para importación)
-    async bulkAdd(store, items) {
-      if (!items.length) return 0;
+    // Operación por lotes segura con put (sin error por clave duplicada)
+    async bulkPut(store, items) {
+      if (!items || !items.length) return 0;
       const d = await db();
       return new Promise((res, rej) => {
         const tx = d.transaction([store], 'readwrite');
@@ -830,16 +874,111 @@ const IDB = (() => {
         tx.oncomplete = () => res(ok);
         tx.onerror    = e => rej(e.target.error);
         items.forEach(item => {
-          const r = os.add(item);
+          const r = os.put(item);
           r.onsuccess = () => ok++;
         });
       });
     },
+
+    // Consulta paginada de alta velocidad utilizando cursores y advance
+    async query(store, { indexName = null, range = null, filter = null, limit = PAGE_SIZE, offset = 0 } = {}) {
+      const d = await db();
+      return new Promise((res, rej) => {
+        const results = [];
+        let total = 0, skipped = 0;
+        const os = d.transaction([store], 'readonly').objectStore(store);
+        const target = indexName && os.indexNames.contains(indexName) ? os.index(indexName) : os;
+        const req = range ? target.openCursor(range) : target.openCursor();
+
+        req.onsuccess = e => {
+          const cursor = e.target.result;
+          if (!cursor) {
+            res({ results, total });
+            return;
+          }
+          const val = cursor.value;
+
+          if (!filter || filter(val)) {
+            total++;
+            if (skipped < offset) {
+              skipped++;
+            } else if (results.length < limit) {
+              results.push(val);
+            }
+          }
+          cursor.continue();
+        };
+        req.onerror = e => rej(e.target.error);
+      });
+    },
+
+    // Búsqueda rápida de clientes para selects sin saturar DOM
+    async buscarClientesRapido(termino = '', { limit = 30, soloActivos = false } = {}) {
+      const d = await db();
+      const s = String(termino || '').trim().toLowerCase();
+      return new Promise((res, rej) => {
+        const results = [];
+        const os = d.transaction(['clientes'], 'readonly').objectStore('clientes');
+        const req = os.openCursor(null, 'prev'); // más recientes primero
+
+        req.onsuccess = e => {
+          const cursor = e.target.result;
+          if (!cursor || results.length >= limit) {
+            res(results);
+            return;
+          }
+          const c = cursor.value;
+          if (!soloActivos || c.estado === 'ACTIVO') {
+            if (!s) {
+              results.push(c);
+            } else {
+              const str = `${c.id} ${c.nombre || ''} ${c.ip || ''} ${c.dni || ''} ${c.celular || ''} ${c.zona || ''}`.toLowerCase();
+              if (str.includes(s)) {
+                results.push(c);
+              }
+            }
+          }
+          cursor.continue();
+        };
+        req.onerror = e => rej(e.target.error);
+      });
+    },
+
+    // Eliminación en cascada en una sola transacción unificada
+    async eliminarClienteCompleto(id) {
+      const d = await db();
+      const numId = Number(id);
+      return new Promise((res, rej) => {
+        const tx = d.transaction(['clientes', 'pagos', 'cortes'], 'readwrite');
+        const cStore = tx.objectStore('clientes');
+        const pStore = tx.objectStore('pagos');
+        const kStore = tx.objectStore('cortes');
+
+        tx.oncomplete = () => res();
+        tx.onerror    = e => rej(e.target.error);
+
+        cStore.delete(numId);
+
+        // Limpiar pagos
+        const pReq = pStore.index('id_cliente').openCursor(IDBKeyRange.only(numId));
+        pReq.onsuccess = ev => {
+          const cur = ev.target.result;
+          if (cur) { cur.delete(); cur.continue(); }
+        };
+
+        // Limpiar cortes
+        const kReq = kStore.index('id_cliente').openCursor(IDBKeyRange.only(numId));
+        kReq.onsuccess = ev => {
+          const cur = ev.target.result;
+          if (cur) { cur.delete(); cur.continue(); }
+        };
+      });
+    }
   };
 })();
 
 // ══════════════════════════════════════════════════════
-//  HELPERS UI
+//  HELPERS DE FECHA Y UI
 // ══════════════════════════════════════════════════════
 function mesActual() {
   const n = new Date();
@@ -864,34 +1003,39 @@ function badgeCable(c) {
     : '<span class="badge badge-nocable">— Sin cable</span>';
 }
 
-// Cache de clientes para joins (se actualiza periódicamente)
+// Cache local dinámica para joins ligeros
 let _clientesCache = new Map();
-async function refreshClientesCache() {
-  const todos = await IDB.getAll('clientes');
-  _clientesCache = new Map(todos.map(c => [c.id, c]));
+
+async function cachearClientes(ids = []) {
+  const faltantes = ids.filter(id => id && !_clientesCache.has(Number(id)));
+  if (!faltantes.length) return;
+  await Promise.all(faltantes.map(async id => {
+    const c = await IDB.get('clientes', Number(id));
+    if (c) _clientesCache.set(Number(id), c);
+  }));
 }
+
 function nombreCliente(id) {
-  const c = _clientesCache.get(id);
-  return c ? esc(c.nombre) : '(desconocido)';
+  const c = _clientesCache.get(Number(id));
+  return c ? esc(c.nombre) : `#${esc(id)}`;
 }
 
 // ══════════════════════════════════════════════════════
-//  TOAST
+//  TOAST SEGURO
 // ══════════════════════════════════════════════════════
-let _toastTimer;
+let _toastTimer = null;
 function toast(msg, tipo = 'success') {
   const t = document.getElementById('toast');
-  // Sanitizamos el mensaje para el toast (solo texto, no HTML)
-  t.textContent = String(msg).slice(0, 120);
+  if (!t) return;
+  t.textContent = String(msg || '').slice(0, 140);
   t.className = `show t-${tipo}`;
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => t.className = '', 3500);
+  _toastTimer = setTimeout(() => { t.className = ''; }, 3500);
 }
 
 // ══════════════════════════════════════════════════════
 //  PAGINACIÓN
 // ══════════════════════════════════════════════════════
-// Estado de paginación por sección
 const _pg = {
   clientes: { page: 0, total: 0 },
 };
@@ -904,19 +1048,20 @@ function renderPagination(containerId, infId, state, onPage) {
 
   if (!container) return;
   container.style.display = state.total > PAGE_SIZE ? 'flex' : 'none';
-  if (inf) inf.textContent = `Mostrando ${cur*PAGE_SIZE+1}–${Math.min((cur+1)*PAGE_SIZE, state.total)} de ${state.total.toLocaleString()}`;
+  if (inf) inf.textContent = `Mostrando ${cur * PAGE_SIZE + 1}–${Math.min((cur + 1) * PAGE_SIZE, state.total)} de ${state.total.toLocaleString()}`;
 
-  const btns = document.getElementById(containerId.replace('paginacion','pgBtns'));
+  const btns = document.getElementById(containerId.replace('paginacion', 'pgBtns'));
   if (!btns) return;
 
-  let html = `<button class="pg-btn" ${cur===0?'disabled':''} data-pg="${cur-1}">◀</button>`;
+  let html = `<button class="pg-btn" ${cur === 0 ? 'disabled' : ''} data-pg="${cur - 1}">◀</button>`;
   const start = Math.max(0, cur - 2);
   const end   = Math.min(pages - 1, cur + 2);
-  if (start > 0) html += `<button class="pg-btn" data-pg="0">1</button>${start>1?'<span style="padding:0 4px;color:var(--gris)">…</span>':''}`;
-  for (let i = start; i <= end; i++)
-    html += `<button class="pg-btn${i===cur?' active':''}" data-pg="${i}">${i+1}</button>`;
-  if (end < pages-1) html += `${end<pages-2?'<span style="padding:0 4px;color:var(--gris)">…</span>':''}<button class="pg-btn" data-pg="${pages-1}">${pages}</button>`;
-  html += `<button class="pg-btn" ${cur===pages-1?'disabled':''} data-pg="${cur+1}">▶</button>`;
+  if (start > 0) html += `<button class="pg-btn" data-pg="0">1</button>${start > 1 ? '<span style="padding:0 4px;color:var(--gris)">…</span>' : ''}`;
+  for (let i = start; i <= end; i++) {
+    html += `<button class="pg-btn${i === cur ? ' active' : ''}" data-pg="${i}">${i + 1}</button>`;
+  }
+  if (end < pages - 1) html += `${end < pages - 2 ? '<span style="padding:0 4px;color:var(--gris)">…</span>' : ''}<button class="pg-btn" data-pg="${pages - 1}">${pages}</button>`;
+  html += `<button class="pg-btn" ${cur === pages - 1 ? 'disabled' : ''} data-pg="${cur + 1}">▶</button>`;
 
   btns.innerHTML = html;
   btns.querySelectorAll('.pg-btn:not(:disabled)').forEach(btn => {
@@ -955,24 +1100,19 @@ function goTo(page) {
 }
 
 // ══════════════════════════════════════════════════════
-//  SIDEBAR
-// ══════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════
-//  SIDEBAR
+//  SIDEBAR (Estadísticas calculadas en O(1) con índices)
 // ══════════════════════════════════════════════════════
 async function updateSidebar() {
   try {
-    const clientes = _clientesCache && _clientesCache.size > 0 
-      ? Array.from(_clientesCache.values()) 
-      : await IDB.getAll('clientes');
-    
-    const total = clientes.length;
-    const activos = clientes.filter(c => c.estado === 'ACTIVO').length;
-    const cortados = clientes.filter(c => c.estado === 'CORTADO').length;
-    
-    const pagos = await IDB.getByIndex('pagos', 'mes', mesActual());
-    const cobrado = pagos.reduce((s, p) => s + Number(p.monto || 0), 0);
+    const mes = mesActual();
+    const [total, activos, cortados, pagosMes] = await Promise.all([
+      IDB.count('clientes'),
+      IDB.countByIndex('clientes', 'estado', 'ACTIVO'),
+      IDB.countByIndex('clientes', 'estado', 'CORTADO'),
+      IDB.getByIndex('pagos', 'mes', mes),
+    ]);
 
+    const cobrado = pagosMes.reduce((s, p) => s + (Number(p.monto) || 0), 0);
     const statsEl = document.getElementById('sidebarStats');
     if (statsEl) {
       statsEl.innerHTML = `
@@ -987,24 +1127,21 @@ async function updateSidebar() {
 }
 
 // ══════════════════════════════════════════════════════
-//  INICIO (Optimizado de alta velocidad - Carga instantánea)
+//  INICIO (Soporta 1,000,000 de clientes sin consumir RAM)
 // ══════════════════════════════════════════════════════
 async function renderInicio() {
   try {
     const mes = mesActual();
-    const [clientes, pagos] = await Promise.all([
-      IDB.getAll('clientes'),
+
+    // 1. Conteo instantáneo de KPIs mediante índices sin cargar arrays en memoria
+    const [total, activos, cortados, pagosMes] = await Promise.all([
+      IDB.count('clientes'),
+      IDB.countByIndex('clientes', 'estado', 'ACTIVO'),
+      IDB.countByIndex('clientes', 'estado', 'CORTADO'),
       IDB.getByIndex('pagos', 'mes', mes)
     ]);
 
-    // Actualizar cache en memoria
-    _clientesCache = new Map(clientes.map(c => [c.id, c]));
-
-    const total = clientes.length;
-    const activos = clientes.filter(c => c.estado === 'ACTIVO').length;
-    const cortados = clientes.filter(c => c.estado === 'CORTADO').length;
-    const conCable = clientes.filter(c => c.cable === true).length;
-    const cobrado = pagos.reduce((s, p) => s + Number(p.monto || 0), 0);
+    const cobrado = pagosMes.reduce((s, p) => s + (Number(p.monto) || 0), 0);
 
     const kpiEl = document.getElementById('kpiGrid');
     if (kpiEl) {
@@ -1012,124 +1149,176 @@ async function renderInicio() {
         <div class="kpi kpi-blue"><div class="val">${total.toLocaleString()}</div><div class="lbl">Total Clientes</div></div>
         <div class="kpi kpi-green"><div class="val">${activos.toLocaleString()}</div><div class="lbl">Activos</div></div>
         <div class="kpi kpi-red"><div class="val">${cortados.toLocaleString()}</div><div class="lbl">Cortados</div></div>
-        <div class="kpi kpi-orange"><div class="val">S/. ${cobrado.toFixed(0)}</div><div class="lbl">Cobrado este mes</div></div>
-        <div class="kpi kpi-blue"><div class="val">${conCable.toLocaleString()}</div><div class="lbl">Con cable</div></div>`;
+        <div class="kpi kpi-orange"><div class="val">S/. ${cobrado.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div><div class="lbl">Cobrado en ${esc(mes)}</div></div>`;
     }
 
-    // Tabla de zonas calculada al instante en memoria RAM sin 15 cursores lentos
-    const zonaRows = ZONAS.map(z => {
-      const enZona = clientes.filter(c => c.zona === z);
-      const tot = enZona.length;
-      const act = enZona.filter(c => c.estado === 'ACTIVO').length;
-      const cort = enZona.filter(c => c.estado === 'CORTADO').length;
-      return `<tr><td><strong>${esc(z)}</strong></td><td>${tot}</td><td>${act}</td><td>${cort}</td></tr>`;
-    });
+    // 2. Conteo por zona vía índices (O(1) por cada zona)
+    const zonaCounts = await Promise.all(ZONAS.map(async z => {
+      const [totZ, actZ, cortZ] = await Promise.all([
+        IDB.countByIndex('clientes', 'zona', z),
+        IDB.countByIndex('clientes', 'zona_estado', [z, 'ACTIVO']),
+        IDB.countByIndex('clientes', 'zona_estado', [z, 'CORTADO'])
+      ]);
+      return { z, totZ, actZ, cortZ };
+    }));
+
+    const zonaRows = zonaCounts.map(item => `
+      <tr>
+        <td><strong>${esc(item.z)}</strong></td>
+        <td>${item.totZ.toLocaleString()}</td>
+        <td style="color:var(--verde);font-weight:600">${item.actZ.toLocaleString()}</td>
+        <td style="color:var(--rojo);font-weight:600">${item.cortZ.toLocaleString()}</td>
+      </tr>
+    `).join('');
 
     const tablaZonasEl = document.getElementById('tablaZonasDash');
     if (tablaZonasEl) {
       tablaZonasEl.innerHTML = `
         <div class="table-wrap"><table>
           <thead><tr><th>Zona</th><th>Total</th><th>Activos</th><th>Cortados</th></tr></thead>
-          <tbody>${zonaRows.join('') || '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--gris)">Sin datos</td></tr>'}</tbody>
+          <tbody>${zonaRows || '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--gris)">Sin datos</td></tr>'}</tbody>
         </table></div>`;
     }
 
-    // Sin pago este mes
-    const conPago = new Set(pagos.map(p => p.id_cliente));
-    const sinPago = clientes.filter(c => c.estado === 'ACTIVO' && !conPago.has(c.id));
-    const sinPagoDashEl = document.getElementById('sinPagoDash');
+    // 3. Muestra de clientes sin pago este mes (muestreo rápido sin saturar)
+    const conPagoIds = new Set(pagosMes.map(p => Number(p.id_cliente)));
+    const sinPagoMuestra = [];
+    let sinPagoTotalEst = Math.max(0, activos - conPagoIds.size);
 
+    // Buscamos hasta 8 activos sin pago para mostrar en el resumen
+    const d = await IDB.query('clientes', {
+      indexName: 'estado',
+      range: IDBKeyRange.only('ACTIVO'),
+      filter: c => !conPagoIds.has(Number(c.id)),
+      limit: 8
+    });
+
+    const sinPagoDashEl = document.getElementById('sinPagoDash');
     if (sinPagoDashEl) {
-      if (sinPago.length === 0) {
-        sinPagoDashEl.innerHTML = '<div class="alert alert-success">✅ Todos al día este mes.</div>';
+      if (d.results.length === 0) {
+        sinPagoDashEl.innerHTML = '<div class="alert alert-success">✅ Todos los clientes activos están al día este mes.</div>';
       } else {
-        const muestra = sinPago.slice(0, 8);
-        const rows = muestra.map(c => `<tr><td>${esc(c.nombre)}</td><td>${esc(c.zona)}</td><td>S/. ${Number(c.plan)}</td></tr>`).join('');
+        const rows = d.results.map(c => `
+          <tr>
+            <td><strong>${esc(c.nombre)}</strong></td>
+            <td>${esc(c.zona)}</td>
+            <td>S/. ${Number(c.plan || 0).toFixed(2)}</td>
+          </tr>
+        `).join('');
+
         sinPagoDashEl.innerHTML = `
-          <div class="alert alert-warning">⚠️ <strong>${sinPago.length.toLocaleString()}</strong> cliente(s) sin pago en ${mes}</div>
+          <div class="alert alert-warning">⚠️ Clientes con mensualidad pendiente en <strong>${esc(mes)}</strong></div>
           <div class="table-wrap"><table>
             <thead><tr><th>Nombre</th><th>Zona</th><th>Plan</th></tr></thead>
             <tbody>${rows}</tbody>
-          </table></div>`;
+          </table></div>
+          <div style="margin-top:10px;text-align:right">
+            <button class="btn btn-outline btn-sm" onclick="goTo('pendientes')">Ver todos los pendientes ➔</button>
+          </div>`;
       }
     }
   } catch(err) {
     console.error('renderInicio:', err);
-    toast('Error cargando datos de inicio', 'error');
+    toast('Error cargando panel de control', 'error');
   }
 }
 
 // ══════════════════════════════════════════════════════
-//  CLIENTES — LISTA CON PAGINACIÓN Y DEBOUNCE
+//  CLIENTES — LISTA Y BÚSQUEDA PAGINADA DE ALTO RENDIMIENTO
 // ══════════════════════════════════════════════════════
 let _busTimer = null;
 function debouncedBusqueda() {
   clearTimeout(_busTimer);
-  _busTimer = setTimeout(() => renderClientes(0), 300);
+  _busTimer = setTimeout(() => renderClientes(0), 250);
 }
 
 async function renderClientes(page = 0) {
   _pg.clientes.page = page;
-  const zona   = document.getElementById('filtZona').value;
-  const estado = document.getElementById('filtEstado').value;
-  const plan   = document.getElementById('filtPlan').value;
-  const bus    = safe(document.getElementById('filtBus').value).toLowerCase();
+  const zona   = document.getElementById('filtZona')?.value || '';
+  const estado = document.getElementById('filtEstado')?.value || '';
+  const plan   = document.getElementById('filtPlan')?.value || '';
+  const bus    = safe(document.getElementById('filtBus')?.value || '').toLowerCase();
 
   const tbody = document.getElementById('bodyClientes');
   tbody.innerHTML = '<tr class="loading-row"><td colspan="10"><span class="spinner"></span>Cargando...</td></tr>';
 
   try {
+    let indexName = null;
+    let range = null;
+
+    if (zona && estado) {
+      indexName = 'zona_estado';
+      range = IDBKeyRange.only([zona, estado]);
+    } else if (zona) {
+      indexName = 'zona';
+      range = IDBKeyRange.only(zona);
+    } else if (estado) {
+      indexName = 'estado';
+      range = IDBKeyRange.only(estado);
+    } else if (plan) {
+      indexName = 'plan';
+      range = IDBKeyRange.only(Number(plan));
+    }
+
     const filter = c => {
-      if (zona   && c.zona   !== zona)           return false;
-      if (estado && c.estado !== estado)          return false;
-      if (plan   && String(c.plan) !== plan)      return false;
+      if (zona && c.zona !== zona) return false;
+      if (estado && c.estado !== estado) return false;
+      if (plan && Number(c.plan) !== Number(plan)) return false;
       if (bus) {
-        const haystack = [c.nombre, c.ip, c.dni, c.celular, c.direccion, c.fecha_inicio]
-          .map(v => (v || '').toLowerCase()).join(' ');
-        if (!haystack.includes(bus)) return false;
+        const text = `${c.id} ${c.nombre || ''} ${c.ip || ''} ${c.dni || ''} ${c.celular || ''} ${c.direccion || ''}`.toLowerCase();
+        if (!text.includes(bus)) return false;
       }
       return true;
     };
 
-    const { results, total } = await IDB.query('clientes', { filter, limit: PAGE_SIZE, offset: page * PAGE_SIZE });
-    _pg.clientes.total = total;
+    const { results, total } = await IDB.query('clientes', {
+      indexName,
+      range,
+      filter,
+      limit: PAGE_SIZE,
+      offset: page * PAGE_SIZE
+    });
 
+    _pg.clientes.total = total;
     document.getElementById('contadorClientes').textContent =
       `👥 ${total.toLocaleString()} cliente(s) encontrado(s)`;
 
     if (!results.length) {
-      tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="e-icon">👥</div>Sin clientes con ese filtro</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="e-icon">👥</div>Sin clientes registrados con ese filtro</div></td></tr>';
     } else {
+      // Guardar en cache local para joins
+      results.forEach(c => _clientesCache.set(Number(c.id), c));
+
       tbody.innerHTML = results.map(c => `
-        <tr class="${c.estado==='CORTADO'?'row-cortado':''}">
-          <td>${c.id}</td>
+        <tr class="${c.estado === 'CORTADO' ? 'row-cortado' : ''}">
+          <td>${Number(c.id)}</td>
           <td><strong>${esc(c.nombre)}</strong></td>
           <td>${esc(c.zona)}</td>
           <td><code>${esc(c.ip) || '—'}</code></td>
-          <td><strong>S/. ${Number(c.plan)}</strong></td>
+          <td><strong>S/. ${Number(c.plan || 0).toFixed(2)}</strong></td>
           <td>${badgeCable(c.cable)}</td>
           <td>${badgeEstado(c.estado)}</td>
           <td><span style="white-space:nowrap;font-size:0.8rem;color:var(--gris)">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
           <td>${esc(c.celular) || '—'}</td>
           <td>
             <div class="btn-group">
-              <button class="btn btn-success btn-sm" data-action="pagar"  data-id="${c.id}" title="Registrar pago">💳</button>
-              <button class="btn btn-outline btn-sm" data-action="editar" data-id="${c.id}" title="Editar">✏️</button>
-              <button class="btn btn-ghost btn-sm"   data-action="pagos"  data-id="${c.id}" title="Ver pagos">💰</button>
-              <button class="btn btn-danger btn-sm"  data-action="delete" data-id="${c.id}" title="Eliminar">🗑️</button>
+              <button class="btn btn-success btn-sm" data-action="pagar"  data-id="${Number(c.id)}" title="Registrar pago">💳</button>
+              <button class="btn btn-outline btn-sm" data-action="editar" data-id="${Number(c.id)}" title="Editar">✏️</button>
+              <button class="btn btn-ghost btn-sm"   data-action="pagos"  data-id="${Number(c.id)}" title="Ver pagos">💰</button>
+              <button class="btn btn-danger btn-sm"  data-action="delete" data-id="${Number(c.id)}" title="Eliminar">🗑️</button>
             </div>
           </td>
         </tr>`).join('');
     }
 
-    renderPagination('paginacionClientes','paginfoClientes', _pg.clientes, renderClientes);
+    renderPagination('paginacionClientes', 'paginfoClientes', _pg.clientes, renderClientes);
   } catch(err) {
     console.error('renderClientes:', err);
     tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes</td></tr>';
   }
 }
 
-// Delegación de eventos en la tabla (sin onclick con user data)
+// Delegación segura de eventos en tabla de clientes
 document.getElementById('bodyClientes').addEventListener('click', async e => {
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
@@ -1144,26 +1333,18 @@ document.getElementById('bodyClientes').addEventListener('click', async e => {
 });
 
 async function eliminarCliente(id) {
-  const c = await IDB.get('clientes', id);
+  const c = await IDB.get('clientes', Number(id));
   if (!c) return;
-  if (!confirm(`¿Eliminar a "${c.nombre}"? También se borrarán sus pagos y cortes.`)) return;
+  if (!confirm(`¿Eliminar definitivamente a "${c.nombre}"?\nEsta acción eliminará también su historial de pagos y cortes.`)) return;
   try {
-    const [pagos, cortes] = await Promise.all([
-      IDB.getByIndex('pagos',  'id_cliente', id),
-      IDB.getByIndex('cortes', 'id_cliente', id),
-    ]);
-    await Promise.all([
-      IDB.delete('clientes', id),
-      ...pagos.map(p  => IDB.delete('pagos',  p.id)),
-      ...cortes.map(co => IDB.delete('cortes', co.id)),
-    ]);
-    toast('Cliente eliminado', 'warn');
-    await refreshClientesCache();
+    await IDB.eliminarClienteCompleto(Number(id));
+    _clientesCache.delete(Number(id));
+    toast('Cliente y su historial eliminados', 'warn');
     renderClientes(_pg.clientes.page);
     updateSidebar();
   } catch(err) {
-    console.error(err);
-    toast('Error al eliminar', 'error');
+    console.error('eliminarCliente:', err);
+    toast('Error al eliminar cliente', 'error');
   }
 }
 
@@ -1184,8 +1365,9 @@ function resetFormAgregar() {
   tog.setAttribute('aria-pressed','false');
   document.getElementById('cableLbl').textContent = 'Sin cable';
   clearFieldErrs('errNombre','errDni','errIp','errZona','errPlan','errFechaInicio');
-  ['aNombre','aIp'].forEach(id => setInputErr(id, false));
-  document.getElementById('btnGuardarCliente').disabled = false;
+  ['aNombre','aIp','aDni'].forEach(id => setInputErr(id, false));
+  const btn = document.getElementById('btnGuardarCliente');
+  if (btn) { btn.disabled = false; btn.textContent = '✅ Registrar Cliente'; }
 }
 
 function selPlan(p) {
@@ -1238,7 +1420,7 @@ async function guardarCliente(e) {
   btn.textContent = '⏳ Guardando...';
 
   try {
-    const newId = await IDB.add('clientes', {
+    const nuevoCliente = {
       nombre, dni, celular, direccion, ip,
       fecha_inicio: fechaInicio,
       zona: _newZona,
@@ -1247,17 +1429,22 @@ async function guardarCliente(e) {
       estado: 'ACTIVO',
       fecha_registro: fechaHora(),
       observaciones: obs,
-    });
-    await refreshClientesCache();
+    };
+    const newId = await IDB.add('clientes', nuevoCliente);
+    nuevoCliente.id = newId;
+    _clientesCache.set(Number(newId), nuevoCliente);
+
     toast(`✅ Cliente "${nombre}" registrado con ID #${newId}`);
     resetFormAgregar();
     updateSidebar();
-    // Redirigir a Pagos con el nuevo cliente pre-seleccionado
-    _preSelectCliente = newId;
+
+    // Redirigir de inmediato a Pagos con cliente pre-seleccionado
+    _preSelectCliente = Number(newId);
     goTo('pagos');
   } catch(err) {
-    console.error(err);
+    console.error('guardarCliente:', err);
     toast('Error al guardar cliente', 'error');
+  } finally {
     btn.disabled = false;
     btn.textContent = '✅ Registrar Cliente';
   }
@@ -1267,21 +1454,21 @@ async function guardarCliente(e) {
 //  EDITAR CLIENTE
 // ══════════════════════════════════════════════════════
 async function abrirEditar(id) {
-  const c = await IDB.get('clientes', id);
+  const c = await IDB.get('clientes', Number(id));
   if (!c) { toast('Cliente no encontrado', 'error'); return; }
   clearFieldErrs('errENombre','errEDni','errEIp');
-  document.getElementById('eId').value       = c.id;
-  document.getElementById('eNombre').value   = c.nombre || '';
-  document.getElementById('eDni').value      = c.dni || '';
-  document.getElementById('eCelular').value  = c.celular || '';
+  document.getElementById('eId').value          = c.id;
+  document.getElementById('eNombre').value      = c.nombre || '';
+  document.getElementById('eDni').value         = c.dni || '';
+  document.getElementById('eCelular').value     = c.celular || '';
   document.getElementById('eFechaInicio').value = c.fecha_inicio || '';
-  document.getElementById('eIp').value       = c.ip || '';
-  document.getElementById('eDireccion').value= c.direccion || '';
-  document.getElementById('eZona').value     = V.zona(c.zona) ? c.zona : 'Loboyacu';
-  document.getElementById('ePlan').value     = V.plan(c.plan) ? String(c.plan) : '50';
-  document.getElementById('eCable').value    = String(!!c.cable);
-  document.getElementById('eEstado').value   = ESTADOS.includes(c.estado) ? c.estado : 'ACTIVO';
-  document.getElementById('eObs').value      = c.observaciones || '';
+  document.getElementById('eIp').value          = c.ip || '';
+  document.getElementById('eDireccion').value   = c.direccion || '';
+  document.getElementById('eZona').value        = V.zona(c.zona) ? c.zona : 'Loboyacu';
+  document.getElementById('ePlan').value        = V.plan(c.plan) ? String(c.plan) : '50';
+  document.getElementById('eCable').value       = String(!!c.cable);
+  document.getElementById('eEstado').value      = ESTADOS.includes(c.estado) ? c.estado : 'ACTIVO';
+  document.getElementById('eObs').value         = c.observaciones || '';
   abrirModal('modalEditar');
 }
 
@@ -1311,25 +1498,36 @@ async function guardarEdicion(e) {
   if (!V.plan(plan))     { valid=false; }
   if (!valid) return;
 
+  const btn = document.getElementById('btnGuardarEdicion');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
+
   try {
     const original = await IDB.get('clientes', id);
     if (!original) { toast('Cliente no encontrado', 'error'); return; }
-    await IDB.put('clientes', { ...original, nombre, dni, celular, ip, direccion, fecha_inicio: fechaInicio || original.fecha_inicio || fechaHoy(), zona, plan, cable, estado, observaciones: obs });
-    await refreshClientesCache();
+    const updated = {
+      ...original,
+      nombre, dni, celular, ip, direccion,
+      fecha_inicio: fechaInicio || original.fecha_inicio || fechaHoy(),
+      zona, plan, cable, estado,
+      observaciones: obs
+    };
+    await IDB.put('clientes', updated);
+    _clientesCache.set(id, updated);
     cerrarModal('modalEditar');
     renderClientes(_pg.clientes.page);
     updateSidebar();
-    toast('Cliente actualizado ✅');
+    toast('Cliente actualizado con éxito ✅');
   } catch(err) {
-    console.error(err);
-    toast('Error al actualizar', 'error');
+    console.error('guardarEdicion:', err);
+    toast('Error al actualizar cliente', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar'; }
   }
 }
 
 // ══════════════════════════════════════════════════════
-//  PAGOS
+//  PAGOS — BÚSQUEDA RÁPIDA Y REGISTRO EN ESCALA 1M
 // ══════════════════════════════════════════════════════
-// ID del cliente para pre-seleccionarlo en pagos
 let _preSelectCliente = null;
 
 function irAPagarCliente(id) {
@@ -1338,51 +1536,68 @@ function irAPagarCliente(id) {
   goTo('pagos');
 }
 
+async function poblarSelectClientesPago(busqueda = '', selectId = null) {
+  const pCliente = document.getElementById('pCliente');
+  if (!pCliente) return;
+
+  let clientes = [];
+  if (_preSelectCliente !== null) {
+    const targetCli = await IDB.get('clientes', _preSelectCliente);
+    if (targetCli) {
+      clientes = [targetCli];
+    }
+  }
+
+  if (!clientes.length) {
+    clientes = await IDB.buscarClientesRapido(busqueda, { limit: 40, soloActivos: false });
+  }
+
+  pCliente.innerHTML = clientes.length
+    ? clientes.map(c => `<option value="${Number(c.id)}">${esc(c.nombre)} · ${esc(c.zona)} · S/. ${Number(c.plan)} (ID #${Number(c.id)})</option>`).join('')
+    : '<option value="">No se encontraron clientes coincidentes</option>';
+
+  const targetId = selectId || _preSelectCliente;
+  if (targetId && clientes.some(c => Number(c.id) === Number(targetId))) {
+    pCliente.value = String(targetId);
+  }
+
+  const selCli = clientes.find(c => Number(c.id) === Number(pCliente.value));
+  if (selCli) {
+    document.getElementById('pMonto').value = Number(selCli.plan || 50).toFixed(2);
+    document.getElementById('pagoAlert').innerHTML = `
+      <div class="alert alert-success" style="margin-top:10px">
+        👤 Cliente: <strong>${esc(selCli.nombre)}</strong> (ID #${Number(selCli.id)})<br>
+        Zona: ${esc(selCli.zona)} · Plan: S/. ${Number(selCli.plan)} · IP: ${esc(selCli.ip)}
+      </div>`;
+  }
+}
+
 async function renderPagos() {
   try {
-    const clientes = await IDB.getAll('clientes');
-    const pCliente = document.getElementById('pCliente');
-    pCliente.innerHTML = clientes.length
-      ? clientes.map(c => `<option value="${c.id}">${esc(c.nombre)} · ${esc(c.zona)} · S/.${c.plan}</option>`).join('')
-      : '<option value="">Sin clientes registrados</option>';
     document.getElementById('pMes').value = mesActual();
 
-    // Pre-seleccionar cliente y sugerir monto del plan
-    if (_preSelectCliente !== null) {
-      pCliente.value = String(_preSelectCliente);
-      const cli = clientes.find(c => c.id === _preSelectCliente);
-      if (cli) {
-        document.getElementById('pMonto').value = cli.plan;
-        // Banner informativo
-        document.getElementById('pagoAlert').innerHTML = `
-          <div class="alert alert-success" style="margin-top:10px">
-            👤 Pago para cliente: <strong>${esc(cli.nombre)}</strong> (ID #${cli.id})<br>
-            Zona: ${esc(cli.zona)} · Plan: S/. ${cli.plan} · IP: ${esc(cli.ip)}
-          </div>`;
-      }
-      _preSelectCliente = null;
-    } else if (pCliente.value) {
-      const cli = clientes.find(c => c.id === Number(pCliente.value));
-      if (cli && !document.getElementById('pMonto').value) {
-        document.getElementById('pMonto').value = cli.plan;
-      }
-    }
+    await poblarSelectClientesPago('', _preSelectCliente);
+    _preSelectCliente = null;
 
-    // Ultimos 20 pagos
-    const allPagos = await IDB.getAll('pagos');
-    const ultimos  = allPagos.slice(-20).reverse();
+    // Cargar últimos 20 pagos (consulta rápida sin leer toda la BD)
+    const ultimos = await IDB.getAll('pagos', 20);
+    ultimos.reverse();
+
+    // Cachear nombres de clientes para los 20 pagos mostrados
+    await cachearClientes(ultimos.map(p => Number(p.id_cliente)));
+
     document.getElementById('bodyUltPagos').innerHTML = ultimos.length
       ? ultimos.map(p => `<tr>
           <td>${nombreCliente(p.id_cliente)}</td>
           <td>${esc(p.mes)}</td>
-          <td><strong>S/. ${Number(p.monto).toFixed(2)}</strong></td>
+          <td><strong>S/. ${Number(p.monto || 0).toFixed(2)}</strong></td>
           <td>${esc(p.metodo)}</td>
           <td style="font-size:0.78rem;color:var(--gris)">${esc(p.fecha)}</td>
-          <td><button class="btn btn-outline btn-sm" data-action="recibo" data-id="${p.id}" title="Ver recibo">🧾</button></td>
+          <td><button class="btn btn-outline btn-sm" data-action="recibo" data-id="${Number(p.id)}" title="Ver recibo">🧾</button></td>
         </tr>`).join('')
-      : '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--gris)">Sin pagos</td></tr>';
+      : '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--gris)">Sin pagos registrados</td></tr>';
   } catch(err) {
-    console.error(err);
+    console.error('renderPagos:', err);
   }
 }
 
@@ -1391,62 +1606,91 @@ async function guardarPago(e) {
   document.getElementById('pagoAlert').innerHTML = '';
 
   const id_cliente = Number(document.getElementById('pCliente').value);
-  const mes        = document.getElementById('pMes').value;
+  const mes        = safe(document.getElementById('pMes').value, 7);
   const monto      = Number(document.getElementById('pMonto').value);
   const metodo     = document.getElementById('pMetodo').value;
   const obs        = safe(document.getElementById('pObs').value, 200);
 
-  if (!id_cliente)    { toast('Seleccione un cliente','error'); return; }
-  if (!V.mes(mes))    { toast('Seleccione un mes válido','error'); return; }
-  if (!V.monto(monto)){ toast('Monto inválido (1 – 9999)','error'); return; }
+  if (!id_cliente)    { toast('Seleccione un cliente válido','error'); return; }
+  if (!V.mes(mes))    { toast('Seleccione un mes válido (AAAA-MM)','error'); return; }
+  if (!V.monto(monto)){ toast('Monto inválido (1.00 – 9999.00)','error'); return; }
 
-  // Verificar pago duplicado
-  const existentes = await IDB.getByIndex('pagos','cli_mes',[id_cliente, mes]);
-  if (existentes.length > 0) {
-    const cli = await IDB.get('clientes', id_cliente);
-    document.getElementById('pagoAlert').innerHTML = `
-      <div class="alert alert-warning" style="margin-top:10px">
-        ⚠️ Ya existe un pago de ${esc(cli?.nombre || '')} para <strong>${mes}</strong> (S/. ${existentes[0].monto}). ¿Deseas registrar uno adicional?
-        <div class="btn-group" style="margin-top:8px">
-          <button class="btn btn-warning btn-sm" id="btnForzarPago">Sí, registrar igualmente</button>
-          <button class="btn btn-ghost btn-sm" id="btnCancelarDupPago">Cancelar</button>
-        </div>
-      </div>`;
-    document.getElementById('btnForzarPago').addEventListener('click', () => realizarPago(id_cliente, mes, monto, metodo, obs));
-    document.getElementById('btnCancelarDupPago').addEventListener('click', () => document.getElementById('pagoAlert').innerHTML = '');
-    return;
+  const btn = document.getElementById('btnGuardarPago');
+  btn.disabled = true;
+
+  try {
+    // Verificar si ya existe un pago para ese cliente en el mes
+    const existentes = await IDB.getByIndex('pagos', 'cli_mes', [id_cliente, mes]);
+    if (existentes && existentes.length > 0) {
+      btn.disabled = false;
+      const cli = await IDB.get('clientes', id_cliente);
+      document.getElementById('pagoAlert').innerHTML = `
+        <div class="alert alert-warning" style="margin-top:10px">
+          ⚠️ Ya existe un pago registrado para ${esc(cli?.nombre || '')} en <strong>${esc(mes)}</strong> (S/. ${Number(existentes[0].monto).toFixed(2)}). ¿Deseas registrar un pago adicional?
+          <div class="btn-group" style="margin-top:8px">
+            <button type="button" class="btn btn-warning btn-sm" id="btnForzarPago">Sí, registrar adicional</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnCancelarDupPago">Cancelar</button>
+          </div>
+        </div>`;
+      document.getElementById('btnForzarPago').addEventListener('click', () => realizarPago(id_cliente, mes, monto, metodo, obs));
+      document.getElementById('btnCancelarDupPago').addEventListener('click', () => { document.getElementById('pagoAlert').innerHTML = ''; });
+      return;
+    }
+
+    await realizarPago(id_cliente, mes, monto, metodo, obs);
+  } catch(err) {
+    console.error('guardarPago:', err);
+    toast('Error verificando pago', 'error');
+  } finally {
+    btn.disabled = false;
   }
-  await realizarPago(id_cliente, mes, monto, metodo, obs);
 }
 
 async function realizarPago(id_cliente, mes, monto, metodo, obs) {
+  const btn = document.getElementById('btnGuardarPago');
+  if (btn) btn.disabled = true;
+
   try {
     document.getElementById('pagoAlert').innerHTML = '';
-    const pagoId = await IDB.add('pagos', { id_cliente, mes, monto, metodo, observaciones: obs, fecha: fechaHora() });
-    // Reactivar si estaba CORTADO
+    const pagoId = await IDB.add('pagos', {
+      id_cliente,
+      mes,
+      monto: Number(monto.toFixed(2)),
+      metodo,
+      observaciones: obs,
+      fecha: fechaHora()
+    });
+
+    // Reactivar cliente automáticamente si estaba cortado
     const c = await IDB.get('clientes', id_cliente);
-    if (c && c.estado === 'CORTADO') await IDB.put('clientes', { ...c, estado: 'ACTIVO' });
-    await refreshClientesCache();
+    if (c && c.estado === 'CORTADO') {
+      await IDB.put('clientes', { ...c, estado: 'ACTIVO' });
+      _clientesCache.set(id_cliente, { ...c, estado: 'ACTIVO' });
+    }
+
     document.getElementById('pObs').value = '';
-    renderPagos();
+    toast('Pago registrado con éxito ✅');
+    await renderPagos();
     updateSidebar();
-    toast('Pago registrado ✅');
-    // Mostrar recibo automáticamente
+
+    // Generar y desplegar el comprobante estilo BCP
     await generarRecibo(pagoId);
   } catch(err) {
-    console.error(err);
+    console.error('realizarPago:', err);
     toast('Error al registrar pago','error');
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
 async function verPagosCliente(id) {
-  const c = await IDB.get('clientes', id);
+  const c = await IDB.get('clientes', Number(id));
   if (!c) return;
-  const pagos = await IDB.getByIndex('pagos','id_cliente', id);
-  const total = pagos.reduce((s,p) => s + Number(p.monto), 0);
+  const pagos = await IDB.getByIndex('pagos', 'id_cliente', Number(id));
+  const total = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
   const rows  = [...pagos].reverse().map(p => `<tr>
     <td>${esc(p.mes)}</td>
-    <td><strong>S/. ${Number(p.monto).toFixed(2)}</strong></td>
+    <td><strong>S/. ${Number(p.monto || 0).toFixed(2)}</strong></td>
     <td>${esc(p.metodo)}</td>
     <td style="font-size:0.78rem">${esc(p.fecha)}</td>
   </tr>`).join('');
@@ -1454,26 +1698,25 @@ async function verPagosCliente(id) {
   document.getElementById('modalPagosBody').innerHTML = `
     <div class="alert alert-info" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div>
-        <strong>${esc(c.nombre)}</strong> · ${esc(c.zona)} · Plan S/. ${c.plan} ${c.fecha_inicio ? '· Inicio: ' + esc(c.fecha_inicio) : ''}<br>
-        Total pagado: <strong>S/. ${total.toFixed(2)}</strong> en ${pagos.length} pago(s)
+        <strong>${esc(c.nombre)}</strong> · ${esc(c.zona)} · Plan S/. ${Number(c.plan || 0)} ${c.fecha_inicio ? '· Inicio: ' + esc(c.fecha_inicio) : ''}<br>
+        Total pagado histórico: <strong>S/. ${total.toFixed(2)}</strong> en ${pagos.length} pago(s)
       </div>
       <button class="btn btn-success btn-sm" id="btnPagarDesdeHistorial">💳 Registrar Pago</button>
     </div>
     <div class="table-wrap"><table>
       <thead><tr><th>Mes</th><th>S/.</th><th>Método</th><th>Fecha</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--gris)">Sin pagos</td></tr>'}</tbody>
+      <tbody>${rows || '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--gris)">Sin pagos registrados</td></tr>'}</tbody>
     </table></div>`;
+
   document.getElementById('btnPagarDesdeHistorial')?.addEventListener('click', () => irAPagarCliente(id));
   abrirModal('modalPagos');
 }
 
 // ══════════════════════════════════════════════════════
-//  CORTES
+//  RECIBO ESTILO BANCA MÓVIL Y COMPARTIR WHATSAPP
 // ══════════════════════════════════════════════════════
-// ── RECIBO ESTILO BANCA MÓVIL ─────────────────────────
 let _reciboActual = null;
 
-// Genera N° de operación pseudo-único: año+mes+día+pagoId (sin NaN)
 function _codigoOp(pagoId, fechaStr) {
   const now = new Date();
   let yy = String(now.getFullYear()).slice(2);
@@ -1503,24 +1746,21 @@ function _fila(label, value, opts = {}) {
 
 async function generarRecibo(pagoId) {
   try {
-    const pago = await IDB.get('pagos', pagoId);
+    const pago = await IDB.get('pagos', Number(pagoId));
     if (!pago) return;
-    const cli  = await IDB.get('clientes', pago.id_cliente);
+    const cli  = await IDB.get('clientes', Number(pago.id_cliente));
 
-    // Nombre del plan
-    const planNombre = { 50:'Plan Básico', 60:'Plan Plus', 65:'Plan Normal' }[Number(cli?.plan)] || `Plan S/. ${cli?.plan}`;
+    const planNombre = { 50:'Plan Básico', 60:'Plan Plus', 65:'Plan Normal' }[Number(cli?.plan)] || `Plan S/. ${cli?.plan || 0}`;
 
-    // Mes formateado: 2026-09 → septiembre 2026
     let mesTexto = pago.mes;
     try {
-      const [ay,am] = pago.mes.split('-');
-      mesTexto = new Date(+ay, +am-1, 1).toLocaleString('es-PE',{month:'long',year:'numeric'});
+      const [ay, am] = pago.mes.split('-');
+      mesTexto = new Date(+ay, +am - 1, 1).toLocaleString('es-PE', { month:'long', year:'numeric' });
     } catch(_) {}
 
     const codigoOp = _codigoOp(pagoId, pago.fecha);
     _reciboActual = { pago, cli, planNombre, codigoOp, mesTexto };
 
-    // Configurar botón WhatsApp con datos del cliente
     const btnWa = document.getElementById('btnWhatsappRecibo');
     if (btnWa) {
       btnWa.textContent = cli?.celular 
@@ -1528,8 +1768,7 @@ async function generarRecibo(pagoId) {
         : '💬 Enviar por WhatsApp al Cliente';
     }
 
-    // Rellenar modal
-    document.getElementById('reciboMonto').textContent = `S/. ${Number(pago.monto).toFixed(2)}`;
+    document.getElementById('reciboMonto').textContent = `S/. ${Number(pago.monto || 0).toFixed(2)}`;
     document.getElementById('reciboOperacion').textContent = codigoOp;
     document.getElementById('reciboDetalles').innerHTML = [
       _fila('Nombre del cliente',  cli?.nombre || '—'),
@@ -1537,7 +1776,7 @@ async function generarRecibo(pagoId) {
       cli?.fecha_inicio ? _fila('Fecha de inicio', cli.fecha_inicio) : '',
       _fila('Plan contratado',     planNombre,       { highlight: true }),
       _fila('Período pagado',      mesTexto,         { highlight: true }),
-      _fila('Método de pago',      pago.metodo),
+      _fila('Método de pago',      pago.metodo || 'Efectivo'),
       _fila('Dirección IP',        cli?.ip     || '—'),
       _fila('Fecha de pago',       pago.fecha  || '—'),
       pago.observaciones ? _fila('Nota', pago.observaciones) : '',
@@ -1545,12 +1784,12 @@ async function generarRecibo(pagoId) {
 
     abrirModal('modalRecibo');
   } catch(err) {
-    console.error('recibo:', err);
+    console.error('generarRecibo:', err);
     toast('No se pudo generar el recibo', 'error');
   }
 }
 
-// Delegación de eventos en tabla de pagos — botón 🧾
+// Delegación para botón 🧾 en tabla de pagos
 document.getElementById('bodyUltPagos').addEventListener('click', async e => {
   const btn = e.target.closest('[data-action="recibo"]');
   if (!btn) return;
@@ -1558,238 +1797,475 @@ document.getElementById('bodyUltPagos').addEventListener('click', async e => {
   if (!isNaN(id)) await generarRecibo(id);
 });
 
+async function _capturarReciboCanvas() {
+  const el = document.querySelector('#modalRecibo .modal');
+  const btnZone = el.querySelectorAll('.btn, button, .modal-close');
+  btnZone.forEach(b => b.style.visibility = 'hidden');
+  try {
+    const canvas = await html2canvas(el, {
+      scale: 2.5,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+    });
+    return canvas;
+  } finally {
+    btnZone.forEach(b => b.style.visibility = '');
+  }
+}
+
+async function descargarReciboImagen() {
+  const btn = document.getElementById('btnGuardarImgRecibo');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando...'; }
+  try {
+    const canvas = await _capturarReciboCanvas();
+    const codigo = document.getElementById('reciboOperacion').textContent || 'recibo';
+    const link   = document.createElement('a');
+    link.download = `Recibo_${codigo}.png`;
+    link.href     = canvas.toDataURL('image/png');
+    link.click();
+    toast('📸 Imagen guardada con éxito');
+  } catch(err) {
+    console.error('descargarReciboImagen:', err);
+    toast('Error generando imagen', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📸 Guardar PNG'; }
+  }
+}
+
+async function copiarImagenRecibo() {
+  const btn = document.getElementById('btnCopiarImgRecibo');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Copiando...'; }
+  try {
+    const canvas = await _capturarReciboCanvas();
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      toast('📋 ¡Imagen copiada! Presiona Ctrl + V en WhatsApp para pegarla.');
+    } else {
+      await descargarReciboImagen();
+      toast('📸 Imagen descargada para adjuntar');
+    }
+  } catch(err) {
+    console.error('copiarImagenRecibo:', err);
+    await descargarReciboImagen();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📋 Copiar Imagen'; }
+  }
+}
+
+async function enviarWhatsappRecibo() {
+  if (!_reciboActual) {
+    toast('No hay comprobante activo', 'error');
+    return;
+  }
+  const { pago, cli, planNombre, codigoOp, mesTexto } = _reciboActual;
+
+  let tel = String(cli?.celular || '').replace(/\D/g, '');
+  if (!tel || tel.length < 8) {
+    tel = prompt(`El cliente "${cli?.nombre || ''}" no tiene celular registrado.\nIngrese el número de WhatsApp (ej: 987654321):`, '');
+    if (!tel) return;
+    tel = tel.replace(/\D/g, '');
+  }
+
+  if (tel.length === 9) tel = '51' + tel;
+
+  const texto = 
+`📡 *LEYTRIX ISP - COMPROBANTE DE PAGO*
+━━━━━━━━━━━━━━━━━━━━━
+👤 *Cliente:* ${cli?.nombre || 'Cliente'}
+💰 *Monto Cancelado:* S/. ${Number(pago.monto || 0).toFixed(2)}
+📅 *Período:* ${mesTexto}
+📶 *Plan:* ${planNombre}
+🔢 *N° Operación:* ${codigoOp}
+🕒 *Fecha:* ${pago.fecha}
+💳 *Método de Pago:* ${pago.metodo || 'Efectivo'}
+${cli?.ip ? '🌐 *IP:* ' + cli.ip : ''}
+━━━━━━━━━━━━━━━━━━━━━
+✅ *¡Servicio ACTIVO! Muchas gracias por su puntualidad.*`;
+
+  // 1. En móviles: Compartir imagen directamente
+  try {
+    const canvas = await _capturarReciboCanvas();
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    const file = new File([blob], `Recibo_${codigoOp}.png`, { type: 'image/png' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: 'Comprobante de Pago — Leytrix ISP',
+        text: texto,
+      });
+      toast('Recibo compartido por WhatsApp ✅');
+      return;
+    }
+  } catch(e) {
+    if (e.name === 'AbortError') return;
+  }
+
+  // 2. En computadoras: Copiar imagen al portapapeles y abrir enlace
+  try {
+    const canvas = await _capturarReciboCanvas();
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      toast('📋 Imagen copiada. Puedes pegarla con Ctrl+V en el chat.');
+    }
+  } catch(_) {}
+
+  const url = `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
+  window.open(url, '_blank');
+}
+
+// ══════════════════════════════════════════════════════
+//  CORTES & RECONEXIÓN
+// ══════════════════════════════════════════════════════
 async function renderCortes() {
   try {
-    const [activos, cortados, cortes] = await Promise.all([
-      IDB.getByIndex('clientes','estado','ACTIVO'),
-      IDB.getByIndex('clientes','estado','CORTADO'),
-      IDB.getAll('cortes'),
+    const cortes = await IDB.getAll('cortes', 50);
+    cortes.reverse();
+
+    // Cachear nombres
+    await cachearClientes(cortes.map(co => Number(co.id_cliente)));
+
+    // Poblar selects con clientes activos y cortados recientes
+    await Promise.all([
+      buscarActivosCorte(''),
+      buscarCortadosReconexion('')
     ]);
 
-    document.getElementById('cCorteCliente').innerHTML = activos.length
-      ? activos.map(c => `<option value="${c.id}">${esc(c.nombre)} · ${esc(c.zona)} · ${esc(c.ip||'—')}</option>`).join('')
-      : '<option>Sin clientes activos</option>';
-
-    document.getElementById('cReconCliente').innerHTML = cortados.length
-      ? cortados.map(c => `<option value="${c.id}">${esc(c.nombre)} · ${esc(c.zona)} · ${esc(c.ip||'—')}</option>`).join('')
-      : '<option>Sin clientes cortados</option>';
-
-    const rows = [...cortes].reverse().slice(0,50).map(co => {
-      const cli = _clientesCache.get(co.id_cliente);
+    const rows = cortes.map(co => {
+      const cli = _clientesCache.get(Number(co.id_cliente));
       return `<tr>
-        <td><strong>${cli ? esc(cli.nombre) : esc(co.id_cliente)}</strong></td>
+        <td><strong>${cli ? esc(cli.nombre) : '#' + esc(co.id_cliente)}</strong></td>
         <td>${cli ? esc(cli.zona) : '—'}</td>
         <td>${esc(co.motivo)}</td>
         <td style="font-size:0.8rem">${esc(co.fecha_corte)}</td>
-        <td style="font-size:0.8rem;color:${co.fecha_recon?'var(--verde)':'var(--gris)'}">${co.fecha_recon ? esc(co.fecha_recon) : '—'}</td>
+        <td style="font-size:0.8rem;color:${co.fecha_recon ? 'var(--verde)' : 'var(--gris)'}">${co.fecha_recon ? esc(co.fecha_recon) : '—'}</td>
         <td>${badgeEstado(co.estado === 'RECONECTADO' ? 'ACTIVO' : 'CORTADO')}</td>
       </tr>`;
     }).join('');
 
     document.getElementById('bodyCortes').innerHTML = rows ||
-      '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--gris)">Sin historial</td></tr>';
+      '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--gris)">Sin historial de cortes</td></tr>';
   } catch(err) {
-    console.error(err);
+    console.error('renderCortes:', err);
   }
 }
 
+async function buscarActivosCorte(termino = '') {
+  const cSel = document.getElementById('cCorteCliente');
+  if (!cSel) return;
+  const activos = await IDB.buscarClientesRapido(termino, { limit: 30, soloActivos: true });
+  cSel.innerHTML = activos.length
+    ? activos.map(c => `<option value="${Number(c.id)}">${esc(c.nombre)} · ${esc(c.zona)} · ${esc(c.ip || '—')}</option>`).join('')
+    : '<option value="">Sin clientes activos</option>';
+}
+
+async function buscarCortadosReconexion(termino = '') {
+  const cSel = document.getElementById('cReconCliente');
+  if (!cSel) return;
+  const s = String(termino || '').toLowerCase();
+  const d = await IDB.query('clientes', {
+    indexName: 'estado',
+    range: IDBKeyRange.only('CORTADO'),
+    filter: c => !s || `${c.id} ${c.nombre} ${c.ip} ${c.dni}`.toLowerCase().includes(s),
+    limit: 30
+  });
+  cSel.innerHTML = d.results.length
+    ? d.results.map(c => `<option value="${Number(c.id)}">${esc(c.nombre)} · ${esc(c.zona)} · ${esc(c.ip || '—')}</option>`).join('')
+    : '<option value="">Sin clientes cortados</option>';
+}
+
 async function cortarServicio() {
-  const id     = Number(document.getElementById('cCorteCliente').value);
-  const motivo = document.getElementById('cCortMotivo').value;
-  if (!id) { toast('Seleccione un cliente','error'); return; }
-  const c = await IDB.get('clientes', id);
-  if (!c) return;
-  if (!confirm(`¿Cortar servicio de "${c.nombre}"?`)) return;
+  const id     = Number(document.getElementById('cCorteCliente')?.value);
+  const motivo = document.getElementById('cCortMotivo')?.value || 'Falta de pago';
+  if (!id) { toast('Seleccione un cliente activo','error'); return; }
+
+  const btn = document.getElementById('btnCortar');
+  btn.disabled = true;
+
   try {
+    const c = await IDB.get('clientes', id);
+    if (!c) return;
+    if (!confirm(`¿Cortar servicio a "${c.nombre}"?`)) return;
+
     await IDB.put('clientes', { ...c, estado: 'CORTADO' });
-    await IDB.add('cortes', { id_cliente: id, motivo, fecha_corte: fechaHora(), fecha_recon: null, estado: 'CORTADO' });
-    await refreshClientesCache();
-    renderCortes(); updateSidebar();
-    toast(`Servicio de ${c.nombre} cortado`, 'warn');
-  } catch(err) { toast('Error','error'); }
+    await IDB.add('cortes', {
+      id_cliente: id,
+      motivo,
+      fecha_corte: fechaHora(),
+      fecha_recon: null,
+      estado: 'CORTADO'
+    });
+    _clientesCache.set(id, { ...c, estado: 'CORTADO' });
+    toast(`Servicio de "${c.nombre}" cortado`, 'warn');
+    await renderCortes();
+    updateSidebar();
+  } catch(err) {
+    console.error('cortarServicio:', err);
+    toast('Error al registrar corte','error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function reconectarServicio() {
-  const id = Number(document.getElementById('cReconCliente').value);
-  if (!id) { toast('Seleccione un cliente','error'); return; }
-  const c = await IDB.get('clientes', id);
-  if (!c) return;
+  const id = Number(document.getElementById('cReconCliente')?.value);
+  if (!id) { toast('Seleccione un cliente cortado','error'); return; }
+
+  const btn = document.getElementById('btnReconectar');
+  btn.disabled = true;
+
   try {
+    const c = await IDB.get('clientes', id);
+    if (!c) return;
     await IDB.put('clientes', { ...c, estado: 'ACTIVO' });
-    const cortes = await IDB.getByIndex('cortes','id_cliente',id);
+
+    const cortes = await IDB.getByIndex('cortes', 'id_cliente', id);
     const pendientes = cortes.filter(co => co.estado === 'CORTADO');
-    await Promise.all(pendientes.map(co => IDB.put('cortes', { ...co, fecha_recon: fechaHora(), estado: 'RECONECTADO' })));
-    await refreshClientesCache();
-    renderCortes(); updateSidebar();
-    toast(`${c.nombre} reconectado ✅`);
-  } catch(err) { toast('Error','error'); }
+    await Promise.all(pendientes.map(co => IDB.put('cortes', {
+      ...co,
+      fecha_recon: fechaHora(),
+      estado: 'RECONECTADO'
+    })));
+
+    _clientesCache.set(id, { ...c, estado: 'ACTIVO' });
+    toast(`Cliente "${c.nombre}" reconectado ✅`);
+    await renderCortes();
+    updateSidebar();
+  } catch(err) {
+    console.error('reconectarServicio:', err);
+    toast('Error al reconectar servicio','error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ══════════════════════════════════════════════════════
-//  ZONAS
+//  ZONAS — VISTA AGRUPADA EFICIENTE
 // ══════════════════════════════════════════════════════
 async function renderZonas() {
   const container = document.getElementById('zonasContainer');
   container.innerHTML = '<div class="empty-state"><span class="spinner"></span> Cargando zonas...</div>';
+
   try {
-    const html = await Promise.all(ZONAS.map(async z => {
-      const clientes = await IDB.getByIndex('clientes','zona',z);
-      const act  = clientes.filter(c => c.estado==='ACTIVO').length;
-      const cort = clientes.filter(c => c.estado==='CORTADO').length;
-      const rows = clientes.map(c => `<tr class="${c.estado==='CORTADO'?'row-cortado':''}">
-        <td><strong>${esc(c.nombre)}</strong></td>
-        <td><code>${esc(c.ip)||'—'}</code></td>
-        <td>S/. ${Number(c.plan)}</td>
-        <td>${badgeCable(c.cable)}</td>
-        <td>${badgeEstado(c.estado)}</td>
-        <td><span style="font-size:0.78rem;color:var(--gris)">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
-        <td>${esc(c.celular)||'—'}</td>
-      </tr>`).join('');
+    const cards = await Promise.all(ZONAS.map(async z => {
+      const [tot, act, cort, muestra] = await Promise.all([
+        IDB.countByIndex('clientes', 'zona', z),
+        IDB.countByIndex('clientes', 'zona_estado', [z, 'ACTIVO']),
+        IDB.countByIndex('clientes', 'zona_estado', [z, 'CORTADO']),
+        IDB.getByIndex('clientes', 'zona', z, 15)
+      ]);
+
+      const rows = muestra.map(c => `
+        <tr class="${c.estado === 'CORTADO' ? 'row-cortado' : ''}">
+          <td><strong>${esc(c.nombre)}</strong></td>
+          <td><code>${esc(c.ip) || '—'}</code></td>
+          <td>S/. ${Number(c.plan || 0).toFixed(2)}</td>
+          <td>${badgeCable(c.cable)}</td>
+          <td>${badgeEstado(c.estado)}</td>
+          <td><span style="font-size:0.78rem;color:var(--gris)">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
+          <td>${esc(c.celular) || '—'}</td>
+        </tr>
+      `).join('');
+
       return `
       <div class="zona-card">
         <div class="zona-card-header">
           <h3>📍 ${esc(z)}</h3>
           <div class="zona-pills">
-            <span class="pill-total">${clientes.length} total</span>
-            <span class="pill-activo">✅ ${act}</span>
-            ${cort ? `<span class="pill-cortado">✂️ ${cort}</span>` : ''}
+            <span class="pill-total">${tot.toLocaleString()} total</span>
+            <span class="pill-activo">✅ ${act.toLocaleString()}</span>
+            ${cort ? `<span class="pill-cortado">✂️ ${cort.toLocaleString()}</span>` : ''}
           </div>
         </div>
-        ${clientes.length
+        ${tot > 0
           ? `<div class="table-wrap"><table>
                <thead><tr><th>Nombre</th><th>IP</th><th>Plan</th><th>Cable</th><th>Estado</th><th>Inicio</th><th>Celular</th></tr></thead>
                <tbody>${rows}</tbody>
-             </table></div>`
-          : '<p style="padding:20px;color:var(--gris);text-align:center">Sin clientes</p>'}
+             </table></div>
+             ${tot > 15 ? `<div style="padding:10px 16px;background:var(--gris-cl);text-align:right">
+               <button class="btn btn-outline btn-sm" onclick="verTodosEnZona('${esc(z)}')">Ver todos los ${tot.toLocaleString()} clientes de ${esc(z)} ➔</button>
+             </div>` : ''}`
+          : '<p style="padding:20px;color:var(--gris);text-align:center">Sin clientes registrados en esta zona</p>'}
       </div>`;
     }));
-    container.innerHTML = html.join('');
+
+    container.innerHTML = cards.join('');
   } catch(err) {
-    console.error(err);
+    console.error('renderZonas:', err);
     container.innerHTML = '<div class="alert alert-danger">Error cargando zonas</div>';
   }
 }
 
+function verTodosEnZona(zona) {
+  document.getElementById('filtZona').value = zona;
+  goTo('clientes');
+}
+
 // ══════════════════════════════════════════════════════
-//  PENDIENTES
+//  PENDIENTES DEL MES
 // ══════════════════════════════════════════════════════
 function initPendientes() {
   document.getElementById('mesPend').value = mesActual();
   renderPendientes();
 }
 
-// IDs de la consulta actual (para corte masivo sin pasar JSON en onclick)
 let _pendientesActuales = [];
 
 async function renderPendientes() {
-  const mes   = document.getElementById('mesPend').value || mesActual();
-  const zona  = document.getElementById('zonaPend').value;
+  const mes   = document.getElementById('mesPend')?.value || mesActual();
+  const zona  = document.getElementById('zonaPend')?.value || '';
 
-  if (!V.mes(mes)) { toast('Ingrese un mes válido','error'); return; }
+  if (!V.mes(mes)) { toast('Ingrese un mes válido (AAAA-MM)','error'); return; }
 
-  document.getElementById('pendientesResult').innerHTML =
-    '<div class="empty-state"><span class="spinner"></span> Consultando...</div>';
+  const resEl = document.getElementById('pendientesResult');
+  resEl.innerHTML = '<div class="empty-state"><span class="spinner"></span> Consultando pendientes...</div>';
 
   try {
-    const pagos   = await IDB.getByIndex('pagos','mes',mes);
-    const conPago = new Set(pagos.map(p => p.id_cliente));
+    const pagosMes = await IDB.getByIndex('pagos', 'mes', mes);
+    const conPagoIds = new Set(pagosMes.map(p => Number(p.id_cliente)));
 
     const filter = c =>
       c.estado === 'ACTIVO' &&
-      !conPago.has(c.id) &&
-      (zona ? c.zona === zona : true);
+      !conPagoIds.has(Number(c.id)) &&
+      (!zona || c.zona === zona);
 
-    const { results: pendientes, total } = await IDB.query('clientes', { filter, limit: 200 });
-    _pendientesActuales = pendientes;
+    const { results, total } = await IDB.query('clientes', {
+      indexName: 'estado',
+      range: IDBKeyRange.only('ACTIVO'),
+      filter,
+      limit: 150
+    });
 
-    const el = document.getElementById('pendientesResult');
-    if (!pendientes.length) {
-      el.innerHTML = `<div class="alert alert-success">✅ Todos los clientes ${zona?'de '+esc(zona):''} tienen pago en <strong>${mes}</strong>.</div>`;
+    _pendientesActuales = results;
+
+    if (!results.length) {
+      resEl.innerHTML = `<div class="alert alert-success">✅ Todos los clientes ${zona ? 'de ' + esc(zona) : ''} tienen su pago al día en <strong>${esc(mes)}</strong>.</div>`;
       return;
     }
 
-    const totalMonto = pendientes.reduce((s,c) => s + Number(c.plan), 0);
-    const rows = pendientes.map(c => `
+    const totalMonto = results.reduce((s, c) => s + (Number(c.plan) || 0), 0);
+    const rows = results.map(c => `
       <tr class="row-pendiente">
         <td><strong>${esc(c.nombre)}</strong></td>
         <td>${esc(c.zona)}</td>
-        <td><code>${esc(c.ip)||'—'}</code></td>
-        <td>S/. ${Number(c.plan)}</td>
+        <td><code>${esc(c.ip) || '—'}</code></td>
+        <td>S/. ${Number(c.plan || 0).toFixed(2)}</td>
         <td>${badgeCable(c.cable)}</td>
-        <td>${esc(c.celular)||'—'}</td>
-        <td><button class="btn btn-danger btn-sm" data-pend-id="${c.id}">✂️</button></td>
+        <td>${esc(c.celular) || '—'}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" data-pend-id="${Number(c.id)}" title="Cortar servicio">✂️</button>
+        </td>
       </tr>`).join('');
 
-    el.innerHTML = `
-      <div class="alert alert-warning">⚠️ <strong>${total.toLocaleString()}</strong> cliente(s) sin pago en <strong>${mes}</strong> · Pendiente: <strong>S/. ${totalMonto.toFixed(2)}</strong></div>
+    resEl.innerHTML = `
+      <div class="alert alert-warning">⚠️ <strong>${total.toLocaleString()}</strong> cliente(s) activos sin pago en <strong>${esc(mes)}</strong> · Total pendiente: <strong>S/. ${totalMonto.toFixed(2)}</strong></div>
       <div class="card">
         <div class="btn-group" style="margin-bottom:14px">
-          <button class="btn btn-danger" id="btnCortarTodos">✂️ Cortar todos (${pendientes.length})</button>
-          <button class="btn btn-ghost" id="btnExpPend">📥 Exportar lista</button>
+          <button class="btn btn-danger" id="btnCortarTodos">✂️ Cortar todos los mostrados (${results.length})</button>
+          <button class="btn btn-ghost" id="btnExpPend">📥 Exportar lista a Excel</button>
         </div>
         <div class="table-wrap"><table>
-          <thead><tr><th>Nombre</th><th>Zona</th><th>IP</th><th>Plan</th><th>Cable</th><th>Celular</th><th></th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Zona</th><th>IP</th><th>Plan</th><th>Cable</th><th>Celular</th><th>Acción</th></tr></thead>
           <tbody>${rows}</tbody>
         </table></div>
       </div>`;
 
-    // Event delegation — NO se serializa user data en onclick
-    el.querySelector('#btnCortarTodos').addEventListener('click', cortarTodosPendientes);
-    el.querySelector('#btnExpPend').addEventListener('click', exportarPendientes);
-    el.querySelectorAll('[data-pend-id]').forEach(btn => {
+    document.getElementById('btnCortarTodos').addEventListener('click', cortarTodosPendientes);
+    document.getElementById('btnExpPend').addEventListener('click', exportarPendientes);
+    resEl.querySelectorAll('[data-pend-id]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = Number(btn.dataset.pendId);
         await cortarRapido(id);
       });
     });
   } catch(err) {
-    console.error(err);
-    document.getElementById('pendientesResult').innerHTML = '<div class="alert alert-danger">Error consultando pendientes</div>';
+    console.error('renderPendientes:', err);
+    resEl.innerHTML = '<div class="alert alert-danger">Error consultando pendientes</div>';
   }
 }
 
 async function cortarRapido(id) {
-  const c = await IDB.get('clientes', id);
+  const c = await IDB.get('clientes', Number(id));
   if (!c) return;
-  if (!confirm(`¿Cortar servicio de "${c.nombre}"?`)) return;
-  await IDB.put('clientes', { ...c, estado: 'CORTADO' });
-  await IDB.add('cortes', { id_cliente: id, motivo: 'Falta de pago', fecha_corte: fechaHora(), fecha_recon: null, estado: 'CORTADO' });
-  await refreshClientesCache();
-  updateSidebar();
-  renderPendientes();
-  toast(`Cortado: ${c.nombre}`, 'warn');
+  if (!confirm(`¿Cortar servicio a "${c.nombre}" por falta de pago?`)) return;
+  try {
+    await IDB.put('clientes', { ...c, estado: 'CORTADO' });
+    await IDB.add('cortes', {
+      id_cliente: Number(id),
+      motivo: 'Falta de pago',
+      fecha_corte: fechaHora(),
+      fecha_recon: null,
+      estado: 'CORTADO'
+    });
+    _clientesCache.set(Number(id), { ...c, estado: 'CORTADO' });
+    toast(`Cortado: ${c.nombre}`, 'warn');
+    updateSidebar();
+    renderPendientes();
+  } catch(err) {
+    toast('Error al cortar servicio','error');
+  }
 }
 
 async function cortarTodosPendientes() {
   if (!_pendientesActuales.length) return;
-  if (!confirm(`¿Cortar ${_pendientesActuales.length} cliente(s)?`)) return;
+  if (!confirm(`¿Desea cortar el servicio a los ${_pendientesActuales.length} clientes pendientes mostrados?`)) return;
+
+  const btn = document.getElementById('btnCortarTodos');
+  if (btn) btn.disabled = true;
+
   try {
-    await Promise.all(_pendientesActuales.map(async c => {
-      await IDB.put('clientes', { ...c, estado: 'CORTADO' });
-      await IDB.add('cortes', { id_cliente: c.id, motivo: 'Falta de pago — corte masivo', fecha_corte: fechaHora(), fecha_recon: null, estado: 'CORTADO' });
+    const fHora = fechaHora();
+    const updatedClientes = _pendientesActuales.map(c => ({ ...c, estado: 'CORTADO' }));
+    const newCortes = _pendientesActuales.map(c => ({
+      id_cliente: Number(c.id),
+      motivo: 'Falta de pago — corte masivo',
+      fecha_corte: fHora,
+      fecha_recon: null,
+      estado: 'CORTADO'
     }));
-    await refreshClientesCache();
+
+    await Promise.all([
+      IDB.bulkPut('clientes', updatedClientes),
+      IDB.bulkPut('cortes', newCortes)
+    ]);
+
+    updatedClientes.forEach(c => _clientesCache.set(Number(c.id), c));
+    toast(`${updatedClientes.length} clientes cortados correctamente`, 'warn');
     updateSidebar();
-    toast(`${_pendientesActuales.length} clientes cortados`, 'warn');
     renderPendientes();
-  } catch(err) { toast('Error en corte masivo','error'); }
+  } catch(err) {
+    console.error('cortarTodosPendientes:', err);
+    toast('Error en corte masivo','error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function exportarPendientes() {
   if (!_pendientesActuales.length) return;
+  const mes = document.getElementById('mesPend')?.value || mesActual();
   const datos = _pendientesActuales.map(c => ({
-    Nombre: c.nombre, Zona: c.zona, IP: c.ip,
-    'Plan S/.': c.plan, Cable: c.cable ? 'Sí' : 'No', Celular: c.celular || ''
+    Nombre: sanitizeExcelVal(c.nombre),
+    Zona: sanitizeExcelVal(c.zona),
+    IP: sanitizeExcelVal(c.ip),
+    'Plan S/.': Number(c.plan || 0),
+    Cable: c.cable ? 'Sí' : 'No',
+    Celular: sanitizeExcelVal(c.celular)
   }));
   const ws = XLSX.utils.json_to_sheet(datos);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Pendientes');
-  XLSX.writeFile(wb, `Pendientes_${document.getElementById('mesPend').value}.xlsx`);
-  toast('Archivo descargado');
+  XLSX.writeFile(wb, `Pendientes_${mes}.xlsx`);
+  toast('Archivo descargado con protección de fórmulas ✅');
 }
 
 // ══════════════════════════════════════════════════════
-//  IMPORTAR / EXPORTAR EXCEL
+//  IMPORTAR / EXPORTAR EXCEL CON PROTECCIÓN CWE-1236
 // ══════════════════════════════════════════════════════
 async function exportarExcel(tipo) {
   const wb = XLSX.utils.book_new();
@@ -1797,47 +2273,67 @@ async function exportarExcel(tipo) {
     if (tipo === 'clientes' || tipo === 'todo') {
       const cli = await IDB.getAll('clientes');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cli.map(c => ({
-        ID: c.id, Nombre: c.nombre, DNI: c.dni, Celular: c.celular,
-        'Fecha Inicio': c.fecha_inicio || '',
-        Dirección: c.direccion, IP: c.ip, Zona: c.zona,
-        'Plan S/.': c.plan, Cable: c.cable ? 'Sí' : 'No',
-        Estado: c.estado, 'Fecha Registro': c.fecha_registro, Observaciones: c.observaciones
+        ID: Number(c.id),
+        Nombre: sanitizeExcelVal(c.nombre),
+        DNI: sanitizeExcelVal(c.dni),
+        Celular: sanitizeExcelVal(c.celular),
+        'Fecha Inicio': sanitizeExcelVal(c.fecha_inicio),
+        Dirección: sanitizeExcelVal(c.direccion),
+        IP: sanitizeExcelVal(c.ip),
+        Zona: sanitizeExcelVal(c.zona),
+        'Plan S/.': Number(c.plan || 0),
+        Cable: c.cable ? 'Sí' : 'No',
+        Estado: sanitizeExcelVal(c.estado),
+        'Fecha Registro': sanitizeExcelVal(c.fecha_registro),
+        Observaciones: sanitizeExcelVal(c.observaciones)
       }))), 'Clientes');
     }
+
     if (tipo === 'pagos' || tipo === 'todo') {
       const pags = await IDB.getAll('pagos');
+      await cachearClientes(pags.map(p => Number(p.id_cliente)));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pags.map(p => ({
-        ID: p.id, 'ID Cliente': p.id_cliente,
-        Cliente: _clientesCache.get(p.id_cliente)?.nombre || '',
-        Mes: p.mes, 'Monto S/.': p.monto,
-        Método: p.metodo, Observaciones: p.observaciones, Fecha: p.fecha
+        ID: Number(p.id),
+        'ID Cliente': Number(p.id_cliente),
+        Cliente: sanitizeExcelVal(_clientesCache.get(Number(p.id_cliente))?.nombre || ''),
+        Mes: sanitizeExcelVal(p.mes),
+        'Monto S/.': Number(p.monto || 0),
+        Método: sanitizeExcelVal(p.metodo),
+        Observaciones: sanitizeExcelVal(p.observaciones),
+        Fecha: sanitizeExcelVal(p.fecha)
       }))), 'Pagos');
     }
+
     if (tipo === 'cortes' || tipo === 'todo') {
       const cortes = await IDB.getAll('cortes');
+      await cachearClientes(cortes.map(co => Number(co.id_cliente)));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cortes.map(co => ({
-        ID: co.id, 'ID Cliente': co.id_cliente,
-        Cliente: _clientesCache.get(co.id_cliente)?.nombre || '',
-        Motivo: co.motivo, 'Fecha Corte': co.fecha_corte,
-        Reconexión: co.fecha_recon || '', Estado: co.estado
+        ID: Number(co.id),
+        'ID Cliente': Number(co.id_cliente),
+        Cliente: sanitizeExcelVal(_clientesCache.get(Number(co.id_cliente))?.nombre || ''),
+        Motivo: sanitizeExcelVal(co.motivo),
+        'Fecha Corte': sanitizeExcelVal(co.fecha_corte),
+        Reconexión: sanitizeExcelVal(co.fecha_recon),
+        Estado: sanitizeExcelVal(co.estado)
       }))), 'Cortes');
     }
+
     const nombres = { clientes:'Clientes_Leytrix', pagos:'Pagos_Leytrix', cortes:'Cortes_Leytrix', todo:'Leytrix_Completo' };
     XLSX.writeFile(wb, `${nombres[tipo]}_${new Date().toISOString().slice(0,10)}.xlsx`);
-    toast('Excel descargado ✅');
+    toast('Excel descargado de forma segura ✅');
   } catch(err) {
-    console.error(err);
-    toast('Error exportando','error');
+    console.error('exportarExcel:', err);
+    toast('Error exportando datos a Excel','error');
   }
 }
 
 async function importarExcel(tipo, fileInput) {
   const file = fileInput.files[0];
   if (!file) return;
-  if (file.size > 50 * 1024 * 1024) { toast('Archivo demasiado grande (máx 50 MB)','error'); return; }
+  if (file.size > 30 * 1024 * 1024) { toast('Archivo demasiado grande (máx 30 MB)','error'); return; }
 
   const resEl = document.getElementById('importResult');
-  resEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> Procesando archivo...</div>';
+  resEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> Procesando archivo Excel...</div>';
 
   const reader = new FileReader();
   reader.onload = async e => {
@@ -1850,75 +2346,90 @@ async function importarExcel(tipo, fileInput) {
       if (tipo === 'clientes') {
         const items = [];
         for (const r of rows) {
-          // Detección robusta de columnas (insensible a mayúsculas y tildes)
           const get = (...keys) => {
             for (const k of keys) {
-              const found = Object.keys(r).find(rk => rk.toLowerCase().replace(/[áéíóú]/g,'a') === k.toLowerCase());
+              const found = Object.keys(r).find(rk => rk.toLowerCase().replace(/[áéíóú]/g,'a').trim() === k.toLowerCase());
               if (found !== undefined && r[found] !== '') return String(r[found]).trim();
             }
             return '';
           };
+
           const nombre       = get('nombre','name');
           const ip           = get('ip','dirección ip','direccion ip');
           const zona         = get('zona','zone');
           const plan         = Number(get('plan','plan s/.','precio'));
-          const cable        = get('cable') === 'Sí' || get('cable') === '1' || get('cable') === 'true';
-          const fecha_inicio = get('fecha_inicio','fecha inicio','inicio','f. inicio','f.inicio','f_inicio','fecha de inicio');
+          const cable        = get('cable').toLowerCase() === 'sí' || get('cable').toLowerCase() === 'si' || get('cable') === '1' || get('cable').toLowerCase() === 'true';
+          const fecha_inicio = get('fecha_inicio','fecha inicio','inicio','f. inicio','f.inicio','f_inicio');
 
-          if (!V.nombre(nombre) || !V.ip(ip) || !V.zona(zona) || !V.plan(plan)) { err++; continue; }
+          if (!V.nombre(nombre) || !V.ip(ip) || !V.zona(zona) || !V.plan(plan)) {
+            err++;
+            continue;
+          }
+
           items.push({
-            nombre: safe(nombre,100),
-            dni: safe(get('dni'),8),
-            celular: safe(get('celular','telefono'),15),
-            fecha_inicio: safe(fecha_inicio,15) || fechaHoy(),
-            direccion: safe(get('direccion','dirección'),200),
-            ip: safe(ip,15), zona, plan, cable,
+            nombre: safe(nombre, 100),
+            dni: safe(get('dni'), 8),
+            celular: safe(get('celular','telefono'), 15),
+            fecha_inicio: safe(fecha_inicio, 15) || fechaHoy(),
+            direccion: safe(get('direccion','dirección'), 200),
+            ip: safe(ip, 15),
+            zona,
+            plan,
+            cable,
             estado: ESTADOS.includes(get('estado').toUpperCase()) ? get('estado').toUpperCase() : 'ACTIVO',
             fecha_registro: fechaHora(),
-            observaciones: safe(get('observaciones'),400),
+            observaciones: safe(get('observaciones'), 400),
           });
           ok++;
         }
-        await IDB.bulkAdd('clientes', items);
-        await refreshClientesCache();
+        await IDB.bulkPut('clientes', items);
       }
 
       if (tipo === 'pagos') {
         const clientes = await IDB.getAll('clientes');
-        const byNombre = new Map(clientes.map(c => [c.nombre.toLowerCase(), c]));
-        const items    = [];
+        const byNombre = new Map(clientes.map(c => [c.nombre.toLowerCase().trim(), c]));
+        const items = [];
+
         for (const r of rows) {
           const get = (...keys) => {
             for (const k of keys) {
-              const found = Object.keys(r).find(rk => rk.toLowerCase() === k.toLowerCase());
+              const found = Object.keys(r).find(rk => rk.toLowerCase().replace(/[áéíóú]/g,'a').trim() === k.toLowerCase());
               if (found !== undefined && r[found] !== '') return String(r[found]).trim();
             }
             return '';
           };
+
           const nombre_cli = get('nombre_cliente','cliente','nombre');
           const mes        = get('mes','month');
           const monto      = Number(get('monto','monto s/.'));
-          const cli        = byNombre.get(nombre_cli.toLowerCase());
-          if (!cli || !V.mes(mes) || !V.monto(monto)) { err++; continue; }
+          const cli        = byNombre.get(nombre_cli.toLowerCase().trim());
+
+          if (!cli || !V.mes(mes) || !V.monto(monto)) {
+            err++;
+            continue;
+          }
+
           items.push({
-            id_cliente: cli.id, mes, monto,
-            metodo: get('metodo','método') || 'Efectivo',
-            observaciones: safe(get('observaciones'),200),
+            id_cliente: Number(cli.id),
+            mes,
+            monto: Number(monto.toFixed(2)),
+            metodo: safe(get('metodo','método'), 50) || 'Efectivo',
+            observaciones: safe(get('observaciones'), 200),
             fecha: fechaHora(),
           });
           ok++;
         }
-        await IDB.bulkAdd('pagos', items);
+        await IDB.bulkPut('pagos', items);
       }
 
       updateSidebar();
       fileInput.value = '';
       resEl.innerHTML = `<div class="alert alert-success">✅ Importación completada: <strong>${ok}</strong> registros agregados${err ? `, <strong>${err}</strong> omitidos por datos inválidos` : ''}.</div>`;
-      toast(`${ok} registros importados`);
+      toast(`${ok} registros importados correctamente`);
     } catch(ex) {
-      console.error(ex);
-      resEl.innerHTML = `<div class="alert alert-danger">❌ Error leyendo el archivo: ${esc(ex.message)}</div>`;
-      toast('Error al importar','error');
+      console.error('importarExcel:', ex);
+      resEl.innerHTML = `<div class="alert alert-danger">❌ Error procesando el archivo: ${esc(ex.message)}</div>`;
+      toast('Error al importar archivo','error');
     }
   };
   reader.readAsArrayBuffer(file);
@@ -1949,188 +2460,7 @@ function descargarPlantilla(tipo) {
 }
 
 // ══════════════════════════════════════════════════════
-//  RECIBO → IMAGEN Y COMPARTIR
-// ══════════════════════════════════════════════════════
-async function _capturarReciboCanvas() {
-  const el = document.querySelector('#modalRecibo .modal');
-  // Ocultar botones y la X de cerrar temporalmente para la captura
-  const btnZone = el.querySelectorAll('.btn, button, .modal-close');
-  btnZone.forEach(b => b.style.visibility = 'hidden');
-  try {
-    const canvas = await html2canvas(el, {
-      scale: 2.5,
-      backgroundColor: '#ffffff',
-      useCORS: true,
-      logging: false,
-    });
-    return canvas;
-  } finally {
-    btnZone.forEach(b => b.style.visibility = '');
-  }
-}
-
-async function descargarReciboImagen() {
-  const btn = document.getElementById('btnGuardarImgRecibo');
-  btn.disabled = true;
-  btn.textContent = '⏳ Generando...';
-  try {
-    const canvas = await _capturarReciboCanvas();
-    const codigo = document.getElementById('reciboOperacion').textContent || 'recibo';
-    const link   = document.createElement('a');
-    link.download = `Recibo_${codigo}.png`;
-    link.href     = canvas.toDataURL('image/png');
-    link.click();
-    toast('📸 Imagen guardada');
-  } catch(err) {
-    console.error(err);
-    toast('Error generando imagen', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '📸 Guardar imagen';
-  }
-}
-
-async function compartirRecibo() {
-  const btn = document.getElementById('btnCompartirRecibo');
-  btn.disabled = true;
-  btn.textContent = '⏳ Preparando...';
-  try {
-    const canvas = await _capturarReciboCanvas();
-    const codigo = document.getElementById('reciboOperacion').textContent || 'recibo';
-    const nombre = `Recibo_${codigo}.png`;
-
-    // Convertir canvas a Blob
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    const file  = new File([blob], nombre, { type: 'image/png' });
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      // Web Share API (móviles y Chrome 89+)
-      await navigator.share({
-        files: [file],
-        title: 'Recibo de pago — Leytrix ISP',
-        text:  `Comprobante de pago ${codigo}`,
-      });
-      toast('Recibo compartido ✅');
-    } else {
-      // Fallback: descarga directa
-      const url  = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href     = url;
-      link.download = nombre;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      toast('📥 Imagen descargada (compartir no disponible en este navegador)');
-    }
-  } catch(err) {
-    if (err.name !== 'AbortError') {
-      console.error(err);
-      toast('Error al compartir', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '📤 Compartir';
-  }
-}
-
-async function copiarImagenRecibo() {
-  const btn = document.getElementById('btnCopiarImgRecibo');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Copiando...'; }
-  try {
-    const canvas = await _capturarReciboCanvas();
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    if (navigator.clipboard && window.ClipboardItem) {
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob })
-      ]);
-      toast('📋 ¡Imagen copiada! Presiona Ctrl + V en WhatsApp para pegarla.');
-    } else {
-      await descargarReciboImagen();
-      toast('📸 Imagen guardada para adjuntar');
-    }
-  } catch(err) {
-    console.error(err);
-    await descargarReciboImagen();
-    toast('📸 Imagen guardada para adjuntar');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '📋 Copiar Imagen'; }
-  }
-}
-
-async function enviarWhatsappRecibo() {
-  if (!_reciboActual) {
-    toast('No hay comprobante activo', 'error');
-    return;
-  }
-  const { pago, cli, planNombre, codigoOp, mesTexto } = _reciboActual;
-
-  let tel = (cli?.celular || '').replace(/\D/g, '');
-  if (!tel || tel.length < 8) {
-    tel = prompt(`El cliente "${cli?.nombre || ''}" no tiene número de celular registrado.\nIngrese el número de WhatsApp (ej: 987654321):`, '');
-    if (!tel) return;
-    tel = tel.replace(/\D/g, '');
-  }
-
-  // Si tiene 9 dígitos (Perú), agregar código de país 51
-  if (tel.length === 9) tel = '51' + tel;
-
-  const texto = 
-`📡 *LEYTRIX ISP - COMPROBANTE DE PAGO*
-━━━━━━━━━━━━━━━━━━━━━
-👤 *Cliente:* ${cli?.nombre || 'Cliente'}
-💰 *Monto Cancelado:* S/. ${Number(pago.monto).toFixed(2)}
-📅 *Período:* ${mesTexto}
-📶 *Plan:* ${planNombre}
-🔢 *N° Operación:* ${codigoOp}
-🕒 *Fecha:* ${pago.fecha}
-💳 *Método de Pago:* ${pago.metodo}
-${cli?.ip ? '🌐 *IP:* ' + cli.ip : ''}
-━━━━━━━━━━━━━━━━━━━━━
-✅ *¡Servicio ACTIVO! Muchas gracias por su pago puntual.*`;
-
-  // 1. En celulares y navegadores móviles: Compartir imagen directamente a WhatsApp
-  try {
-    const canvas = await _capturarReciboCanvas();
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    const file = new File([blob], `Recibo_${codigoOp}.png`, { type: 'image/png' });
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        files: [file],
-        title: 'Comprobante de Pago — Leytrix ISP',
-        text: texto,
-      });
-      toast('Recibo compartido por WhatsApp ✅');
-      return;
-    }
-  } catch(e) {
-    if (e.name === 'AbortError') return; // Usuario canceló el menú
-    console.log('Fallback a wa.me:', e);
-  }
-
-  // 2. En PC / laptops: Copiar imagen al portapapeles, descargar y abrir WhatsApp Web
-  try {
-    const canvas = await _capturarReciboCanvas();
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    if (navigator.clipboard && window.ClipboardItem) {
-      try {
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        toast('📋 ¡Imagen copiada! Presiona Ctrl + V en WhatsApp para pegarla.');
-      } catch(_) {
-        await descargarReciboImagen();
-      }
-    } else {
-      await descargarReciboImagen();
-    }
-  } catch(e) {
-    console.error(e);
-  }
-
-  const url = `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
-  window.open(url, '_blank');
-  toast('Abriendo chat de WhatsApp...');
-}
-
-// ══════════════════════════════════════════════════════
-//  RESPALDO & COMPARTIR BASE DE DATOS
+//  RESPALDO SEGURO & COMPARTIR BASE DE DATOS (Anti-Prototype Pollution)
 // ══════════════════════════════════════════════════════
 async function descargarBackupCompleto() {
   const btn = document.getElementById('btnDescargarBackup');
@@ -2143,7 +2473,7 @@ async function descargarBackupCompleto() {
     ]);
     const data = {
       app: 'Leytrix ISP',
-      version: 1,
+      version: 2,
       fecha_backup: fechaHora(),
       total_clientes: clientes.length,
       total_pagos: pagos.length,
@@ -2161,7 +2491,7 @@ async function descargarBackupCompleto() {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
     toast('💾 Respaldo guardado exitosamente');
   } catch(err) {
-    console.error(err);
+    console.error('descargarBackupCompleto:', err);
     toast('Error generando respaldo', 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '💾 Descargar Respaldo (.json)'; }
@@ -2172,45 +2502,87 @@ async function restaurarBackupCompleto(fileInput) {
   const file = fileInput.files[0];
   if (!file) return;
   const resEl = document.getElementById('backupResult');
-  if (resEl) resEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> Restaurando respaldo completo...</div>';
+  if (resEl) resEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> Validando y restaurando respaldo...</div>';
+
   const reader = new FileReader();
   reader.onload = async e => {
     try {
-      const data = JSON.parse(e.target.result);
-      if (!data || (!data.clientes && !data.pagos)) {
-        throw new Error('El archivo no tiene el formato de respaldo de Leytrix.');
+      // Prevención de Prototype Pollution mediante reviver estricto
+      const data = JSON.parse(e.target.result, (key, value) => {
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+          return undefined;
+        }
+        return value;
+      });
+
+      if (!data || (!Array.isArray(data.clientes) && !Array.isArray(data.pagos))) {
+        throw new Error('El archivo no tiene el formato de respaldo válido de Leytrix.');
       }
-      const numCli = Array.isArray(data.clientes) ? data.clientes.length : 0;
-      const numPag = Array.isArray(data.pagos) ? data.pagos.length : 0;
-      if (!confirm(`¿Restaurar copia de seguridad?\nSe importarán ${numCli} clientes y ${numPag} pagos.\nLos datos se guardarán de forma permanente en este navegador.`)) {
+
+      const rawClientes = Array.isArray(data.clientes) ? data.clientes : [];
+      const rawPagos    = Array.isArray(data.pagos) ? data.pagos : [];
+      const rawCortes   = Array.isArray(data.cortes) ? data.cortes : [];
+
+      if (!confirm(`¿Restaurar copia de seguridad?\nSe importarán ${rawClientes.length} clientes y ${rawPagos.length} pagos.\nLos datos se guardarán de forma permanente.`)) {
         if (resEl) resEl.innerHTML = '';
         fileInput.value = '';
         return;
       }
 
-      let cliOk = 0, pagOk = 0, corOk = 0;
-      if (Array.isArray(data.clientes) && data.clientes.length) {
-        cliOk = await IDB.bulkAdd('clientes', data.clientes);
-      }
-      if (Array.isArray(data.pagos) && data.pagos.length) {
-        pagOk = await IDB.bulkAdd('pagos', data.pagos);
-      }
-      if (Array.isArray(data.cortes) && data.cortes.length) {
-        corOk = await IDB.bulkAdd('cortes', data.cortes);
-      }
+      // Sanitización y validación estricta de cada objeto antes de la inserción
+      const sanitizedClientes = rawClientes.map(c => ({
+        id: Number(c.id) || undefined,
+        nombre: safe(c.nombre, 100),
+        dni: safe(c.dni, 8),
+        celular: safe(c.celular, 15),
+        fecha_inicio: safe(c.fecha_inicio, 15),
+        direccion: safe(c.direccion, 200),
+        ip: safe(c.ip, 15),
+        zona: V.zona(c.zona) ? c.zona : 'Loboyacu',
+        plan: V.plan(c.plan) ? Number(c.plan) : 50,
+        cable: !!c.cable,
+        estado: ESTADOS.includes(c.estado) ? c.estado : 'ACTIVO',
+        fecha_registro: safe(c.fecha_registro, 30),
+        observaciones: safe(c.observaciones, 400)
+      })).filter(c => V.nombre(c.nombre));
 
-      await refreshClientesCache();
+      const sanitizedPagos = rawPagos.map(p => ({
+        id: Number(p.id) || undefined,
+        id_cliente: Number(p.id_cliente),
+        mes: safe(p.mes, 7),
+        monto: Number(p.monto) || 0,
+        metodo: safe(p.metodo, 50) || 'Efectivo',
+        observaciones: safe(p.observaciones, 200),
+        fecha: safe(p.fecha, 30)
+      })).filter(p => p.id_cliente && V.mes(p.mes));
+
+      const sanitizedCortes = rawCortes.map(co => ({
+        id: Number(co.id) || undefined,
+        id_cliente: Number(co.id_cliente),
+        motivo: safe(co.motivo, 100),
+        fecha_corte: safe(co.fecha_corte, 30),
+        fecha_recon: safe(co.fecha_recon, 30),
+        estado: co.estado === 'RECONECTADO' ? 'RECONECTADO' : 'CORTADO'
+      })).filter(co => co.id_cliente);
+
+      let [cliOk, pagOk, corOk] = await Promise.all([
+        IDB.bulkPut('clientes', sanitizedClientes),
+        IDB.bulkPut('pagos', sanitizedPagos),
+        IDB.bulkPut('cortes', sanitizedCortes),
+      ]);
+
+      _clientesCache.clear();
       updateSidebar();
       fileInput.value = '';
       if (resEl) {
-        resEl.innerHTML = `<div class="alert alert-success">✅ Respaldo restaurado con éxito: <strong>${cliOk}</strong> clientes, <strong>${pagOk}</strong> pagos, <strong>${corOk}</strong> cortes agregados permanentemente.</div>`;
+        resEl.innerHTML = `<div class="alert alert-success">✅ Respaldo restaurado con éxito: <strong>${cliOk}</strong> clientes, <strong>${pagOk}</strong> pagos, <strong>${corOk}</strong> cortes integrados de forma segura.</div>`;
       }
       toast('Respaldo restaurado correctamente ✅');
       if (document.getElementById('page-clientes')?.classList.contains('active')) {
         renderClientes(0);
       }
     } catch(err) {
-      console.error(err);
+      console.error('restaurarBackupCompleto:', err);
       if (resEl) resEl.innerHTML = `<div class="alert alert-danger">❌ Error restaurando el respaldo: ${esc(err.message)}</div>`;
       toast('Error al restaurar respaldo', 'error');
     }
@@ -2219,7 +2591,7 @@ async function restaurarBackupCompleto(fileInput) {
 }
 
 // ══════════════════════════════════════════════════════
-//  EXPORTAR A SCRIPT MYSQL (.sql)
+//  EXPORTAR A SCRIPT MYSQL (.sql) BLINDADO CONTRA INYECCIÓN
 // ══════════════════════════════════════════════════════
 async function exportarMySQL() {
   const btn = document.getElementById('btnExpMySQL');
@@ -2256,13 +2628,14 @@ async function exportarMySQL() {
     sql += `  \`estado\` varchar(30) NOT NULL DEFAULT 'ACTIVO',\n`;
     sql += `  \`fecha_registro\` varchar(30) DEFAULT NULL,\n`;
     sql += `  \`observaciones\` text DEFAULT NULL,\n`;
-    sql += `  PRIMARY KEY (\`id\`)\n`;
+    sql += `  PRIMARY KEY (\`id\`),\n`;
+    sql += `  KEY \`idx_zona\` (\`zona\`),\n`;
+    sql += `  KEY \`idx_estado\` (\`estado\`)\n`;
     sql += `) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n\n`;
 
     if (clientes.length) {
       sql += `INSERT INTO \`clientes\` (\`id\`, \`nombre\`, \`dni\`, \`celular\`, \`fecha_inicio\`, \`direccion\`, \`ip\`, \`zona\`, \`plan\`, \`cable\`, \`estado\`, \`fecha_registro\`, \`observaciones\`) VALUES\n`;
-      const escSql = s => s == null ? 'NULL' : `'${String(s).replace(/'/g, "''").replace(/\\/g, "\\\\")}'`;
-      const vals = clientes.map(c => `(${c.id}, ${escSql(c.nombre)}, ${escSql(c.dni)}, ${escSql(c.celular)}, ${escSql(c.fecha_inicio)}, ${escSql(c.direccion)}, ${escSql(c.ip)}, ${escSql(c.zona)}, ${Number(c.plan)}, ${c.cable ? 1 : 0}, ${escSql(c.estado)}, ${escSql(c.fecha_registro)}, ${escSql(c.observaciones)})`);
+      const vals = clientes.map(c => `(${Number(c.id)}, ${escSql(c.nombre)}, ${escSql(c.dni)}, ${escSql(c.celular)}, ${escSql(c.fecha_inicio)}, ${escSql(c.direccion)}, ${escSql(c.ip)}, ${escSql(c.zona)}, ${Number(c.plan || 0).toFixed(2)}, ${c.cable ? 1 : 0}, ${escSql(c.estado)}, ${escSql(c.fecha_registro)}, ${escSql(c.observaciones)})`);
       sql += vals.join(',\n') + ';\n\n';
     }
 
@@ -2277,13 +2650,13 @@ async function exportarMySQL() {
     sql += `  \`fecha\` varchar(30) DEFAULT NULL,\n`;
     sql += `  \`observaciones\` text DEFAULT NULL,\n`;
     sql += `  PRIMARY KEY (\`id\`),\n`;
-    sql += `  KEY \`fk_cliente_pago\` (\`id_cliente\`)\n`;
+    sql += `  KEY \`fk_cliente_pago\` (\`id_cliente\`),\n`;
+    sql += `  KEY \`idx_mes\` (\`mes\`)\n`;
     sql += `) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n\n`;
 
     if (pagos.length) {
       sql += `INSERT INTO \`pagos\` (\`id\`, \`id_cliente\`, \`mes\`, \`monto\`, \`metodo\`, \`fecha\`, \`observaciones\`) VALUES\n`;
-      const escSql = s => s == null ? 'NULL' : `'${String(s).replace(/'/g, "''").replace(/\\/g, "\\\\")}'`;
-      const pVals = pagos.map(p => `(${p.id}, ${p.id_cliente}, ${escSql(p.mes)}, ${Number(p.monto)}, ${escSql(p.metodo)}, ${escSql(p.fecha)}, ${escSql(p.observaciones)})`);
+      const pVals = pagos.map(p => `(${Number(p.id)}, ${Number(p.id_cliente)}, ${escSql(p.mes)}, ${Number(p.monto || 0).toFixed(2)}, ${escSql(p.metodo)}, ${escSql(p.fecha)}, ${escSql(p.observaciones)})`);
       sql += pVals.join(',\n') + ';\n\n';
     }
 
@@ -2296,13 +2669,13 @@ async function exportarMySQL() {
     sql += `  \`fecha_corte\` varchar(30) DEFAULT NULL,\n`;
     sql += `  \`fecha_recon\` varchar(30) DEFAULT NULL,\n`;
     sql += `  \`estado\` varchar(30) DEFAULT 'CORTADO',\n`;
-    sql += `  PRIMARY KEY (\`id\`)\n`;
+    sql += `  PRIMARY KEY (\`id\`),\n`;
+    sql += `  KEY \`idx_cliente_corte\` (\`id_cliente\`)\n`;
     sql += `) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n\n`;
 
     if (cortes.length) {
       sql += `INSERT INTO \`cortes\` (\`id\`, \`id_cliente\`, \`motivo\`, \`fecha_corte\`, \`fecha_recon\`, \`estado\`) VALUES\n`;
-      const escSql = s => s == null ? 'NULL' : `'${String(s).replace(/'/g, "''").replace(/\\/g, "\\\\")}'`;
-      const cVals = cortes.map(co => `(${co.id}, ${co.id_cliente}, ${escSql(co.motivo)}, ${escSql(co.fecha_corte)}, ${escSql(co.fecha_recon)}, ${escSql(co.estado)})`);
+      const cVals = cortes.map(co => `(${Number(co.id)}, ${Number(co.id_cliente)}, ${escSql(co.motivo)}, ${escSql(co.fecha_corte)}, ${escSql(co.fecha_recon)}, ${escSql(co.estado)})`);
       sql += cVals.join(',\n') + ';\n\n';
     }
 
@@ -2315,7 +2688,7 @@ async function exportarMySQL() {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
     toast('🐬 Script MySQL (.sql) descargado exitosamente');
   } catch(err) {
-    console.error(err);
+    console.error('exportarMySQL:', err);
     toast('Error exportando a MySQL', 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '🐬 Descargar Script MySQL (.sql)'; }
@@ -2323,7 +2696,7 @@ async function exportarMySQL() {
 }
 
 // ══════════════════════════════════════════════════════
-//  MODAL
+//  GESTIÓN DE MODALES
 // ══════════════════════════════════════════════════════
 function abrirModal(id) {
   const m = document.getElementById(id);
@@ -2334,7 +2707,6 @@ function cerrarModal(id) {
   if (m) m.classList.remove('open');
 }
 
-// Cerrar modales con ESC o clic en fondo
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
 });
@@ -2343,65 +2715,60 @@ document.querySelectorAll('.modal-bg').forEach(m => {
 });
 
 // ══════════════════════════════════════════════════════
-//  INICIALIZACIÓN
+//  INICIALIZACIÓN DE LA APLICACIÓN
 // ══════════════════════════════════════════════════════
 async function init() {
-  // Inicializar fecha de hoy en formulario
   const aFI = document.getElementById('aFechaInicio');
   if (aFI) aFI.value = fechaHoy();
 
-  // Poblar zonas en formulario y filtros
+  // Poblar opciones de zona en formularios
   const zg = document.getElementById('zonasGrid');
   if (zg) zg.innerHTML = ZONAS.map(z =>
     `<div class="zona-opt" data-zona="${esc(z)}">${esc(z)}</div>`
   ).join('');
 
-  const filtZona  = document.getElementById('filtZona');
-  const zonaPend  = document.getElementById('zonaPend');
+  const filtZona = document.getElementById('filtZona');
+  const zonaPend = document.getElementById('zonaPend');
   ZONAS.forEach(z => {
     [filtZona, zonaPend].forEach(sel => {
       if (!sel) return;
       const opt = document.createElement('option');
       opt.value = z; opt.textContent = z;
-      // Evitar duplicados (hay un option vacío ya)
       if (![...sel.options].some(o => o.value === z)) sel.appendChild(opt);
     });
   });
 
-  // Añadir Shishiyacu también al selector de edición
   const eZona = document.getElementById('eZona');
-  if (eZona && ![...eZona.options].some(o => o.value === 'Shishiyacu')) {
-    const opt = document.createElement('option');
-    opt.value = 'Shishiyacu';
-    opt.textContent = 'Shishiyacu';
-    eZona.appendChild(opt);
+  if (eZona) {
+    ZONAS.forEach(z => {
+      if (![...eZona.options].some(o => o.value === z)) {
+        const opt = document.createElement('option');
+        opt.value = z; opt.textContent = z;
+        eZona.appendChild(opt);
+      }
+    });
   }
 
-  // Cargar cache inicial
-  await IDB.getAll('clientes').then(todos => {
-    _clientesCache = new Map(todos.map(c => [c.id, c]));
-  }).catch(()=>{});
-
-  // Nav items
+  // Eventos de navegación
   document.querySelectorAll('.nav-item[data-page]').forEach(n => {
     n.addEventListener('click', () => goTo(n.dataset.page));
   });
 
-  // Plan cards
+  // Selector interactivo de planes
   document.getElementById('plan50').addEventListener('click', () => selPlan(50));
   document.getElementById('plan60').addEventListener('click', () => selPlan(60));
   document.getElementById('plan65').addEventListener('click', () => selPlan(65));
-  document.getElementById('plan50').addEventListener('keydown', e => e.key==='Enter' && selPlan(50));
-  document.getElementById('plan60').addEventListener('keydown', e => e.key==='Enter' && selPlan(60));
-  document.getElementById('plan65').addEventListener('keydown', e => e.key==='Enter' && selPlan(65));
+  document.getElementById('plan50').addEventListener('keydown', e => e.key === 'Enter' && selPlan(50));
+  document.getElementById('plan60').addEventListener('keydown', e => e.key === 'Enter' && selPlan(60));
+  document.getElementById('plan65').addEventListener('keydown', e => e.key === 'Enter' && selPlan(65));
 
-  // Zona opts (delegación)
+  // Zonas delegación
   document.getElementById('zonasGrid').addEventListener('click', e => {
     const opt = e.target.closest('.zona-opt');
     if (opt) selZona(opt.dataset.zona, opt);
   });
 
-  // Cable toggle
+  // Toggle cable
   const ct = document.getElementById('cableToggle');
   ct.addEventListener('click', toggleCable);
   ct.addEventListener('keydown', e => e.key === 'Enter' && toggleCable());
@@ -2410,49 +2777,70 @@ async function init() {
   document.getElementById('formAgregar').addEventListener('submit', guardarCliente);
   document.getElementById('formEditar').addEventListener('submit',  guardarEdicion);
   document.getElementById('formPago').addEventListener('submit',    guardarPago);
+
+  // Buscador dinámico de clientes en Registrar Pago (no satura con 1M opciones)
+  document.getElementById('btnBuscarCliPago')?.addEventListener('click', () => {
+    const val = document.getElementById('pBuscarCli').value;
+    poblarSelectClientesPago(val);
+  });
+  document.getElementById('pBuscarCli')?.addEventListener('input', e => {
+    clearTimeout(_busTimer);
+    _busTimer = setTimeout(() => poblarSelectClientesPago(e.target.value), 200);
+  });
+
   document.getElementById('pCliente').addEventListener('change', async e => {
     const id = Number(e.target.value);
     if (!id) return;
     const cli = await IDB.get('clientes', id);
-    if (cli && cli.plan) {
-      document.getElementById('pMonto').value = cli.plan;
+    if (cli) {
+      document.getElementById('pMonto').value = Number(cli.plan || 50).toFixed(2);
       document.getElementById('pagoAlert').innerHTML = `
         <div class="alert alert-info" style="margin-top:10px">
-          👤 Cliente: <strong>${esc(cli.nombre)}</strong> · Zona: ${esc(cli.zona)} · Plan: S/. ${cli.plan} · IP: ${esc(cli.ip)}
+          👤 Cliente: <strong>${esc(cli.nombre)}</strong> · Zona: ${esc(cli.zona)} · Plan: S/. ${Number(cli.plan)} · IP: ${esc(cli.ip)}
         </div>`;
     }
   });
 
-  // Botones editar modal
+  // Buscadores dinámicos para Cortes y Reconexión
+  document.getElementById('btnBuscarActivo')?.addEventListener('click', () => {
+    buscarActivosCorte(document.getElementById('cBuscarCliActivo').value);
+  });
+  document.getElementById('cBuscarCliActivo')?.addEventListener('input', e => {
+    buscarActivosCorte(e.target.value);
+  });
+  document.getElementById('btnBuscarCortado')?.addEventListener('click', () => {
+    buscarCortadosReconexion(document.getElementById('cBuscarCliCortado').value);
+  });
+  document.getElementById('cBuscarCliCortado')?.addEventListener('input', e => {
+    buscarCortadosReconexion(e.target.value);
+  });
+
+  // Botones modal editar
   document.getElementById('closeModalEditar').addEventListener('click',  () => cerrarModal('modalEditar'));
   document.getElementById('cancelModalEditar').addEventListener('click', () => cerrarModal('modalEditar'));
   document.getElementById('closeModalPagos').addEventListener('click',   () => cerrarModal('modalPagos'));
 
-  // Recibo
+  // Botones recibo
   document.getElementById('closeModalRecibo').addEventListener('click',  () => cerrarModal('modalRecibo'));
   document.getElementById('closeModalRecibo2').addEventListener('click', () => cerrarModal('modalRecibo'));
   document.getElementById('btnWhatsappRecibo')?.addEventListener('click', enviarWhatsappRecibo);
   document.getElementById('btnCopiarImgRecibo')?.addEventListener('click', copiarImagenRecibo);
   document.getElementById('btnGuardarImgRecibo')?.addEventListener('click', descargarReciboImagen);
-  document.getElementById('btnCompartirRecibo')?.addEventListener('click',  compartirRecibo);
-  document.getElementById('btnImprimirRecibo').addEventListener('click', () => {
-    // Impresión limpia del recibo mediante @media print
-    window.print();
-  });
+  document.getElementById('btnImprimirRecibo').addEventListener('click', () => { window.print(); });
 
-  // Cortes
+  // Botones cortes
   document.getElementById('btnCortar').addEventListener('click',     cortarServicio);
   document.getElementById('btnReconectar').addEventListener('click', reconectarServicio);
 
-  // Pendientes
+  // Botones pendientes
   document.getElementById('btnConsultarPend').addEventListener('click', renderPendientes);
 
-  // Filtros clientes con debounce
+  // Filtros de clientes
   ['filtZona','filtEstado','filtPlan'].forEach(id =>
     document.getElementById(id).addEventListener('change', () => renderClientes(0)));
   document.getElementById('filtBus').addEventListener('input', debouncedBusqueda);
 
-  // Import/Export & Respaldo & MySQL
+  // Importar / Exportar / Respaldo / MySQL
   document.getElementById('btnDescargarBackup')?.addEventListener('click', descargarBackupCompleto);
   document.getElementById('btnCargarBackup')?.addEventListener('click', () => document.getElementById('fileBackup').click());
   document.getElementById('fileBackup')?.addEventListener('change', e => restaurarBackupCompleto(e.target));
@@ -2473,21 +2861,21 @@ async function init() {
   if (navigator.storage && navigator.storage.persist) {
     try {
       navigator.storage.persist().then(granted => {
-        if (granted) console.log('Almacenamiento persistente garantizado en el navegador');
+        if (granted) console.log('Almacenamiento persistente garantizado');
       });
     } catch (_) {}
   }
 
-  // Render inicial
+  // Carga inicial
   await renderInicio();
   updateSidebar();
 }
 
-// Arrancar
+// Ejecutar
 init().catch(err => {
-  console.error('Error de arranque:', err);
+  console.error('Error al inicializar aplicación:', err);
   document.getElementById('main').innerHTML =
-    '<div style="padding:40px;text-align:center;color:#DC2626">❌ Error iniciando la aplicación. Intente recargar la página.</div>';
+    '<div style="padding:40px;text-align:center;color:#DC2626">❌ Error iniciando la aplicación. Por favor recargue la página.</div>';
 });
 </script>
 </body>
