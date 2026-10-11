@@ -3,9 +3,44 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LEYTRIX ISP — Pendientes del Mes</title>
+  <title>LEYTRIX ISP — Pendientes & IA Cobranzas</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    .ai-tone-badge {
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--borde);
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .15s ease;
+      background: #fff;
+    }
+    .ai-tone-badge.active {
+      border-color: #2563EB;
+      background: #EFF6FF;
+      color: #1D4ED8;
+      box-shadow: 0 0 0 1px #2563EB;
+    }
+    .ai-preview-box {
+      background: #F0FDF4;
+      border: 1.5px solid #86EFAC;
+      border-radius: 12px;
+      padding: 14px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: #064E3B;
+      line-height: 1.5;
+      width: 100%;
+      min-height: 140px;
+      resize: vertical;
+      outline: none;
+    }
+  </style>
 </head>
 <body>
 
@@ -16,12 +51,17 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>📅 Clientes Pendientes de Pago (Morosidad)</h2>
-        <p>Listado de abonados que aún no registran pago en el mes seleccionado</p>
+        <h2>📅 Pendientes del Mes &amp; Asistente IA WhatsApp</h2>
+        <p>Genera mensajes persuasivos automáticos con IA y envíalos a los abonados por cobrar</p>
       </div>
       <div class="btn-group">
-        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir Lista de Cobro</button>
-        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar</button>
+        <button class="btn btn-primary" onclick="abrirModalCobranzaIA()" style="background:#7C3AED;border-color:#7C3AED">
+          🤖 Asistente IA de Cobranzas
+        </button>
+        <button class="btn btn-outline" onclick="abrirModalAjustesIA()">
+          ⚙️ Cuentas &amp; Clave IA
+        </button>
+        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
       </div>
     </div>
 
@@ -42,6 +82,26 @@
       <div class="kpi kpi-blue">
         <div class="val" id="kpiEfectividadCobro">0%</div>
         <div class="lbl">Efectividad de Cobranza</div>
+      </div>
+    </div>
+
+    <!-- Barra de Acciones Inteligentes IA -->
+    <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg, #FAF5FF 0%, #F5F3FF 50%, #EFF6FF 100%);border:1.5px solid #DDD6FE;padding:16px 20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:2rem">🤖</span>
+          <div>
+            <strong style="color:#5B21B6;font-size:0.95rem;display:block">Cobranza Inteligente con Inteligencia Artificial</strong>
+            <p style="color:#6D28D9;font-size:0.8rem;margin:2px 0 0">
+              Redacta mensajes persuasivos automáticos según la morosidad (Amable, Formal de fin de mes o Urgente de corte) con tus cuentas Yape y BCP integradas.
+            </p>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary btn-sm" onclick="iniciarEnvioMasivoIA()" style="background:#6D28D9;border-color:#6D28D9">
+            ⚡ Iniciar Cobranza Rápida IA
+          </button>
+        </div>
       </div>
     </div>
 
@@ -99,12 +159,135 @@
 
   </main>
 
+  <!-- MODAL ASISTENTE IA DE COBRANZA WHATSAPP -->
+  <div class="modal-bg" id="modalCobranzaIA">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header">
+        <h3 style="display:flex;align-items:center;gap:8px;color:#6D28D9">
+          <span>🤖</span> Asistente IA de Cobranza WhatsApp
+        </h3>
+        <button class="modal-close" onclick="cerrarModal('modalCobranzaIA')">✕</button>
+      </div>
+
+      <div style="background:#F8FAFC;border:1px solid var(--borde);border-radius:10px;padding:12px 16px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong id="aiModalCliNombre" style="color:var(--azul);font-size:0.95rem">Cliente</strong>
+          <span id="aiModalCliZona" class="badge" style="background:#E2E8F0;color:#334155">Zona</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--gris);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap">
+          <span>Mes: <b id="aiModalCliMes" style="color:#0284C7">—</b></span>
+          <span>Deuda: <b id="aiModalCliMonto" style="color:var(--rojo)">S/. 65.00</b></span>
+          <span>Celular: <b id="aiModalCliCel">—</b></span>
+        </div>
+      </div>
+
+      <!-- Selector de Tono IA -->
+      <div style="margin-bottom:14px">
+        <label class="form-label" style="font-weight:700">Tono del Mensaje generado por IA:</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          <button type="button" class="ai-tone-badge active" id="btnTonoAmable" onclick="cambiarTonoIA('amable')">
+            🟢 Amable / Preventivo
+          </button>
+          <button type="button" class="ai-tone-badge" id="btnTonoFormal" onclick="cambiarTonoIA('formal')">
+            🟡 Formal / Fin de Mes
+          </button>
+          <button type="button" class="ai-tone-badge" id="btnTonoUrgente" onclick="cambiarTonoIA('urgente')">
+            🔴 Urgente / Pre-Corte
+          </button>
+          <button type="button" class="ai-tone-badge" id="btnTonoConvenio" onclick="cambiarTonoIA('convenio')">
+            🤝 Convenio / Facilidad
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview del Mensaje Generado -->
+      <div style="margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label class="form-label" style="margin:0">Mensaje para WhatsApp (puedes editarlo antes de enviar):</label>
+          <button class="btn btn-outline btn-sm" onclick="generarTextoModalIA()" style="padding:4px 8px;font-size:0.75rem">
+            🔄 Regenerar IA
+          </button>
+        </div>
+        <textarea id="aiMensajePreview" class="ai-preview-box" rows="8"></textarea>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="cerrarModal('modalCobranzaIA')">Cerrar</button>
+        <button class="btn btn-success" id="btnEnviarWAIA" onclick="enviarMensajeModalWA()" style="padding:10px 20px;font-weight:700">
+          📲 Enviar Mensaje por WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CONFIGURACIÓN DE CUENTAS & CLAVE GEMINI IA -->
+  <div class="modal-bg" id="modalAjustesIA">
+    <div class="modal" style="max-width:540px">
+      <div class="modal-header">
+        <h3>⚙️ Configuración de Cobranzas &amp; IA</h3>
+        <button class="modal-close" onclick="cerrarModal('modalAjustesIA')">✕</button>
+      </div>
+
+      <form id="formAjustesIA" onsubmit="guardarAjustesIA(event)">
+        <p style="font-size:0.8rem;color:var(--gris);margin-bottom:14px">
+          Estos datos se colocarán automáticamente en todos los mensajes de WhatsApp generados por la IA:
+        </p>
+
+        <div style="margin-bottom:14px">
+          <label class="form-label" for="cfgNombreEmpresa">Nombre de tu Empresa</label>
+          <input type="text" id="cfgNombreEmpresa" class="form-input" placeholder="Ej. Leytrix Internet Rural" required />
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div>
+            <label class="form-label" for="cfgNumeroYape">Número Yape / Plin</label>
+            <input type="text" id="cfgNumeroYape" class="form-input" placeholder="Ej. 987654321" required />
+          </div>
+          <div>
+            <label class="form-label" for="cfgTitularYape">Titular Yape / Plin</label>
+            <input type="text" id="cfgTitularYape" class="form-input" placeholder="Ej. Leyder Leytrix" required />
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div>
+            <label class="form-label" for="cfgCuentaBcp">Número de Cuenta BCP</label>
+            <input type="text" id="cfgCuentaBcp" class="form-input" placeholder="Ej. 191-98234812-0-45" />
+          </div>
+          <div>
+            <label class="form-label" for="cfgTitularBcp">Titular Cuenta BCP</label>
+            <input type="text" id="cfgTitularBcp" class="form-input" placeholder="Ej. Leytrix Internet SAC" />
+          </div>
+        </div>
+
+        <div style="margin-bottom:18px;background:#F8FAFC;border:1px solid var(--borde);padding:12px;border-radius:8px">
+          <label class="form-label" for="cfgGeminiApiKey" style="color:var(--azul)">
+            ✨ Clave Gemini API (Opcional)
+          </label>
+          <input type="password" id="cfgGeminiApiKey" class="form-input" placeholder="Pega tu API Key de Google Gemini si deseas IA generativa avanzada" />
+          <p style="font-size:0.73rem;color:var(--gris);margin:4px 0 0">
+            *Si lo dejas vacío, el sistema utiliza el potente <strong>Motor Neural Local ISP</strong> integrado sin costo.
+          </p>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px">
+          <button type="button" class="btn btn-outline" onclick="cerrarModal('modalAjustesIA')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Guardar Configuración</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="js/db.js"></script>
   <script src="js/sidebar.js"></script>
+  <script src="js/ai-cobranza.js"></script>
   <script>
     let clientesLista = [];
     let pagosLista = [];
     let listaPendientes = [];
+    let clienteActualIA = null;
+    let tonoActualIA = 'amable';
 
     document.addEventListener('DOMContentLoaded', async () => {
       renderSidebar('pendientes');
@@ -126,17 +309,14 @@
       const mesSel = document.getElementById('selMesPendiente').value;
       if (!mesSel) return;
 
-      // Filtrar pagos del mes
       const pagosDelMes = pagosLista.filter(p => p.mes === mesSel);
       const clientesQuePagaron = new Set(pagosDelMes.map(p => Number(p.id_cliente)));
 
-      // Identificar pendientes (excluir RETIRADO)
       listaPendientes = clientesLista.filter(c => {
         if (c.estado === 'RETIRADO') return false;
         return !clientesQuePagaron.has(c.id);
       });
 
-      // KPIs
       const totalClientesRed = clientesLista.filter(c => c.estado !== 'RETIRADO').length;
       const cantPagaron = totalClientesRed - listaPendientes.length;
       const montoPorCobrar = listaPendientes.reduce((s, c) => s + (Number(c.plan) || 65), 0);
@@ -172,8 +352,6 @@
 
     function renderTablaPendientes(lista) {
       const tbody = document.getElementById('tbodyPendientes');
-      const mesSel = document.getElementById('selMesPendiente').value;
-
       if (!lista.length) {
         tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:36px;color:#16A34A;font-weight:700">🎉 ¡Excelente! No hay clientes pendientes con los filtros actuales.</td></tr>';
         return;
@@ -195,12 +373,12 @@
           <td style="font-size:0.75rem;color:var(--gris);max-width:180px">${esc(c.direccion || '—')}</td>
           <td>
             <div class="btn-group">
+              <button class="btn btn-primary btn-sm" onclick="abrirModalCobranzaIA(${c.id})" style="background:#7C3AED;border-color:#7C3AED" title="Generar mensaje con IA y enviar a WhatsApp">
+                🤖 IA WA
+              </button>
               <a href="pagos.html?id=${c.id}" class="btn btn-success btn-sm" title="Registrar Pago">
                 💳 Cobrar
               </a>
-              <button class="btn btn-outline btn-sm" onclick="enviarRecordatorioWA(${c.id})" title="Enviar Aviso WhatsApp">
-                📲 WA
-              </button>
               ${c.estado === 'ACTIVO' ? `
                 <button class="btn btn-danger btn-sm" onclick="cortarPorMora(${c.id})" title="Cortar Servicio">
                   ✂️
@@ -212,30 +390,97 @@
       `).join('');
     }
 
-    function enviarRecordatorioWA(id) {
-      const cli = clientesLista.find(c => c.id === id);
-      if (!cli) return;
+    // ══ FUNCIONES DEL ASISTENTE IA DE COBRANZA ══════════════
+    async function abrirModalCobranzaIA(id = null) {
+      if (id) {
+        clienteActualIA = clientesLista.find(c => c.id === id);
+      } else if (listaPendientes.length) {
+        clienteActualIA = listaPendientes[0];
+      }
+
+      if (!clienteActualIA) {
+        toast('No hay clientes pendientes para enviar cobranza', 'warn');
+        return;
+      }
 
       const mesSel = document.getElementById('selMesPendiente').value;
-      const cel = (cli.celular || '').replace(/\D/g, '');
+      document.getElementById('aiModalCliNombre').textContent = clienteActualIA.nombre;
+      document.getElementById('aiModalCliZona').textContent = clienteActualIA.zona || '—';
+      document.getElementById('aiModalCliMes').textContent = mesSel;
+      document.getElementById('aiModalCliMonto').textContent = `S/. ${clienteActualIA.plan || 65}.00`;
+      document.getElementById('aiModalCliCel').textContent = clienteActualIA.celular || 'Sin celular';
 
-      const mensaje = 
-`*📡 RECORDATORIO DE PAGO — LEYTRIX INTERNET*
-━━━━━━━━━━━━━━━━━━━━━
-Estimado(a) *${cli.nombre}*:
-Le recordamos que se encuentra pendiente el pago de su servicio de internet correspondiente al mes *${mesSel}*.
+      cambiarTonoIA(tonoActualIA);
+      document.getElementById('modalCobranzaIA').classList.add('open');
+    }
 
-💰 *Monto a pagar:* S/. ${cli.plan || 65}.00 (${labelPlan(cli.plan)})
-🏢 *Zona:* ${cli.zona}
+    async function cambiarTonoIA(tono) {
+      tonoActualIA = tono;
+      ['amable', 'formal', 'urgente', 'convenio'].forEach(t => {
+        const btn = document.getElementById('btnTono' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (btn) btn.className = (t === tono) ? 'ai-tone-badge active' : 'ai-tone-badge';
+      });
+      await generarTextoModalIA();
+    }
 
-Le agradeceremos realizar su abono a tiempo para evitar la suspensión del servicio. Puede pagar por Yape, Plin o BCP y enviar su constancia por este chat.
+    async function generarTextoModalIA() {
+      if (!clienteActualIA) return;
+      const preview = document.getElementById('aiMensajePreview');
+      preview.value = '⏳ Generando mensaje inteligente con IA...';
 
-¡Muchas gracias por su preferencia!
-*Leytrix ISP*`;
+      const mesSel = document.getElementById('selMesPendiente').value;
+      const texto = await generarMensajeCobranzaIA({
+        cliente: clienteActualIA,
+        mes: mesSel,
+        monto: clienteActualIA.plan || 65,
+        tono: tonoActualIA
+      });
 
-      const numDestino = cel.length >= 9 ? (cel.startsWith('51') ? cel : '51' + cel) : '';
-      const url = `https://api.whatsapp.com/send?phone=${numDestino}&text=${encodeURIComponent(mensaje)}`;
-      window.open(url, '_blank');
+      preview.value = texto;
+    }
+
+    function enviarMensajeModalWA() {
+      if (!clienteActualIA) return;
+      const texto = document.getElementById('aiMensajePreview').value.trim();
+      abrirWhatsAppConMensaje(clienteActualIA.celular, texto);
+      toast('📲 Abriendo WhatsApp con el mensaje generado por IA...');
+    }
+
+    function iniciarEnvioMasivoIA() {
+      if (!listaPendientes.length) {
+        toast('No hay clientes pendientes en este mes', 'info');
+        return;
+      }
+      abrirModalCobranzaIA(listaPendientes[0].id);
+    }
+
+    // ══ AJUSTES DE CUENTAS & IA ══════════════════════════════
+    function abrirModalAjustesIA() {
+      const cfg = obtenerConfiguracionIA();
+      document.getElementById('cfgNombreEmpresa').value = cfg.nombreEmpresa || '';
+      document.getElementById('cfgNumeroYape').value    = cfg.numeroYape || '';
+      document.getElementById('cfgTitularYape').value   = cfg.titularYape || '';
+      document.getElementById('cfgCuentaBcp').value     = cfg.cuentaBcp || '';
+      document.getElementById('cfgTitularBcp').value    = cfg.titularBcp || '';
+      document.getElementById('cfgGeminiApiKey').value  = cfg.geminiApiKey || '';
+
+      document.getElementById('modalAjustesIA').classList.add('open');
+    }
+
+    function guardarAjustesIA(e) {
+      e.preventDefault();
+      const cfg = {
+        nombreEmpresa: document.getElementById('cfgNombreEmpresa').value.trim(),
+        numeroYape:    document.getElementById('cfgNumeroYape').value.trim(),
+        titularYape:   document.getElementById('cfgTitularYape').value.trim(),
+        cuentaBcp:     document.getElementById('cfgCuentaBcp').value.trim(),
+        cciBcp:        '002191009823481204592',
+        titularBcp:    document.getElementById('cfgTitularBcp').value.trim(),
+        geminiApiKey:  document.getElementById('cfgGeminiApiKey').value.trim()
+      };
+      guardarConfiguracionIA(cfg);
+      toast('✅ Configuración de cuentas e IA guardada correctamente');
+      cerrarModal('modalAjustesIA');
     }
 
     async function cortarPorMora(id) {

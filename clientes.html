@@ -6,6 +6,7 @@
   <title>LEYTRIX ISP — Clientes</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/ai-cobranza.js"></script>
 </head>
 <body>
 
@@ -281,6 +282,7 @@
               <td>
                 <div class="btn-group">
                   <a href="pagos.html?id=${c.id}" class="btn btn-success btn-sm" title="Registrar pago">💳 Pagar</a>
+                  <button class="btn btn-primary btn-sm" onclick="enviarMensajeIACliente(${c.id})" style="background:#7C3AED;border-color:#7C3AED" title="Enviar recordatorio con IA a WhatsApp">🤖</button>
                   <button class="btn btn-outline btn-sm" onclick="abrirEditar(${c.id})" title="Editar">✏️</button>
                   <button class="btn btn-ghost btn-sm" onclick="verHistorialPagos(${c.id})" title="Ver pagos">💰</button>
                   <button class="btn btn-danger btn-sm" onclick="eliminarCliente(${c.id})" title="Eliminar">🗑️</button>
@@ -401,6 +403,15 @@
         cargarClientes(_paginaActual);
         actualizarEstadisticasSidebar();
       }
+    }
+
+    async function enviarMensajeIACliente(id) {
+      const c = await IDB.get('clientes', Number(id));
+      if (!c) return;
+      const mes = mesActual();
+      toast('🤖 Generando mensaje con IA...');
+      const txt = await generarMensajeCobranzaIA({ cliente: c, mes, monto: c.plan || 65, tono: 'amable' });
+      abrirWhatsAppConMensaje(c.celular, txt);
     }
   </script>
 </body>

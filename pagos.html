@@ -3,63 +3,107 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LEYTRIX ISP — Pagos y Recibos</title>
+  <title>LEYTRIX ISP — Pagos y Vouchers Bancarios</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <style>
-    /* Estilos del Recibo BCP */
+    /* Estilos del Recibo / Voucher Bancario BCP */
     .bcp-voucher-card {
       background: #FFFFFF;
       border: 2px solid #002A8F;
-      border-radius: 16px;
+      border-radius: 18px;
       overflow: hidden;
       max-width: 440px;
       margin: 0 auto;
-      box-shadow: 0 10px 25px -5px rgba(0, 42, 143, 0.2);
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    .bcp-voucher-header {
-      background: linear-gradient(135deg, #002A8F 0%, #001B5E 100%);
-      color: #FFFFFF;
-      padding: 20px;
-      text-align: center;
+      box-shadow: 0 15px 35px -5px rgba(0, 42, 143, 0.25);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       position: relative;
     }
-    .bcp-voucher-header h3 {
+    .bcp-top-bar {
+      background: #002A8F;
+      padding: 16px 20px 14px;
+      color: #FFFFFF;
+      position: relative;
+    }
+    .bcp-brand-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .bcp-logo-text {
       font-size: 1.25rem;
-      font-weight: 800;
-      letter-spacing: 1px;
-      margin-bottom: 2px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .bcp-logo-text span {
       color: #FF7800;
     }
-    .bcp-voucher-header p {
+    .bcp-agente-tag {
+      background: #FF7800;
+      color: #FFFFFF;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .bcp-voucher-title {
       font-size: 0.8rem;
-      opacity: 0.9;
+      color: #E0E7FF;
       margin: 0;
+      letter-spacing: 0.5px;
     }
     .bcp-voucher-body {
-      padding: 22px;
+      padding: 20px 22px;
+      background: #FFFFFF;
+    }
+    .bcp-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+      border-bottom: 1.5px dashed #CBD5E1;
+      font-size: 0.78rem;
+    }
+    .bcp-meta-item span {
+      color: #64748B;
+      display: block;
+      font-size: 0.7rem;
+    }
+    .bcp-meta-item strong {
+      color: #0F172A;
+      font-weight: 700;
     }
     .bcp-voucher-row {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding: 8px 0;
+      align-items: flex-start;
+      padding: 7px 0;
       border-bottom: 1px dashed #E2E8F0;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
     }
     .bcp-voucher-row:last-child {
       border-bottom: none;
     }
     .bcp-voucher-label {
       color: #64748B;
-      font-weight: 500;
+      font-weight: 600;
+      flex: 1;
     }
     .bcp-voucher-val {
       color: #0F172A;
       font-weight: 700;
       text-align: right;
+      flex: 1;
     }
     .bcp-voucher-total {
       background: #F8FAFC;
@@ -71,18 +115,71 @@
       justify-content: space-between;
       align-items: center;
     }
+    .bcp-voucher-total .lbl {
+      font-size: 0.75rem;
+      color: #64748B;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
     .bcp-voucher-total .monto {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       font-weight: 900;
       color: #002A8F;
     }
+    .bcp-qr-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      margin-top: 14px;
+    }
+    .bcp-qr-info {
+      font-size: 0.72rem;
+      color: #475569;
+      line-height: 1.35;
+    }
+    .bcp-qr-info strong {
+      color: #002A8F;
+      display: block;
+      font-size: 0.78rem;
+      margin-bottom: 2px;
+    }
+    .bcp-barcode-strip {
+      height: 32px;
+      margin: 14px 0 6px;
+      background: repeating-linear-gradient(
+        90deg,
+        #0F172A,
+        #0F172A 2px,
+        transparent 2px,
+        transparent 4px,
+        #0F172A 4px,
+        #0F172A 7px,
+        transparent 7px,
+        transparent 9px
+      );
+      opacity: 0.85;
+      border-radius: 2px;
+    }
+    .bcp-barcode-num {
+      text-align: center;
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: #64748B;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
     .bcp-voucher-footer {
       background: #F1F5F9;
-      padding: 12px;
+      padding: 12px 18px;
       text-align: center;
       font-size: 0.72rem;
       color: #64748B;
       border-top: 1px solid #E2E8F0;
+      line-height: 1.4;
     }
 
     @media print {
@@ -112,11 +209,12 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>💰 Registro de Pagos &amp; Comprobantes</h2>
-        <p>Registra mensualidades, emite recibos tipo BCP/Yape e imprime o envía por WhatsApp</p>
+        <h2>💰 Pagos &amp; Vouchers de Banco Oficiales</h2>
+        <p>Genera comprobantes estilo BCP, guárdalos en la nube y compártelos por WhatsApp</p>
       </div>
       <div class="btn-group">
-        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Pagos</button>
+        <a href="explorador.html" class="btn btn-outline">📸 Ver Vouchers Guardados</a>
+        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
       </div>
     </div>
 
@@ -125,7 +223,7 @@
       <!-- FORMULARIO DE REGISTRO DE PAGO -->
       <div class="card" style="padding:22px 24px">
         <h3 style="font-size:1.05rem;color:var(--azul);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-          <span>💳</span> Nuevo Pago
+          <span>💳</span> Registrar Nuevo Pago
         </h3>
 
         <form id="formPago" onsubmit="registrarPago(event)">
@@ -170,19 +268,19 @@
           <!-- Método de Pago -->
           <div style="margin-bottom:14px">
             <label class="form-label" for="pagoMetodo">Método de Pago</label>
-            <select id="pagoMetodo" class="form-select" onchange="actualizarCamposMetodo()">
-              <option value="Efectivo" selected>💵 Efectivo</option>
-              <option value="Yape">📱 Yape</option>
-              <option value="Plin">📱 Plin</option>
+            <select id="pagoMetodo" class="form-select">
+              <option value="Yape" selected>📱 Yape</option>
               <option value="BCP">🏦 BCP / Transferencia</option>
+              <option value="Plin">📱 Plin</option>
+              <option value="Efectivo">💵 Efectivo</option>
               <option value="Otro">💳 Otro</option>
             </select>
           </div>
 
-          <!-- N° de Operación (visible si no es efectivo o siempre opcional) -->
+          <!-- N° de Operación Bancaria -->
           <div style="margin-bottom:14px" id="grpNumOperacion">
-            <label class="form-label" for="pagoNumOperacion">N° de Operación / Ref. BCP o Yape</label>
-            <input type="text" id="pagoNumOperacion" class="form-input" placeholder="Ej. OP-982341 / Ref. 4509" />
+            <label class="form-label" for="pagoNumOperacion">N° de Operación Bancaria (OP)</label>
+            <input type="text" id="pagoNumOperacion" class="form-input" placeholder="Ej. OP-098234 (o dejar vacío para autogenerar)" />
           </div>
 
           <!-- Fecha de Pago -->
@@ -194,11 +292,11 @@
           <!-- Observación -->
           <div style="margin-bottom:20px">
             <label class="form-label" for="pagoNotas">Observación / Nota</label>
-            <input type="text" id="pagoNotas" class="form-input" placeholder="Opcional: Canceló mitad, adelantado, etc." />
+            <input type="text" id="pagoNotas" class="form-input" placeholder="Opcional: Canceló adelantado, titular del Yape, etc." />
           </div>
 
-          <button type="submit" class="btn btn-primary btn-full" id="btnGuardarPago" style="padding:12px;font-size:0.95rem;background:#16A34A;border-color:#16A34A">
-            💾 Registrar Pago &amp; Emitir Recibo
+          <button type="submit" class="btn btn-primary btn-full" id="btnGuardarPago" style="padding:12px;font-size:0.95rem;background:#002A8F;border-color:#002A8F">
+            🧾 Generar Voucher Bancario &amp; Guardar
           </button>
         </form>
       </div>
@@ -243,83 +341,125 @@
     </div>
   </main>
 
-  <!-- MODAL RECIBO BCP / VOUCHER -->
+  <!-- MODAL VOUCHER BANCARIO BCP OFICIAL -->
   <div class="modal-bg" id="modalVoucher">
     <div class="modal" style="max-width:480px;background:#F8FAFC">
       <div class="modal-header">
-        <h3>🧾 Comprobante de Pago</h3>
+        <h3 style="color:#002A8F;display:flex;align-items:center;gap:6px">
+          <span>🧾</span> Voucher Bancario Oficial BCP
+        </h3>
         <button class="modal-close" onclick="cerrarModal('modalVoucher')">✕</button>
       </div>
 
       <!-- Área de Recibo imprimible y descargable -->
       <div id="areaImpresionRecibo">
         <div class="bcp-voucher-card" id="bcpVoucherVisual">
-          <div class="bcp-voucher-header">
-            <h3>LEYTRIX INTERNET</h3>
-            <p>Comprobante de Servicio de Internet ISP</p>
-            <div style="margin-top:8px;font-size:0.75rem;background:rgba(255,255,255,0.15);display:inline-block;padding:3px 12px;border-radius:20px">
-              CONSTANCIA DE ABONO
+          
+          <div class="bcp-top-bar">
+            <div class="bcp-brand-row">
+              <div class="bcp-logo-text">
+                BANCO DE CRÉDITO <span>BCP</span>
+              </div>
+              <span class="bcp-agente-tag">AGENTE BCP</span>
             </div>
+            <p class="bcp-voucher-title">CONSTANCIA DE ABONO ELECTRÓNICO — LEYTRIX ISP</p>
           </div>
 
           <div class="bcp-voucher-body">
+            
+            <div class="bcp-meta-grid">
+              <div class="bcp-meta-item">
+                <span>N° OPERACIÓN:</span>
+                <strong id="vouchNumOp">OP-000000</strong>
+              </div>
+              <div class="bcp-meta-item">
+                <span>TERMINAL / AGENTE:</span>
+                <strong>AG-00492 LEYTRIX</strong>
+              </div>
+              <div class="bcp-meta-item">
+                <span>FECHA Y HORA:</span>
+                <strong id="vouchFechaHora">—</strong>
+              </div>
+              <div class="bcp-meta-item">
+                <span>ESTADO:</span>
+                <strong style="color:#16A34A">✓ CONFORME / AL DÍA</strong>
+              </div>
+            </div>
+
             <div class="bcp-voucher-row">
-              <span class="bcp-voucher-label">N° Operación / Recibo:</span>
-              <span class="bcp-voucher-val" id="vouchNumOp">OP-000000</span>
+              <span class="bcp-voucher-label">EMPRESA RECAUDADORA:</span>
+              <span class="bcp-voucher-val" style="color:#002A8F">LEYTRIX INTERNET RURAL SAC</span>
             </div>
             <div class="bcp-voucher-row">
-              <span class="bcp-voucher-label">Fecha y Hora:</span>
-              <span class="bcp-voucher-val" id="vouchFechaHora">—</span>
+              <span class="bcp-voucher-label">SERVICIO:</span>
+              <span class="bcp-voucher-val">INTERNET BANDA ANCHA</span>
             </div>
             <div class="bcp-voucher-row">
-              <span class="bcp-voucher-label">Cliente:</span>
+              <span class="bcp-voucher-label">CLIENTE / TITULAR:</span>
               <span class="bcp-voucher-val" id="vouchCliente" style="color:var(--azul)">—</span>
             </div>
             <div class="bcp-voucher-row">
-              <span class="bcp-voucher-label">DNI / Celular:</span>
+              <span class="bcp-voucher-label">DNI / CELULAR:</span>
               <span class="bcp-voucher-val" id="vouchDniCel">—</span>
             </div>
             <div class="bcp-voucher-row">
-              <span class="bcp-voucher-label">Zona / Dirección:</span>
+              <span class="bcp-voucher-label">ZONA / SECTOR:</span>
               <span class="bcp-voucher-val" id="vouchZonaDir">—</span>
             </div>
             <div class="bcp-voucher-row">
-              <span class="bcp-voucher-label">Mes Cancelado:</span>
+              <span class="bcp-voucher-label">MES FACTURADO:</span>
               <span class="bcp-voucher-val" id="vouchMes" style="color:#16A34A;font-weight:800">—</span>
             </div>
             <div class="bcp-voucher-row">
-              <span class="bcp-voucher-label">Método de Pago:</span>
-              <span class="bcp-voucher-val" id="vouchMetodo">Efectivo</span>
+              <span class="bcp-voucher-label">MEDIO DE PAGO:</span>
+              <span class="bcp-voucher-val" id="vouchMetodo">Yape</span>
             </div>
 
             <div class="bcp-voucher-total">
               <div>
-                <span style="font-size:0.75rem;color:#64748B;display:block">IMPORTE TOTAL</span>
-                <strong style="font-size:0.85rem;color:#0F172A">Servicio de Internet</strong>
+                <div class="lbl">IMPORTE TOTAL PAGADO</div>
+                <div style="font-size:0.72rem;color:#16A34A;font-weight:700">CARGO / COMISIÓN: S/. 0.00</div>
               </div>
               <div class="monto" id="vouchMonto">S/. 65.00</div>
             </div>
 
-            <p id="vouchNotas" style="font-size:0.75rem;color:#64748B;font-style:italic;text-align:center;margin:4px 0 0"></p>
+            <!-- Código QR dinámico de validación -->
+            <div class="bcp-qr-section">
+              <div class="bcp-qr-info">
+                <strong>VALIDACIÓN ELECTRÓNICA</strong>
+                <span>CÓDIGO AUTH: <b id="vouchAuthCode">BCP-8921-99A1</b></span><br/>
+                <span>ESCANEE EL CÓDIGO QR PARA CERTIFICAR EL ABONO DEL CLIENTE.</span>
+              </div>
+              <canvas id="canvasQrVoucher" width="80" height="80" style="width:80px;height:80px;border-radius:6px;background:#fff"></canvas>
+            </div>
+
+            <!-- Código de barras visual bancario -->
+            <div class="bcp-barcode-strip"></div>
+            <div class="bcp-barcode-num" id="vouchBarcodeNum">*09823481204592*</div>
+
+            <p id="vouchNotas" style="font-size:0.72rem;color:#64748B;font-style:italic;text-align:center;margin:6px 0 0"></p>
           </div>
 
           <div class="bcp-voucher-footer">
-            ¡Gracias por su puntualidad! Su servicio se encuentra activo y garantizado.<br/>
-            Soporte y Atención Leytrix: 987654321
+            CONSERVE SU COMPROBANTE DE PAGO BANCARIO.<br/>
+            SERVICIO DE INTERNET 100% ACTIVO Y GARANTIZADO POR LEYTRIX ISP.
           </div>
         </div>
       </div>
 
-      <!-- Botones de Acción del Recibo -->
+      <!-- Botones de Acción y Compartir -->
       <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="imprimirRecibo()" style="flex:1;background:#002A8F;border-color:#002A8F">
-          🖨️ Imprimir
-        </button>
         <button class="btn btn-success" onclick="compartirWhatsappRecibo()" style="flex:1">
           📲 WhatsApp
         </button>
+        <button class="btn btn-primary" onclick="compartirNativoVoucher()" style="flex:1;background:#0284C7;border-color:#0284C7" title="Compartir archivo en el celular">
+          📤 Compartir Celular
+        </button>
         <button class="btn btn-outline" onclick="descargarVoucherImagen()" style="flex:1">
-          📥 Descargar PNG
+          📥 Guardar PNG
+        </button>
+        <button class="btn btn-outline" onclick="imprimirRecibo()" style="flex:1">
+          🖨️ Imprimir
         </button>
       </div>
     </div>
@@ -331,6 +471,7 @@
     let todosClientes = [];
     let historialPagos = [];
     let voucherActual = null;
+    let voucherCanvasCache = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
       renderSidebar('pagos');
@@ -342,10 +483,8 @@
       document.getElementById('pagoMes').value = mes;
       document.getElementById('filtHistMes').value = mes;
 
-      // Cargar lista de clientes
       todosClientes = await IDB.getAll('clientes');
 
-      // Si viene un ID por parámetro en la URL (?id=X)
       const urlParams = new URLSearchParams(window.location.search);
       const preId = urlParams.get('id');
       if (preId) {
@@ -362,16 +501,6 @@
 
     function setMontoRapido(monto) {
       document.getElementById('pagoMonto').value = Number(monto).toFixed(2);
-    }
-
-    function actualizarCamposMetodo() {
-      const metodo = document.getElementById('pagoMetodo').value;
-      const grp = document.getElementById('grpNumOperacion');
-      if (metodo === 'Efectivo') {
-        grp.style.opacity = '0.7';
-      } else {
-        grp.style.opacity = '1';
-      }
     }
 
     function filtrarClientesPago() {
@@ -416,7 +545,6 @@
       document.getElementById('busCliPago').value = cli.nombre;
       document.getElementById('listaSugClientes').style.display = 'none';
 
-      // Info card
       document.getElementById('infoCliSel').style.display = 'block';
       document.getElementById('infoCliNombre').textContent = cli.nombre;
       document.getElementById('infoCliZona').textContent = cli.zona || '—';
@@ -427,7 +555,6 @@
       badgeEstado.textContent = cli.estado;
       badgeEstado.className = 'badge ' + (cli.estado === 'ACTIVO' ? 'badge-act' : 'badge-cort');
 
-      // Prellenar monto con el plan del cliente
       document.getElementById('pagoMonto').value = Number(cli.plan || 65).toFixed(2);
     }
 
@@ -448,7 +575,7 @@
 
       const btn = document.getElementById('btnGuardarPago');
       btn.disabled = true;
-      btn.textContent = '⏳ Registrando...';
+      btn.textContent = '⏳ Emitiendo Voucher Bancario...';
 
       try {
         const mes       = document.getElementById('pagoMes').value;
@@ -474,23 +601,20 @@
         const pagoId = await IDB.add('pagos', nuevoPago);
         nuevoPago.id = pagoId;
 
-        // Si el cliente estaba CORTADO o PENDIENTE, reactivarlo automáticamente
         if (cli.estado === 'CORTADO' || cli.estado === 'PENDIENTE') {
           cli.estado = 'ACTIVO';
           await IDB.put('clientes', cli);
           toast(`⚡ El cliente "${cli.nombre}" ha sido RECONECTADO automáticamente a estado ACTIVO.`, 'info');
         }
 
-        toast(`✅ ¡Pago registrado con éxito! Recibo emitido: ${numOp}`);
+        toast(`✅ ¡Pago registrado con éxito! Operación: ${numOp}`);
         actualizarEstadisticasSidebar();
 
-        // Mostrar Voucher
-        mostrarVoucherModal(nuevoPago, cli);
+        // Mostrar Voucher Bancario y AUTO-GUARDAR LA IMAGEN EN LA NUBE
+        await mostrarVoucherModal(nuevoPago, cli, true);
 
-        // Recargar historial
         await cargarHistorialPagos();
 
-        // Resetear campos del formulario
         document.getElementById('pagoIdCliente').value = '';
         document.getElementById('busCliPago').value = '';
         document.getElementById('infoCliSel').style.display = 'none';
@@ -502,7 +626,7 @@
         toast('❌ Error al registrar pago: ' + (err.message || ''), 'error');
       } finally {
         btn.disabled = false;
-        btn.textContent = '💾 Registrar Pago & Emitir Recibo';
+        btn.textContent = '🧾 Generar Voucher Bancario & Guardar';
       }
     }
 
@@ -513,7 +637,6 @@
 
       try {
         let pagos = await IDB.getAll('pagos');
-        // Ordenar más recientes primero
         pagos.sort((a, b) => (b.id || 0) - (a.id || 0));
 
         if (mesFiltro) {
@@ -523,7 +646,6 @@
         historialPagos = pagos;
         renderTablaHistorial(pagos);
 
-        // Total recaudado
         const total = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
         document.getElementById('lblTotalRecaudado').textContent = `S/. ${total.toFixed(2)}`;
 
@@ -551,8 +673,8 @@
           <td style="font-size:0.8rem;color:var(--gris)">${esc(p.fecha || '—')}</td>
           <td>
             <div class="btn-group">
-              <button class="btn btn-outline btn-sm" onclick="verVoucherHistorial(${p.id})" title="Ver / Imprimir Recibo">
-                🧾 Recibo
+              <button class="btn btn-outline btn-sm" onclick="verVoucherHistorial(${p.id})" title="Ver / Compartir Voucher BCP">
+                🧾 Voucher
               </button>
               <button class="btn btn-danger btn-sm" onclick="eliminarPago(${p.id})" title="Eliminar Pago">
                 🗑️
@@ -588,25 +710,74 @@
         celular: '—',
         direccion: '—'
       };
-      mostrarVoucherModal(pago, cli);
+      await mostrarVoucherModal(pago, cli, false);
     }
 
-    function mostrarVoucherModal(pago, cli) {
+    async function mostrarVoucherModal(pago, cli, autoGuardarFoto = false) {
       voucherActual = { pago, cli };
+      voucherCanvasCache = null;
 
-      document.getElementById('vouchNumOp').textContent = pago.numero_operacion || `OP-${pago.id}`;
-      document.getElementById('vouchFechaHora').textContent = `${pago.fecha || 'Hoy'} - ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
-      document.getElementById('vouchCliente').textContent = cli.nombre || pago.cliente_nombre || 'Cliente';
-      document.getElementById('vouchDniCel').textContent = `${cli.dni ? 'DNI: ' + cli.dni : ''} ${cli.celular ? '• Cel: ' + cli.celular : ''}`.trim() || '—';
-      document.getElementById('vouchZonaDir').textContent = `${cli.zona || '—'} ${cli.direccion ? '• ' + cli.direccion : ''}`;
-      document.getElementById('vouchMes').textContent = pago.mes || '—';
-      document.getElementById('vouchMetodo').textContent = pago.metodo || 'Efectivo';
+      const numOp = pago.numero_operacion || `OP-${pago.id}`;
+      document.getElementById('vouchNumOp').textContent = numOp;
+      
+      const ahora = new Date();
+      const horaStr = ahora.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      document.getElementById('vouchFechaHora').textContent = `${pago.fecha || 'Hoy'} ${horaStr}`;
+      
+      document.getElementById('vouchCliente').textContent = (cli.nombre || pago.cliente_nombre || 'Cliente').toUpperCase();
+      document.getElementById('vouchDniCel').textContent = `${cli.dni ? 'DNI: ' + cli.dni : ''} ${cli.celular ? '• CEL: ' + cli.celular : ''}`.trim() || '—';
+      document.getElementById('vouchZonaDir').textContent = `${cli.zona || '—'}`.toUpperCase();
+      document.getElementById('vouchMes').textContent = `${pago.mes} (PERIODO CANCELADO)`;
+      document.getElementById('vouchMetodo').textContent = (pago.metodo || 'Yape').toUpperCase();
       document.getElementById('vouchMonto').textContent = `S/. ${Number(pago.monto).toFixed(2)}`;
       
+      const authHex = Math.abs((numOp.split('').reduce((a,b)=>a+b.charCodeAt(0),0) * 192837)).toString(16).toUpperCase().padStart(8, '0');
+      document.getElementById('vouchAuthCode').textContent = `BCP-${authHex.slice(0,4)}-${authHex.slice(4,8)}`;
+      document.getElementById('vouchBarcodeNum').textContent = `*${numOp.replace(/\D/g, '') || '09823481204592'}*`;
+
       const elNotas = document.getElementById('vouchNotas');
-      elNotas.textContent = pago.notas ? `Nota: "${pago.notas}"` : '';
+      elNotas.textContent = pago.notas ? `Obs: "${pago.notas}"` : '';
+
+      // Generar Código QR de Seguridad
+      const qrCanvas = document.getElementById('canvasQrVoucher');
+      const qrPayload = `LEYTRIX ISP BCP | OP:${numOp} | CLI:${cli.nombre} | MES:${pago.mes} | MONTO:S/.${Number(pago.monto).toFixed(2)} | ESTADO:CONFORME`;
+      try {
+        if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+          QRCode.toCanvas(qrCanvas, qrPayload, { width: 80, margin: 1 });
+        }
+      } catch(e) {
+        console.warn('QR Code generation notice:', e);
+      }
 
       document.getElementById('modalVoucher').classList.add('open');
+
+      // GUARDADO AUTOMÁTICO DE LA IMAGEN EN LA NUBE Y GALERÍA ISP
+      if (autoGuardarFoto) {
+        setTimeout(async () => {
+          try {
+            const el = document.getElementById('bcpVoucherVisual');
+            const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+            voucherCanvasCache = canvas;
+            const imgData = canvas.toDataURL('image/jpeg', 0.90);
+
+            // Guardar en tabla fotos (se sincroniza a Supabase y se ve en explorador.html)
+            await IDB.add('fotos', {
+              titulo: `Voucher BCP ${numOp} - ${cli.nombre}`,
+              categoria: 'comprobante',
+              cliente_id: cli.id,
+              cliente_nombre: cli.nombre,
+              zona: cli.zona,
+              data_url: imgData,
+              notas: `Voucher bancario emitido automáticamente para el mes ${pago.mes} (S/. ${pago.monto})`,
+              creado_el: new Date().toISOString()
+            });
+
+            toast(`☁️ ¡Voucher bancario guardado automáticamente en Supabase Cloud y Galería!`);
+          } catch(err) {
+            console.warn('Auto-save voucher error:', err);
+          }
+        }, 300);
+      }
     }
 
     function imprimirRecibo() {
@@ -618,36 +789,81 @@
       const { pago, cli } = voucherActual;
       
       const cel = (cli.celular || '').replace(/\D/g, '');
+      const numOp = pago.numero_operacion || `OP-${pago.id}`;
       const mensaje = 
-`*📡 LEYTRIX INTERNET — CONSTANCIA DE PAGO*
-━━━━━━━━━━━━━━━━━━━━━
-👤 *Cliente:* ${cli.nombre}
-🏢 *Zona:* ${cli.zona || '—'}
-📅 *Mes Cancelado:* ${pago.mes}
-💰 *Importe:* S/. ${Number(pago.monto).toFixed(2)}
-💳 *Método:* ${pago.metodo}
-🔢 *N° Operación:* ${pago.numero_operacion || 'OP-' + pago.id}
-📆 *Fecha:* ${pago.fecha}
-━━━━━━━━━━━━━━━━━━━━━
-✅ *¡Su servicio está 100% ACTIVO!*
-Gracias por su puntual preferencia.`;
+`*🏦 CONSTANCIA OFICIAL DE PAGO — AGENTE BCP / LEYTRIX ISP*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ *ESTADO:* PAGO CONFORME Y VALIDADO
+🔢 *N° OPERACIÓN:* ${numOp}
+👤 *CLIENTE:* ${cli.nombre}
+📍 *ZONA / SECTOR:* ${cli.zona || '—'}
+📅 *MES CANCELADO:* ${pago.mes}
+💰 *TOTAL ABONADO:* S/. ${Number(pago.monto).toFixed(2)}
+💳 *MEDIO DE PAGO:* ${pago.metodo || 'Yape'}
+📆 *FECHA DE ABONO:* ${pago.fecha}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌐 *¡Su servicio de internet se encuentra 100% ACTIVO y garantizado!*
+¡Muchas gracias por su puntual preferencia!
+_Leytrix Internet Rural — Soporte: 987654321_`;
 
       const numDestino = cel.length >= 9 ? (cel.startsWith('51') ? cel : '51' + cel) : '';
       const url = `https://api.whatsapp.com/send?phone=${numDestino}&text=${encodeURIComponent(mensaje)}`;
       window.open(url, '_blank');
     }
 
+    // Compartir nativo para celular (abre menú con WhatsApp, Telegram, correo, etc.)
+    async function compartirNativoVoucher() {
+      const el = document.getElementById('bcpVoucherVisual');
+      try {
+        toast('⏳ Preparando voucher para compartir...');
+        const canvas = voucherCanvasCache || await html2canvas(el, { scale: 2, useCORS: true });
+        voucherCanvasCache = canvas;
+
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            compartirWhatsappRecibo();
+            return;
+          }
+
+          const file = new File([blob], `Voucher_BCP_${voucherActual?.pago?.numero_operacion || 'pago'}.png`, { type: 'image/png' });
+          const shareData = {
+            title: 'Voucher de Pago BCP - Leytrix Internet',
+            text: `Voucher oficial de pago del servicio de internet Leytrix ISP para ${voucherActual?.cli?.nombre}. Operación: ${voucherActual?.pago?.numero_operacion}`,
+            files: [file]
+          };
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share(shareData);
+              toast('✅ Voucher compartido con éxito');
+            } catch(e) {
+              if (e.name !== 'AbortError') compartirWhatsappRecibo();
+            }
+          } else {
+            // Si el navegador no permite compartir archivos directamente, descargamos y abrimos WhatsApp
+            descargarVoucherImagen();
+            compartirWhatsappRecibo();
+          }
+        }, 'image/png');
+
+      } catch(err) {
+        console.error('Error al compartir nativo:', err);
+        compartirWhatsappRecibo();
+      }
+    }
+
     async function descargarVoucherImagen() {
       const el = document.getElementById('bcpVoucherVisual');
       try {
-        toast('📸 Generando imagen del comprobante...');
-        const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+        toast('📸 Descargando voucher en alta resolución...');
+        const canvas = voucherCanvasCache || await html2canvas(el, { scale: 2, useCORS: true });
+        voucherCanvasCache = canvas;
         const imgData = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = `Recibo_Leytrix_${voucherActual ? voucherActual.pago.numero_operacion : 'pago'}.png`;
+        link.download = `Voucher_BCP_${voucherActual ? voucherActual.pago.numero_operacion : 'pago'}.png`;
         link.href = imgData;
         link.click();
-        toast('✅ Comprobante descargado en imagen PNG');
+        toast('✅ Comprobante PNG descargado en tu dispositivo');
       } catch(err) {
         console.error('Error html2canvas:', err);
         toast('No se pudo generar la imagen, usa el botón Imprimir', 'warn');

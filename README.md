@@ -44,7 +44,12 @@ Cada sección funciona de manera autónoma en su propio archivo HTML con carga i
    - **S/. 60** — Plan Plus
    - **S/. 65** — Plan Normal
 
-3. **Recibo BCP / WhatsApp:**
-   - Formato idéntico a comprobante de banca móvil con N° de Operación.
-   - Envío directo a WhatsApp del cliente (`wa.me/51...`) con plantilla detallada.
-   - Descarga en imagen PNG (`html2canvas`) e impresión térmica / PDF (`@media print`).
+3. **Recibo / Voucher Bancario BCP & Guardado en la Nube:**
+   - Formato idéntico a comprobante oficial de **Agente BCP** con N° de Operación, código de autorización y código QR dinámico de validación electrónica.
+   - **Guardado Automático:** Cada voucher emitido se convierte a imagen PNG de alta resolución y se guarda automáticamente en la tabla `fotos` de Supabase Cloud y la galería local, para no perder ningún comprobante.
+   - **Compartir Multicanal:** Envío directo al WhatsApp del cliente (`wa.me`), compartir archivo nativo en celulares (`navigator.share`), descarga de imagen PNG e impresión térmica / PDF (`@media print`).
+
+4. **🤖 Asistente de Cobranzas con Inteligencia Artificial (IA WhatsApp):**
+   - Redacción inteligente de mensajes persuasivos con selector de tonos (Amable, Formal de fin de mes, Urgente pre-corte y Convenio de pago).
+   - Inclusión automática de datos de pago (Yape, Plin y BCP) y monto personalizado.
+   - Motor neural local integrado (funciona 100% offline) con opción de conectar la API de Google Gemini para personalización avanzada.
