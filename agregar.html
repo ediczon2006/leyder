@@ -38,7 +38,10 @@
               <input type="text" id="addNombre" class="form-input" placeholder="Ej. Juan Pérez García" required />
             </div>
 
-        
+            <div>
+              <label class="form-label" for="addDni">DNI / RUC</label>
+              <input type="text" id="addDni" class="form-input" placeholder="8 dígitos (DNI) o 11 (RUC)" maxlength="11" />
+            </div>
 
             <div>
               <label class="form-label" for="addCelular">Celular / WhatsApp</label>
@@ -175,17 +178,17 @@
       btn.textContent = '⏳ Guardando...';
 
       try {
-        const nombre    = document.getElementById('addNombre').value.trim();
-        const dni       = document.getElementById('addDni').value.trim();
-        const celular   = document.getElementById('addCelular').value.trim();
-        const zona      = document.getElementById('addZona').value;
-        const direccion = document.getElementById('addDireccion').value.trim();
-        const ip        = document.getElementById('addIp').value.trim();
-        const plan      = Number(document.getElementById('addPlan').value) || 65;
-        const cable     = Number(document.getElementById('addCable').value) || 0;
-        const estado    = document.getElementById('addEstado').value || 'ACTIVO';
-        const fecha     = document.getElementById('addFecha').value || new Date().toISOString().split('T')[0];
-        const notas     = document.getElementById('addNotas').value.trim();
+        const nombre    = (document.getElementById('addNombre')?.value || '').trim();
+        const dni       = (document.getElementById('addDni')?.value || '').trim();
+        const celular   = (document.getElementById('addCelular')?.value || '').trim();
+        const zona      = document.getElementById('addZona')?.value || 'Loboyacu';
+        const direccion = (document.getElementById('addDireccion')?.value || '').trim();
+        const ip        = (document.getElementById('addIp')?.value || '').trim();
+        const plan      = Number(document.getElementById('addPlan')?.value) || 65;
+        const cable     = Number(document.getElementById('addCable')?.value) || 0;
+        const estado    = document.getElementById('addEstado')?.value || 'ACTIVO';
+        const fecha     = document.getElementById('addFecha')?.value || new Date().toISOString().split('T')[0];
+        const notas     = (document.getElementById('addNotas')?.value || '').trim();
 
         if (!nombre) {
           toast('Por favor ingrese el nombre del cliente', 'warn');

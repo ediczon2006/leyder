@@ -578,12 +578,12 @@
       btn.textContent = '⏳ Emitiendo Voucher Bancario...';
 
       try {
-        const mes       = document.getElementById('pagoMes').value;
-        const monto     = Number(document.getElementById('pagoMonto').value) || 0;
-        const metodo    = document.getElementById('pagoMetodo').value;
-        const numOp     = document.getElementById('pagoNumOperacion').value.trim() || `OP-${Date.now().toString().slice(-6)}`;
-        const fecha     = document.getElementById('pagoFecha').value || new Date().toISOString().split('T')[0];
-        const notas     = document.getElementById('pagoNotas').value.trim();
+        const mes       = document.getElementById('pagoMes')?.value || mesActual();
+        const monto     = Number(document.getElementById('pagoMonto')?.value) || 0;
+        const metodo    = document.getElementById('pagoMetodo')?.value || 'Yape';
+        const numOp     = (document.getElementById('pagoNumOperacion')?.value || '').trim() || `OP-${Date.now().toString().slice(-6)}`;
+        const fecha     = document.getElementById('pagoFecha')?.value || new Date().toISOString().split('T')[0];
+        const notas     = (document.getElementById('pagoNotas')?.value || '').trim();
 
         const nuevoPago = {
           id_cliente: cli.id,

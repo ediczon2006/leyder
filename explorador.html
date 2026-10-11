@@ -549,11 +549,11 @@
       btn.textContent = '⏳ Guardando...';
 
       try {
-        const categoria  = document.getElementById('subirCategoria').value;
-        const zona       = document.getElementById('subirZona').value;
-        const cliId      = Number(document.getElementById('subirCliente').value) || null;
-        const titulo     = document.getElementById('subirTitulo').value.trim() || 'Foto ISP';
-        const notas      = document.getElementById('subirNotas').value.trim();
+        const categoria  = document.getElementById('subirCategoria')?.value || 'comprobante';
+        const zona       = document.getElementById('subirZona')?.value || '';
+        const cliId      = Number(document.getElementById('subirCliente')?.value) || null;
+        const titulo     = (document.getElementById('subirTitulo')?.value || '').trim() || 'Foto ISP';
+        const notas      = (document.getElementById('subirNotas')?.value || '').trim();
 
         let cliNombre = '';
         if (cliId) {

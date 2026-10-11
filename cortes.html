@@ -328,9 +328,9 @@
       const cli = todosClientes.find(c => c.id === cliId);
       if (!cli) return;
 
-      const motivo = document.getElementById('corteMotivo').value;
-      const fecha  = document.getElementById('corteFecha').value || new Date().toISOString().split('T')[0];
-      const notas  = document.getElementById('corteNotas').value.trim();
+      const motivo = document.getElementById('corteMotivo')?.value || 'Falta de Pago (Morosidad)';
+      const fecha  = document.getElementById('corteFecha')?.value || new Date().toISOString().split('T')[0];
+      const notas  = (document.getElementById('corteNotas')?.value || '').trim();
 
       const btn = document.getElementById('btnEjecutarCorte');
       btn.disabled = true;
