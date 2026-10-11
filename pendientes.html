@@ -58,11 +58,23 @@
         <button class="btn btn-primary" onclick="abrirModalCobranzaIA()" style="background:#7C3AED;border-color:#7C3AED">
           🤖 Asistente IA de Cobranzas
         </button>
+        <button id="btnRiesgoIA" class="btn btn-outline" onclick="analizarRiesgoMoraIA()" style="border-color:#DC2626;color:#DC2626">
+          🔴 Riesgo de Mora (IA)
+        </button>
         <button class="btn btn-outline" onclick="abrirModalAjustesIA()">
           ⚙️ Cuentas &amp; Clave IA
         </button>
         <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
       </div>
+    </div>
+
+    <!-- Panel de Riesgo IA -->
+    <div id="panelRiesgoIA" style="display:none;background:#fff;border:1.5px solid #FCA5A5;border-radius:12px;padding:18px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:1rem;font-weight:800;color:#DC2626;margin:0">🔴 Análisis de Riesgo de Mora — Gemini IA</h3>
+        <button onclick="document.getElementById('panelRiesgoIA').style.display='none'" style="background:none;border:none;cursor:pointer;color:#94A3B8;font-size:1.2rem">✕</button>
+      </div>
+      <div id="panelRiesgoIA-content"></div>
     </div>
 
     <!-- KPIs del Mes -->
@@ -279,7 +291,7 @@
   </div>
 
   <script src="js/db.js"></script>
-  <script src="js/sidebar.js"></script>
+  <script src="js/ia-central.js"></script><script src="js/sidebar.js"></script>
   <script src="js/ai-cobranza.js"></script>
   <script>
     let clientesLista = [];
@@ -471,6 +483,8 @@
         nombreEmpresa: document.getElementById('cfgNombreEmpresa').value.trim(),
         numeroYape:    document.getElementById('cfgNumeroYape').value.trim(),
         titularYape:   document.getElementById('cfgTitularYape').value.trim(),
+        telefono:      '+51 993 053 643',
+        correo:        'fastnetloboyacu@gmail.com',
         cuentaBcp:     document.getElementById('cfgCuentaBcp').value.trim(),
         cciBcp:        '002191009823481204592',
         titularBcp:    document.getElementById('cfgTitularBcp').value.trim(),
@@ -479,6 +493,42 @@
       guardarConfiguracionIA(cfg);
       toast('✅ Configuración de cuentas e IA guardada correctamente');
       cerrarModal('modalAjustesIA');
+    }
+
+    async function analizarRiesgoMoraIA() {
+      const btn = document.getElementById('btnRiesgoIA');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Analizando con IA...'; }
+      try {
+        const [clientes, pagos] = await Promise.all([IDB.getAll('clientes'), IDB.getAll('pagos')]);
+        const resultados = await FASTNET_IA.predecirRiesgoMora(clientes, pagos);
+        const altos  = resultados.filter(r => r.nivel === 'ALTO');
+        const medios = resultados.filter(r => r.nivel === 'MEDIO');
+        let html = `<div style="margin-bottom:14px">
+          <strong style="color:#DC2626;font-size:0.9rem">🔴 Alto Riesgo (${altos.length} clientes)</strong>
+          ${altos.slice(0,5).map(r => `<div style="background:#FFF1F2;border-left:3px solid #DC2626;padding:8px 12px;margin:6px 0;border-radius:6px;font-size:0.82rem">
+            <strong>${esc(r.cliente.nombre)}</strong> — ${esc(r.cliente.zona)} — S/. ${r.cliente.plan}<br>
+            <span style="color:#B91C1C">${r.razones.join(' • ')}</span>
+            ${r.sugerenciaIA ? `<br>🤖 <em style="color:#7C3AED">${esc(r.sugerenciaIA)}</em>` : ''}
+            <div style="margin-top:6px;display:flex;gap:6px">
+              <a href="pagos.html?id=${r.cliente.id}" class="btn btn-success btn-sm" style="font-size:0.72rem;padding:3px 10px">💳 Cobrar</a>
+              <button onclick="abrirModalCobranzaIA(${r.cliente.id})" class="btn btn-primary btn-sm" style="font-size:0.72rem;padding:3px 10px;background:#7C3AED;border-color:#7C3AED">🤖 WA</button>
+            </div>
+          </div>`).join('')}
+        </div>
+        <div><strong style="color:#D97706;font-size:0.9rem">🟡 Riesgo Medio (${medios.length} clientes)</strong>
+          ${medios.slice(0,5).map(r => `<div style="background:#FFFBEB;border-left:3px solid #F59E0B;padding:8px 12px;margin:6px 0;border-radius:6px;font-size:0.82rem">
+            <strong>${esc(r.cliente.nombre)}</strong> — ${esc(r.cliente.zona)}<br>
+            <span style="color:#92400E">${r.razones.join(' • ')}</span>
+          </div>`).join('')}
+        </div>`;
+        const panel = document.getElementById('panelRiesgoIA');
+        if (panel) { panel.innerHTML = html; panel.style.display = 'block'; }
+        toast(`🤖 IA detectó ${altos.length} clientes en alto riesgo y ${medios.length} en riesgo medio.`);
+      } catch (err) {
+        toast('Error en análisis IA: ' + err.message, 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🤖 Analizar Riesgo de Mora con IA'; }
+      }
     }
 
     async function cortarPorMora(id) {

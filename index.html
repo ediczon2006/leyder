@@ -118,10 +118,30 @@
       </div>
     </div>
 
+    <!-- Panel IA — Análisis del Negocio -->
+    <div class="card" style="margin-bottom:20px;border:1.5px solid #DDD6FE;background:linear-gradient(135deg,#FAFAFF,#F5F3FF)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:1.6rem">🤖</span>
+          <div>
+            <div style="font-weight:800;color:#4F46E5;font-size:1rem">Asistente IA — FastNet Loboyacu</div>
+            <div style="font-size:0.78rem;color:#7C3AED" id="iaResumenRed">Cargando estado de red...</div>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button onclick="ejecutarAnalisisIA()" class="btn btn-primary" style="background:#7C3AED;border-color:#7C3AED">
+            📊 Analizar Negocio con IA
+          </button>
+          <a href="pendientes.html" class="btn btn-outline" style="border-color:#DC2626;color:#DC2626">🔴 Ver Mora</a>
+        </div>
+      </div>
+      <div id="iaAnalisisDashboard" style="display:none;background:#fff;border-radius:10px;padding:14px;border:1px solid #DDD6FE;font-size:0.87rem;line-height:1.7;color:#1E1B4B"></div>
+    </div>
+
   </main>
 
   <script src="js/db.js"></script>
-  <script src="js/sidebar.js"></script>
+  <script src="js/ia-central.js"></script><script src="js/sidebar.js"></script>
   <script>
     async function cargarDashboard() {
       const mes = mesActual();
@@ -197,7 +217,35 @@
       renderSidebar('index');
       window.onDatosActualizados = cargarDashboard;
       await cargarDashboard();
+
+      // Cargar resumen de red con IA (no bloquea el dashboard)
+      setTimeout(async () => {
+        try {
+          const clientes = await IDB.getAll('clientes');
+          const resumen = await FASTNET_IA.resumirEstadoRed(clientes);
+          const el = document.getElementById('iaResumenRed');
+          if (el) el.textContent = resumen;
+        } catch (_) {}
+      }, 800);
     });
+
+    async function ejecutarAnalisisIA() {
+      const panel = document.getElementById('iaAnalisisDashboard');
+      if (!panel) return;
+      panel.style.display = 'block';
+      panel.textContent = '⏳ Generando análisis con Gemini IA...';
+      try {
+        const [clientes, pagos] = await Promise.all([IDB.getAll('clientes'), IDB.getAll('pagos')]);
+        const analisis = await FASTNET_IA.analizarNegocio(clientes, pagos);
+        // Renderizar negritas de markdown
+        panel.innerHTML = analisis
+          .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+          .replace(/\*(.+?)\*/g, '<b>$1</b>')
+          .replace(/\n/g, '<br>');
+      } catch (err) {
+        panel.textContent = '❌ Error: ' + (err.message || 'Verifica tu API Key en ⚙️ Ajustes IA.');
+      }
+    }
   </script>
 </body>
 </html>
