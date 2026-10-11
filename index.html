@@ -270,13 +270,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
     <p>Gestión de Clientes Internet</p>
   </div>
   <hr class="sidebar-sep">
-  <div class="nav-item active" data-page="explorador"><span class="nav-icon">📂</span> Explorador de Archivos</div>
-  <div class="nav-item" data-page="favoritos"><span class="nav-icon">⭐</span> Favoritos</div>
-  <div class="nav-item" data-page="recientes"><span class="nav-icon">🕒</span> Recientes</div>
-  <div class="nav-item" data-page="analizador"><span class="nav-icon">🤖</span> Analizador IA</div>
-  <hr class="sidebar-sep">
-  <div style="padding:6px 20px 2px;font-size:0.7rem;color:#60A5FA;text-transform:uppercase;letter-spacing:1px;font-weight:700">Sistema ISP</div>
-  <div class="nav-item" data-page="inicio"><span class="nav-icon">🏠</span> Panel ISP</div>
+  <div class="nav-item active" data-page="inicio"><span class="nav-icon">🏠</span> Panel ISP</div>
   <div class="nav-item" data-page="clientes"><span class="nav-icon">👥</span> Clientes</div>
   <div class="nav-item" data-page="agregar"><span class="nav-icon">➕</span> Agregar Cliente</div>
   <div class="nav-item" data-page="pagos"><span class="nav-icon">💰</span> Registrar Pago</div>
@@ -284,6 +278,11 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
   <div class="nav-item" data-page="zonas"><span class="nav-icon">🗺️</span> Vista por Zona</div>
   <div class="nav-item" data-page="pendientes"><span class="nav-icon">📅</span> Pendientes del Mes</div>
   <div class="nav-item" data-page="importexport"><span class="nav-icon">📊</span> Importar / Exportar</div>
+  <hr class="sidebar-sep">
+  <div class="nav-item" data-page="explorador"><span class="nav-icon">📂</span> Explorador de Archivos</div>
+  <div class="nav-item" data-page="favoritos"><span class="nav-icon">⭐</span> Favoritos</div>
+  <div class="nav-item" data-page="recientes"><span class="nav-icon">🕒</span> Recientes</div>
+  <div class="nav-item" data-page="analizador"><span class="nav-icon">🤖</span> Analizador IA</div>
   <div class="sidebar-stats" id="sidebarStats"><p>Cargando estadísticas...</p></div>
 </nav>
 
@@ -291,9 +290,33 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 <main id="main">
 
 <!-- INICIO -->
-<section class="page" id="page-inicio">
+<section class="page active" id="page-inicio">
   <div class="page-header"><h2>📡 Panel de Control — Leytrix ISP</h2><p>Resumen general del servicio (Optimizado para 1,000,000+ registros)</p></div>
-  <div class="kpi-grid" id="kpiGrid"><div class="kpi kpi-blue"><div class="val">—</div><div class="lbl">Cargando</div></div></div>
+    <div class="kpi-grid" id="kpiGrid"><div class="kpi kpi-blue"><div class="val">—</div><div class="lbl">Cargando</div></div></div>
+
+  <!-- Acceso Directo en el Frente al Explorador de Archivos Windows -->
+  <div class="card" style="margin-bottom:24px;background:linear-gradient(135deg,#F0FDFA 0%,#E0F2FE 50%,#EFF6FF 100%);border:1.5px solid #BAE6FD;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <span style="font-size:1.8rem">📂</span>
+          <h3 style="font-size:1.1rem;font-weight:800;color:#0F172A">Explorador de Archivos Windows</h3>
+          <span class="badge" style="background:#0284C7;color:#fff;font-size:0.72rem">Integrado</span>
+        </div>
+        <p style="font-size:0.85rem;color:#0369A1;line-height:1.4">
+          Lee y previsualiza cualquier archivo de tu computadora (.pdf, .docx, .xlsx, .jpg, .mp4, .zip, etc.) en tiempo real sin datos demos.
+        </p>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="goTo('explorador')" style="background:#0284C7;border-color:#0284C7">
+          📂 Abrir Explorador Completo
+        </button>
+        <button class="btn btn-outline" onclick="goTo('inicio'); setTimeout(() => document.getElementById('expInputCarpeta').click(), 150)">
+          📁 Cargar Carpeta Local
+        </button>
+      </div>
+    </div>
+  </div>
   <div class="two-col">
     <div class="card"><div class="card-title">🗺️ Clientes por Zona</div><div id="tablaZonasDash"></div></div>
     <div class="card"><div class="card-title">📅 Sin pago este mes</div><div id="sinPagoDash"></div></div>
@@ -597,7 +620,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 
 
 <!-- EXPLORADOR DE ARCHIVOS WINDOWS -->
-<section class="page active" id="page-explorador">
+<section class="page" id="page-explorador">
   <!-- Barra Superior de Búsqueda y Filtros estilo Windows Explorer -->
   <div style="background:#fff;border:1px solid var(--borde);border-radius:12px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,.04)">
     <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:300px">
