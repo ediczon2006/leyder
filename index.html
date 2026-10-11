@@ -212,6 +212,52 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
     print-color-adjust: exact !important;
   }
 }
+
+/* ═══ ESTILOS EXPLORADOR DE ARCHIVOS WINDOWS ═══ */
+.exp-nav-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--texto);
+  transition: all .15s;
+}
+.exp-nav-btn:hover { background: var(--azul-xs); color: var(--azul); }
+.exp-nav-btn.active { background: var(--azul-cl); color: var(--azul); font-weight: 700; }
+.exp-nav-btn .badge { background: #E2E8F0; color: #475569; font-size: 0.72rem; }
+.exp-nav-btn.active .badge { background: var(--azul); color: #fff; }
+
+.exp-folder-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #334155;
+  transition: all .15s;
+  word-break: break-all;
+}
+.exp-folder-item:hover { background: var(--azul-xs); color: var(--azul); }
+.exp-folder-item.active { background: var(--azul-cl); color: var(--azul); font-weight: 700; }
+
+.exp-row { cursor: pointer; user-select: none; transition: background .12s; }
+.exp-row:hover td { background: #F8FAFC; }
+.exp-row.selected td { background: #EFF6FF !important; }
+
+.exp-file-icon { font-size: 1.3rem; vertical-align: middle; margin-right: 8px; flex-shrink: 0; }
+.exp-file-name { font-weight: 600; color: #1E293B; word-break: break-all; }
+.exp-drop-active { outline: 3px dashed var(--azul2) !important; outline-offset: -6px; background: rgba(239,246,255,0.7) !important; }
+
+@media(max-width: 1024px) {
+  #expGridContenedor { grid-template-columns: 1fr !important; }
+}
+
 </style>
 </head>
 <body>
@@ -232,6 +278,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
   <div class="nav-item" data-page="zonas"><span class="nav-icon">🗺️</span> Vista por Zona</div>
   <div class="nav-item" data-page="pendientes"><span class="nav-icon">📅</span> Pendientes del Mes</div>
   <div class="nav-item" data-page="importexport"><span class="nav-icon">📊</span> Importar / Exportar</div>
+  <div class="nav-item" data-page="explorador"><span class="nav-icon">📂</span> Explorador de Archivos</div>
   <div class="sidebar-stats" id="sidebarStats"><p>Cargando estadísticas...</p></div>
 </nav>
 
@@ -539,6 +586,145 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
     <div class="btn-group">
       <button class="btn btn-ghost" id="btnPlantCli">📄 Plantilla Clientes</button>
       <button class="btn btn-ghost" id="btnPlantPag">📄 Plantilla Pagos</button>
+    </div>
+  </div>
+</section>
+
+
+<!-- EXPLORADOR DE ARCHIVOS WINDOWS -->
+<section class="page" id="page-explorador">
+  <div class="page-header" style="background:linear-gradient(135deg,#0F172A 0%,#1E3A8A 50%,#0284C7 100%)">
+    <h2>📂 Explorador de Archivos Windows — Leytrix</h2>
+    <p>Gestor documental integrado. Lee, busca y previsualiza cualquier archivo de tu computadora en tiempo real sin datos demos.</p>
+  </div>
+
+  <!-- Barra de Acciones y Controles Principales -->
+  <div class="card" style="margin-bottom:18px;padding:16px 20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <!-- Buscador y Filtro -->
+      <div style="display:flex;gap:10px;flex:1;min-width:280px;align-items:center">
+        <input id="expBusqueda" placeholder="🔍 Buscar por nombre o extensión (.pdf, .docx, .xlsx, .jpg, .mp4...)" style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.88rem;outline:none"/>
+        <select id="expFiltroTipo" style="padding:9px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;min-width:170px">
+          <option value="todos">Todos los tipos</option>
+          <option value="docs">Documentos (Word, PDF, TXT)</option>
+          <option value="sheets">Hojas de cálculo (Excel, CSV)</option>
+          <option value="slides">Presentaciones (PowerPoint)</option>
+          <option value="images">Imágenes (JPG, PNG, WebP)</option>
+          <option value="media">Video &amp; Audio (MP4, MP3, etc.)</option>
+          <option value="archives">Comprimidos (ZIP, RAR, 7Z)</option>
+          <option value="code">Código / Datos (JSON, SQL, XML)</option>
+        </select>
+      </div>
+
+      <!-- Botones de Carga de Windows -->
+      <div class="btn-group">
+        <input type="file" id="expInputArchivos" multiple style="display:none"/>
+        <input type="file" id="expInputCarpeta" webkitdirectory directory multiple style="display:none"/>
+        <button class="btn btn-primary" id="btnExpCargarCarpeta" style="background:#0284C7;border-color:#0284C7">
+          📁 Abrir Carpeta de Windows
+        </button>
+        <button class="btn btn-outline" id="btnExpCargarArchivos">
+          📄 Seleccionar Archivos
+        </button>
+        <button class="btn btn-ghost" id="btnExpLimpiar" title="Limpiar lista">
+          🧹 Limpiar
+        </button>
+      </div>
+    </div>
+
+    <!-- Píldoras de resumen / estadísticas de archivos cargados -->
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;font-size:0.78rem" id="expResumenPills">
+      <span class="badge" style="background:#EFF6FF;color:#1E40AF" id="pillExpTotal">Total: 0</span>
+      <span class="badge" style="background:#F0FDF4;color:#166534" id="pillExpDocs">Docs: 0</span>
+      <span class="badge" style="background:#FEF3C7;color:#92400E" id="pillExpSheets">Excel: 0</span>
+      <span class="badge" style="background:#FAF5FF;color:#6B21A8" id="pillExpImgs">Imágenes: 0</span>
+      <span class="badge" style="background:#FFF1F2;color:#9F1239" id="pillExpMedia">Media: 0</span>
+      <span class="badge" style="background:#F1F5F9;color:#475569" id="pillExpTamano">Peso: 0 B</span>
+    </div>
+  </div>
+
+  <!-- Contenedor Principal: 3 Columnas (Árbol | Tabla Explorer | Vista Previa) -->
+  <div style="display:grid;grid-template-columns:220px 1fr 340px;gap:16px;min-height:560px;align-items:start" id="expGridContenedor">
+    <!-- 1. Panel Izquierdo: Categorías y Carpetas -->
+    <div class="card" style="padding:16px;height:100%;min-height:560px;overflow-y:auto">
+      <div class="card-title" style="font-size:0.88rem;margin-bottom:10px">📁 Categorías</div>
+      <div style="display:flex;flex-direction:column;gap:4px" id="expTreeCarpetas">
+        <div class="exp-nav-btn active" data-cat="todos">📂 Todos <span class="badge" id="badgeCatTodos">0</span></div>
+        <div class="exp-nav-btn" data-cat="docs">📄 Documentos <span class="badge" id="badgeCatDocs">0</span></div>
+        <div class="exp-nav-btn" data-cat="sheets">📊 Hojas Excel <span class="badge" id="badgeCatSheets">0</span></div>
+        <div class="exp-nav-btn" data-cat="slides">📑 Diapositivas <span class="badge" id="badgeCatSlides">0</span></div>
+        <div class="exp-nav-btn" data-cat="images">🖼️ Imágenes <span class="badge" id="badgeCatImages">0</span></div>
+        <div class="exp-nav-btn" data-cat="media">🎬 Multimedia <span class="badge" id="badgeCatMedia">0</span></div>
+        <div class="exp-nav-btn" data-cat="archives">📦 Comprimidos <span class="badge" id="badgeCatArchives">0</span></div>
+        <div class="exp-nav-btn" data-cat="code">💻 Código/Datos <span class="badge" id="badgeCatCode">0</span></div>
+        <div class="exp-nav-btn" data-cat="favs">⭐ Favoritos <span class="badge" id="badgeCatFavs">0</span></div>
+      </div>
+      <hr style="margin:14px 0">
+      <div class="card-title" style="font-size:0.82rem;margin-bottom:8px">🗂️ Carpetas Detectadas</div>
+      <div id="expListaSubcarpetas" style="display:flex;flex-direction:column;gap:3px;font-size:0.8rem;color:var(--gris)">
+        <span style="font-style:italic;padding:4px">Sin carpetas cargadas aún</span>
+      </div>
+    </div>
+
+    <!-- 2. Panel Central: Explorador de Archivos (Tabla Windows) -->
+    <div class="card" style="padding:0;overflow:hidden;min-height:560px;display:flex;flex-direction:column">
+      <!-- Barra de Ruta (Breadcrumb estilo Windows) -->
+      <div style="padding:10px 16px;background:#F8FAFC;border-bottom:1px solid var(--borde);display:flex;align-items:center;gap:8px;font-size:0.82rem">
+        <span style="color:#0284C7;font-weight:700">🖥️ Este Equipo</span>
+        <span style="color:var(--gris)">›</span>
+        <span id="expBreadcrumb" style="font-weight:600;color:var(--texto);word-break:break-all">Todos los archivos</span>
+      </div>
+
+      <!-- Zona de Drop y Tabla -->
+      <div style="flex:1;overflow-y:auto;position:relative" id="expDropZone">
+        <div class="table-wrap" style="border:none;border-radius:0">
+          <table style="width:100%">
+            <thead style="background:#F1F5F9;position:sticky;top:0;z-index:2">
+              <tr>
+                <th>Nombre</th>
+                <th>Tipo de archivo</th>
+                <th>Fecha de modificación</th>
+                <th>Tamaño</th>
+              </tr>
+            </thead>
+            <tbody id="expTablaCuerpo">
+              <!-- Estado inicial limpio sin datos demos -->
+              <tr>
+                <td colspan="4" style="padding:70px 20px;text-align:center">
+                  <div class="empty-state" style="padding:0">
+                    <div class="e-icon" style="font-size:3.5rem">📂</div>
+                    <h3 style="font-size:1.15rem;color:var(--azul);margin-bottom:6px">Explorador de Archivos Windows</h3>
+                    <p style="font-size:0.85rem;color:var(--gris);max-width:440px;margin:0 auto 18px;line-height:1.5">
+                      Arrastra cualquier carpeta o archivos de tu computadora aquí, o haz clic en los botones para abrir documentos reales de Windows (.pdf, .docx, .xlsx, .jpg, .mp4, etc.).
+                    </p>
+                    <div style="display:inline-flex;gap:10px">
+                      <button class="btn btn-primary" onclick="document.getElementById('expInputCarpeta').click()" style="background:#0284C7;border-color:#0284C7">
+                        📁 Abrir Carpeta de Windows
+                      </button>
+                      <button class="btn btn-outline" onclick="document.getElementById('expInputArchivos').click()">
+                        📄 Seleccionar Archivos
+                      </button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Panel Derecho: Vista Previa y Detalles del Archivo -->
+    <div class="card" style="padding:18px;min-height:560px;display:flex;flex-direction:column;overflow-y:auto" id="expPanelDetalles">
+      <div class="card-title" style="font-size:0.88rem;margin-bottom:12px">🔍 Vista Previa &amp; Detalles</div>
+      <div id="expDetallesContenido" style="display:flex;flex-direction:column;height:100%">
+        <!-- Estado inicial -->
+        <div style="text-align:center;padding:50px 10px;color:var(--gris);margin:auto 0">
+          <div style="font-size:2.8rem;margin-bottom:8px">📄</div>
+          <p style="font-size:0.85rem;font-weight:600">Ningún archivo seleccionado</p>
+          <p style="font-size:0.75rem;margin-top:4px">Selecciona un archivo de la lista para ver su vista previa y opciones.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -1075,6 +1261,511 @@ function renderPagination(containerId, infId, state, onPage) {
 // ══════════════════════════════════════════════════════
 //  NAVEGACIÓN
 // ══════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════
+//  EXPLORADOR DE ARCHIVOS WINDOWS (100% REAL - SIN DATOS DEMOS)
+// ══════════════════════════════════════════════════════
+const EXP_TYPES = {
+  docs:     ['pdf','doc','docx','txt','rtf','odt','wps','pages'],
+  sheets:   ['xls','xlsx','csv','ods','tsv'],
+  slides:   ['ppt','pptx','odp','key'],
+  images:   ['jpg','jpeg','png','gif','webp','svg','bmp','ico','avif','tiff','jfif'],
+  media:    ['mp4','webm','mkv','avi','mov','mp3','wav','ogg','m4a','flac','aac','wma','3gp'],
+  archives: ['zip','rar','7z','tar','gz','bz2','iso','xz'],
+  code:     ['json','sql','html','css','js','py','xml','md','log','ini','yml','yaml','php','sh','bat']
+};
+
+let _expArchivos = []; // Lista de archivos reales cargados
+let _expSeleccionado = null; // Archivo seleccionado actualmente
+let _expCarpetaFiltro = ''; // Filtro de subcarpeta
+let _expCatFiltro = 'todos'; // Filtro de categoría
+let _expFavoritos = new Set(); // Conjunto de nombres favoritos
+
+function getFileCategory(ext) {
+  ext = (ext || '').toLowerCase();
+  for (const [cat, exts] of Object.entries(EXP_TYPES)) {
+    if (exts.includes(ext)) return cat;
+  }
+  return 'otros';
+}
+
+function getFileInfo(file) {
+  const name = file.name || '';
+  const parts = name.split('.');
+  const ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
+  const cat = getFileCategory(ext);
+
+  let icon = '📄';
+  let typeDesc = ext ? `Archivo .${ext.toUpperCase()}` : 'Archivo';
+  let color = '#64748B';
+
+  if (['doc','docx'].includes(ext)) { icon = '📘'; typeDesc = 'Documento de Word'; color = '#2B579A'; }
+  else if (['xls','xlsx','csv'].includes(ext)) { icon = '📊'; typeDesc = 'Hoja de cálculo Excel'; color = '#217346'; }
+  else if (['ppt','pptx'].includes(ext)) { icon = '📑'; typeDesc = 'Presentación PowerPoint'; color = '#D24726'; }
+  else if (ext === 'pdf') { icon = '📕'; typeDesc = 'Documento PDF'; color = '#F40F02'; }
+  else if (EXP_TYPES.images.includes(ext)) { icon = '🖼️'; typeDesc = `Imagen ${ext.toUpperCase()}`; color = '#8B5CF6'; }
+  else if (['mp4','webm','mkv','avi','mov'].includes(ext)) { icon = '🎬'; typeDesc = `Video ${ext.toUpperCase()}`; color = '#E11D48'; }
+  else if (['mp3','wav','ogg','m4a','flac'].includes(ext)) { icon = '🎵'; typeDesc = `Audio ${ext.toUpperCase()}`; color = '#D97706'; }
+  else if (EXP_TYPES.archives.includes(ext)) { icon = '📦'; typeDesc = `Archivo comprimido (${ext.toUpperCase()})`; color = '#4F46E5'; }
+  else if (['txt','log','md'].includes(ext)) { icon = '📝'; typeDesc = 'Documento de texto'; color = '#64748B'; }
+  else if (EXP_TYPES.code.includes(ext)) { icon = '💻'; typeDesc = `Archivo de código / datos (${ext.toUpperCase()})`; color = '#0284C7'; }
+
+  const relPath = file.webkitRelativePath || file.name;
+  const pathParts = relPath.split('/');
+  const folder = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : '';
+
+  return {
+    file,
+    name,
+    ext,
+    cat,
+    icon,
+    typeDesc,
+    color,
+    folder,
+    relPath,
+    size: file.size || 0,
+    mtime: file.lastModified ? new Date(file.lastModified) : new Date()
+  };
+}
+
+function formatBytes(bytes) {
+  if (!bytes || bytes <= 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function agregarArchivosExplorador(fileList) {
+  if (!fileList || !fileList.length) return;
+  const nuevos = [];
+  for (let i = 0; i < fileList.length; i++) {
+    nuevos.push(getFileInfo(fileList[i]));
+  }
+  // Evitar duplicados por ruta relativa / nombre + tamaño
+  nuevos.forEach(nf => {
+    if (!_expArchivos.some(a => a.relPath === nf.relPath && a.size === nf.size)) {
+      _expArchivos.push(nf);
+    }
+  });
+
+  toast(`📂 ${fileList.length} archivo(s) cargado(s) correctamente`);
+  actualizarVistaExplorador();
+}
+
+function actualizarVistaExplorador() {
+  actualizarContadoresExplorador();
+  actualizarArbolCarpetas();
+  renderTablaArchivos();
+}
+
+function actualizarContadoresExplorador() {
+  const total = _expArchivos.length;
+  const docs = _expArchivos.filter(a => a.cat === 'docs').length;
+  const sheets = _expArchivos.filter(a => a.cat === 'sheets').length;
+  const slides = _expArchivos.filter(a => a.cat === 'slides').length;
+  const images = _expArchivos.filter(a => a.cat === 'images').length;
+  const media = _expArchivos.filter(a => a.cat === 'media').length;
+  const archives = _expArchivos.filter(a => a.cat === 'archives').length;
+  const code = _expArchivos.filter(a => a.cat === 'code').length;
+  const favs = _expArchivos.filter(a => _expFavoritos.has(a.relPath)).length;
+  const totalBytes = _expArchivos.reduce((s, a) => s + (a.size || 0), 0);
+
+  const setT = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setT('pillExpTotal', `Total: ${total}`);
+  setT('pillExpDocs', `Docs: ${docs}`);
+  setT('pillExpSheets', `Excel: ${sheets}`);
+  setT('pillExpImgs', `Imágenes: ${images}`);
+  setT('pillExpMedia', `Media: ${media}`);
+  setT('pillExpTamano', `Peso: ${formatBytes(totalBytes)}`);
+
+  setT('badgeCatTodos', total);
+  setT('badgeCatDocs', docs);
+  setT('badgeCatSheets', sheets);
+  setT('badgeCatSlides', slides);
+  setT('badgeCatImages', images);
+  setT('badgeCatMedia', media);
+  setT('badgeCatArchives', archives);
+  setT('badgeCatCode', code);
+  setT('badgeCatFavs', favs);
+}
+
+function actualizarArbolCarpetas() {
+  const carpetasSet = new Set();
+  _expArchivos.forEach(a => {
+    if (a.folder) carpetasSet.add(a.folder);
+  });
+
+  const contenedor = document.getElementById('expListaSubcarpetas');
+  if (!contenedor) return;
+
+  if (carpetasSet.size === 0) {
+    contenedor.innerHTML = '<span style="font-style:italic;padding:4px">Sin subcarpetas detectadas</span>';
+    return;
+  }
+
+  const carpetasArr = Array.from(carpetasSet).sort();
+  contenedor.innerHTML = carpetasArr.map(f => `
+    <div class="exp-folder-item${_expCarpetaFiltro === f ? ' active' : ''}" data-folder="${esc(f)}">
+      <span>📁</span>
+      <span style="flex:1">${esc(f)}</span>
+    </div>
+  `).join('');
+
+  contenedor.querySelectorAll('[data-folder]').forEach(item => {
+    item.addEventListener('click', () => {
+      const targetFolder = item.dataset.folder;
+      if (_expCarpetaFiltro === targetFolder) {
+        _expCarpetaFiltro = '';
+      } else {
+        _expCarpetaFiltro = targetFolder;
+      }
+      actualizarVistaExplorador();
+    });
+  });
+}
+
+function renderTablaArchivos() {
+  const tbody = document.getElementById('expTablaCuerpo');
+  const breadcrumb = document.getElementById('expBreadcrumb');
+  if (!tbody) return;
+
+  const busqueda = (document.getElementById('expBusqueda')?.value || '').toLowerCase().trim();
+  const tipoFiltro = document.getElementById('expFiltroTipo')?.value || 'todos';
+
+  let filtrados = _expArchivos.filter(a => {
+    // Filtro de categoría izquierda
+    if (_expCatFiltro === 'favs' && !_expFavoritos.has(a.relPath)) return false;
+    if (_expCatFiltro !== 'todos' && _expCatFiltro !== 'favs' && a.cat !== _expCatFiltro) return false;
+
+    // Filtro desplegable
+    if (tipoFiltro !== 'todos' && a.cat !== tipoFiltro) return false;
+
+    // Filtro de carpeta
+    if (_expCarpetaFiltro && a.folder !== _expCarpetaFiltro) return false;
+
+    // Búsqueda
+    if (busqueda && !a.name.toLowerCase().includes(busqueda) && !a.ext.includes(busqueda)) return false;
+
+    return true;
+  });
+
+  // Breadcrumb
+  let bText = 'Todos los archivos';
+  if (_expCarpetaFiltro) bText = `📁 ${_expCarpetaFiltro}`;
+  else if (_expCatFiltro !== 'todos') bText = `📂 Categoría: ${_expCatFiltro.toUpperCase()}`;
+  if (breadcrumb) breadcrumb.textContent = bText;
+
+  if (_expArchivos.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="padding:70px 20px;text-align:center">
+          <div class="empty-state" style="padding:0">
+            <div class="e-icon" style="font-size:3.5rem">📂</div>
+            <h3 style="font-size:1.15rem;color:var(--azul);margin-bottom:6px">Explorador de Archivos Windows</h3>
+            <p style="font-size:0.85rem;color:var(--gris);max-width:440px;margin:0 auto 18px;line-height:1.5">
+              Arrastra cualquier carpeta o archivos de tu computadora aquí, o haz clic en los botones para abrir documentos reales de Windows (.pdf, .docx, .xlsx, .jpg, .mp4, etc.).
+            </p>
+            <div style="display:inline-flex;gap:10px">
+              <button class="btn btn-primary" onclick="document.getElementById('expInputCarpeta').click()" style="background:#0284C7;border-color:#0284C7">
+                📁 Abrir Carpeta de Windows
+              </button>
+              <button class="btn btn-outline" onclick="document.getElementById('expInputArchivos').click()">
+                📄 Seleccionar Archivos
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    return;
+  }
+
+  if (filtrados.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="padding:40px;text-align:center;color:var(--gris)">
+          🔍 No se encontraron archivos coincidentes con el filtro o búsqueda actual.
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtrados.map(a => {
+    const isSelected = _expSeleccionado && _expSeleccionado.relPath === a.relPath;
+    const isFav = _expFavoritos.has(a.relPath);
+    const fStr = a.mtime.toLocaleString('es-PE', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    return `
+      <tr class="exp-row${isSelected ? ' selected' : ''}" data-path="${esc(a.relPath)}">
+        <td>
+          <span class="exp-file-icon">${a.icon}</span>
+          <span class="exp-file-name">${esc(a.name)}</span>
+          ${isFav ? '<span style="color:#F59E0B;margin-left:4px" title="Favorito">⭐</span>' : ''}
+        </td>
+        <td style="color:#475569;font-size:0.82rem">${esc(a.typeDesc)}</td>
+        <td style="color:var(--gris);font-size:0.82rem">${esc(fStr)}</td>
+        <td style="color:#1E293B;font-weight:600;font-size:0.82rem">${esc(formatBytes(a.size))}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Eventos de selección de fila
+  tbody.querySelectorAll('.exp-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const p = row.dataset.path;
+      const target = _expArchivos.find(a => a.relPath === p);
+      if (target) {
+        _expSeleccionado = target;
+        tbody.querySelectorAll('.exp-row').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+        mostrarDetallesArchivo(target);
+      }
+    });
+
+    row.addEventListener('dblclick', () => {
+      const p = row.dataset.path;
+      const target = _expArchivos.find(a => a.relPath === p);
+      if (target) abrirArchivoVistaCompleta(target);
+    });
+  });
+}
+
+function mostrarDetallesArchivo(info) {
+  const panel = document.getElementById('expDetallesContenido');
+  if (!panel) return;
+
+  const url = URL.createObjectURL(info.file);
+  const isFav = _expFavoritos.has(info.relPath);
+  let previewHtml = '';
+
+  if (info.cat === 'images') {
+    previewHtml = `
+      <div style="text-align:center;background:#F8FAFC;border:1px solid var(--borde);border-radius:10px;padding:12px;margin-bottom:14px">
+        <img src="${url}" alt="${esc(info.name)}" style="max-width:100%;max-height:220px;border-radius:6px;object-fit:contain;box-shadow:0 2px 8px rgba(0,0,0,0.08)"/>
+      </div>`;
+  } else if (info.cat === 'media') {
+    const isVideo = ['mp4','webm','mkv','mov'].includes(info.ext);
+    if (isVideo) {
+      previewHtml = `
+        <div style="background:#000;border-radius:10px;overflow:hidden;margin-bottom:14px">
+          <video controls src="${url}" style="width:100%;max-height:200px;display:block"></video>
+        </div>`;
+    } else {
+      previewHtml = `
+        <div style="background:#F8FAFC;border:1px solid var(--borde);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px">
+          <div style="font-size:2.5rem;margin-bottom:8px">🎵</div>
+          <audio controls src="${url}" style="width:100%"></audio>
+        </div>`;
+    }
+  } else if (info.ext === 'pdf') {
+    previewHtml = `
+      <div style="background:#FFF1F2;border:1px solid #FECDD3;border-radius:10px;padding:20px;text-align:center;margin-bottom:14px">
+        <div style="font-size:3rem;margin-bottom:6px">📕</div>
+        <div style="font-weight:700;color:#BE123C;font-size:0.9rem">Documento PDF</div>
+        <button class="btn btn-primary btn-sm mt-16" style="background:#BE123C;border-color:#BE123C" onclick="window.open('${url}','_blank')">
+          👁️ Abrir PDF en nueva pestaña
+        </button>
+      </div>`;
+  } else if (info.cat === 'code' || info.ext === 'txt') {
+    previewHtml = `
+      <div style="margin-bottom:14px">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--gris);margin-bottom:4px">Vista previa de texto:</div>
+        <pre id="expTextPreview" style="background:#F8FAFC;border:1px solid var(--borde);border-radius:8px;padding:10px;font-size:0.74rem;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-all">Cargando contenido...</pre>
+      </div>`;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const pEl = document.getElementById('expTextPreview');
+      if (pEl) pEl.textContent = String(e.target.result || '').slice(0, 5000);
+    };
+    reader.readAsText(info.file.slice(0, 5000));
+  } else {
+    previewHtml = `
+      <div style="background:#F8FAFC;border:1px solid var(--borde);border-radius:10px;padding:26px 14px;text-align:center;margin-bottom:14px">
+        <div style="font-size:3.5rem;margin-bottom:8px">${info.icon}</div>
+        <div style="font-weight:700;color:${info.color};font-size:0.95rem">${esc(info.typeDesc)}</div>
+      </div>`;
+  }
+
+  const fStr = info.mtime.toLocaleString('es-PE', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+
+  panel.innerHTML = `
+    ${previewHtml}
+    <div style="margin-bottom:16px">
+      <h4 style="font-size:0.95rem;font-weight:800;color:var(--texto);word-break:break-all;margin-bottom:8px">${esc(info.name)}</h4>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:0.8rem;color:#475569">
+        <div><strong>Tipo:</strong> ${esc(info.typeDesc)}</div>
+        <div><strong>Tamaño:</strong> ${esc(formatBytes(info.size))} (${Number(info.size).toLocaleString()} bytes)</div>
+        <div><strong>Modificado:</strong> ${esc(fStr)}</div>
+        ${info.folder ? `<div><strong>Ubicación:</strong> <code>${esc(info.folder)}</code></div>` : ''}
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
+      <button class="btn btn-primary btn-full" style="background:#0284C7;border-color:#0284C7" id="btnExpAbrirDoc">
+        👁️ Abrir / Ver Vista Completa
+      </button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn btn-outline btn-sm" id="btnExpDescargar">💾 Descargar</button>
+        <button class="btn btn-outline btn-sm" id="btnExpCopiarNombre">📋 Copiar Nombre</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn btn-ghost btn-sm" id="btnExpToggleFav">${isFav ? '⭐ Quitar Favorito' : '☆ Agregar Favorito'}</button>
+        <button class="btn btn-danger btn-sm" id="btnExpQuitar">🗑️ Quitar de Lista</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btnExpAbrirDoc')?.addEventListener('click', () => abrirArchivoVistaCompleta(info));
+  document.getElementById('btnExpDescargar')?.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = info.name;
+    a.click();
+    toast('Descargando archivo...');
+  });
+  document.getElementById('btnExpCopiarNombre')?.addEventListener('click', () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(info.name);
+      toast('📋 Nombre copiado al portapapeles');
+    }
+  });
+  document.getElementById('btnExpToggleFav')?.addEventListener('click', () => {
+    if (_expFavoritos.has(info.relPath)) {
+      _expFavoritos.delete(info.relPath);
+      toast('Quitado de favoritos');
+    } else {
+      _expFavoritos.add(info.relPath);
+      toast('⭐ Agregado a favoritos');
+    }
+    actualizarVistaExplorador();
+    mostrarDetallesArchivo(info);
+  });
+  document.getElementById('btnExpQuitar')?.addEventListener('click', () => {
+    _expArchivos = _expArchivos.filter(a => a.relPath !== info.relPath);
+    _expSeleccionado = null;
+    toast('Archivo quitado de la lista');
+    actualizarVistaExplorador();
+    panel.innerHTML = `
+      <div style="text-align:center;padding:50px 10px;color:var(--gris);margin:auto 0">
+        <div style="font-size:2.8rem;margin-bottom:8px">📄</div>
+        <p style="font-size:0.85rem;font-weight:600">Ningún archivo seleccionado</p>
+      </div>`;
+  });
+}
+
+function abrirArchivoVistaCompleta(info) {
+  const url = URL.createObjectURL(info.file);
+  window.open(url, '_blank');
+}
+
+function inicializarEventosExplorador() {
+  const inputArchivos = document.getElementById('expInputArchivos');
+  const inputCarpeta  = document.getElementById('expInputCarpeta');
+
+  document.getElementById('btnExpCargarArchivos')?.addEventListener('click', () => inputArchivos?.click());
+  document.getElementById('btnExpCargarCarpeta')?.addEventListener('click', async () => {
+    // Intentar File System Access API para Windows moderno si está disponible
+    if (window.showDirectoryPicker) {
+      try {
+        const dirHandle = await window.showDirectoryPicker();
+        const files = [];
+        async function scanDir(handle, path = '') {
+          for await (const entry of handle.values()) {
+            if (entry.kind === 'file') {
+              const file = await entry.getFile();
+              Object.defineProperty(file, 'webkitRelativePath', {
+                value: path ? `${path}/${file.name}` : `${handle.name}/${file.name}`
+              });
+              files.push(file);
+            } else if (entry.kind === 'directory') {
+              await scanDir(entry, path ? `${path}/${entry.name}` : `${handle.name}/${entry.name}`);
+            }
+          }
+        }
+        await scanDir(dirHandle);
+        agregarArchivosExplorador(files);
+        return;
+      } catch(err) {
+        if (err.name === 'AbortError') return;
+        console.log('Fallback a input webkitdirectory:', err);
+      }
+    }
+    inputCarpeta?.click();
+  });
+
+  inputArchivos?.addEventListener('change', e => {
+    if (e.target.files && e.target.files.length) {
+      agregarArchivosExplorador(e.target.files);
+      e.target.value = '';
+    }
+  });
+
+  inputCarpeta?.addEventListener('change', e => {
+    if (e.target.files && e.target.files.length) {
+      agregarArchivosExplorador(e.target.files);
+      e.target.value = '';
+    }
+  });
+
+  document.getElementById('btnExpLimpiar')?.addEventListener('click', () => {
+    if (!_expArchivos.length) return;
+    if (confirm('¿Desea limpiar todos los archivos del explorador?')) {
+      _expArchivos = [];
+      _expSeleccionado = null;
+      _expCarpetaFiltro = '';
+      _expCatFiltro = 'todos';
+      actualizarVistaExplorador();
+      const p = document.getElementById('expDetallesContenido');
+      if (p) p.innerHTML = '<div style="text-align:center;padding:50px 10px;color:var(--gris);margin:auto 0"><div style="font-size:2.8rem;margin-bottom:8px">📄</div><p style="font-size:0.85rem;font-weight:600">Ningún archivo seleccionado</p></div>';
+      toast('Explorador reiniciado');
+    }
+  });
+
+  // Búsqueda y selector de tipo
+  document.getElementById('expBusqueda')?.addEventListener('input', () => renderTablaArchivos());
+  document.getElementById('expFiltroTipo')?.addEventListener('change', () => renderTablaArchivos());
+
+  // Categorías panel izquierdo
+  document.querySelectorAll('#expTreeCarpetas .exp-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#expTreeCarpetas .exp-nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _expCatFiltro = btn.dataset.cat || 'todos';
+      renderTablaArchivos();
+    });
+  });
+
+  // Drag & drop en zona central
+  const dropZone = document.getElementById('expDropZone');
+  if (dropZone) {
+    ['dragenter','dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, e => {
+        e.preventDefault(); e.stopPropagation();
+        dropZone.classList.add('exp-drop-active');
+      });
+    });
+    ['dragleave','drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, e => {
+        e.preventDefault(); e.stopPropagation();
+        dropZone.classList.remove('exp-drop-active');
+      });
+    });
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length) {
+        agregarArchivosExplorador(dt.files);
+      }
+    });
+  }
+}
+
 const PAGE_HANDLERS = {
   inicio:       renderInicio,
   clientes:     () => renderClientes(0),
@@ -1084,6 +1775,7 @@ const PAGE_HANDLERS = {
   zonas:        renderZonas,
   pendientes:   initPendientes,
   importexport: () => {},
+  explorador:   () => { actualizarVistaExplorador(); },
 };
 
 function goTo(page) {
@@ -2865,6 +3557,8 @@ async function init() {
       });
     } catch (_) {}
   }
+
+  inicializarEventosExplorador();
 
   // Carga inicial
   await renderInicio();
