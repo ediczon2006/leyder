@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LEYTRIX ISP — Agregar Cliente</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div class="page-header" style="margin-bottom:0">
+        <h2>➕ Registrar Nuevo Cliente</h2>
+        <p>Ingresa los datos de instalación y facturación del nuevo usuario de internet</p>
+      </div>
+      <div class="btn-group">
+        <a href="clientes.html" class="btn btn-outline">👥 Ver Todos los Clientes</a>
+      </div>
+    </div>
+
+    <div style="max-width:860px;margin:0 auto">
+      <div class="card" style="padding:28px 32px">
+        <form id="formAgregarCliente" onsubmit="guardarCliente(event)">
+          
+          <h3 style="font-size:1.05rem;color:var(--azul);margin-bottom:16px;display:flex;align-items:center;gap:8px;border-bottom:1.5px solid var(--borde);padding-bottom:10px">
+            <span>👤</span> Datos Personales y de Contacto
+          </h3>
+          
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:16px;margin-bottom:20px">
+            <div>
+              <label class="form-label" for="addNombre">Nombre Completo <span style="color:var(--rojo)">*</span></label>
+              <input type="text" id="addNombre" class="form-input" placeholder="Ej. Juan Pérez García" required />
+            </div>
+
+        
+
+            <div>
+              <label class="form-label" for="addCelular">Celular / WhatsApp</label>
+              <input type="tel" id="addCelular" class="form-input" placeholder="Ej. 987654321" maxlength="15" />
+            </div>
+          </div>
+
+          <h3 style="font-size:1.05rem;color:var(--azul);margin-bottom:16px;display:flex;align-items:center;gap:8px;border-bottom:1.5px solid var(--borde);padding-bottom:10px">
+            <span>🗺️</span> Ubicación &amp; Zona de Red
+          </h3>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:16px;margin-bottom:20px">
+            <div>
+              <label class="form-label" for="addZona">Zona de Cobertura <span style="color:var(--rojo)">*</span></label>
+              <select id="addZona" class="form-select" required>
+                <option value="Loboyacu">Loboyacu</option>
+                <option value="Huayranga">Huayranga</option>
+                <option value="Pacotillo">Pacotillo</option>
+                <option value="Ramal de Cachiyacu">Ramal de Cachiyacu</option>
+                <option value="Palmeras">Palmeras</option>
+                <option value="Shishiyacu">Shishiyacu</option>
+              </select>
+            </div>
+
+            <div style="grid-column:span 2">
+              <label class="form-label" for="addDireccion">Dirección / Referencia</label>
+              <input type="text" id="addDireccion" class="form-input" placeholder="Ej. Jr. Comercio s/n (Frente a la posta médica)" />
+            </div>
+          </div>
+
+          <h3 style="font-size:1.05rem;color:var(--azul);margin-bottom:16px;display:flex;align-items:center;gap:8px;border-bottom:1.5px solid var(--borde);padding-bottom:10px">
+            <span>📶</span> Plan &amp; Parámetros Técnicos
+          </h3>
+
+          <!-- Selección Rápida de Plan -->
+          <div style="margin-bottom:18px">
+            <label class="form-label">Seleccionar Plan de Internet <span style="color:var(--rojo)">*</span></label>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-top:6px">
+              <div class="card card-plan-opt" id="optPlan50" onclick="seleccionarPlan(50)" style="cursor:pointer;border:2px solid var(--borde);padding:14px;border-radius:10px;text-align:center;transition:all .15s ease">
+                <div style="font-weight:800;font-size:1.2rem;color:var(--azul)">S/. 50</div>
+                <div style="font-size:0.8rem;color:var(--gris);font-weight:600">Plan Básico</div>
+              </div>
+              <div class="card card-plan-opt" id="optPlan60" onclick="seleccionarPlan(60)" style="cursor:pointer;border:2px solid var(--borde);padding:14px;border-radius:10px;text-align:center;transition:all .15s ease">
+                <div style="font-weight:800;font-size:1.2rem;color:var(--azul)">S/. 60</div>
+                <div style="font-size:0.8rem;color:var(--gris);font-weight:600">Plan Plus</div>
+              </div>
+              <div class="card card-plan-opt active-plan" id="optPlan65" onclick="seleccionarPlan(65)" style="cursor:pointer;border:2px solid var(--azul);background:#EFF6FF;padding:14px;border-radius:10px;text-align:center;transition:all .15s ease">
+                <div style="font-weight:800;font-size:1.2rem;color:var(--azul)">S/. 65</div>
+                <div style="font-size:0.8rem;color:#1D4ED8;font-weight:700">⭐ Plan Normal</div>
+              </div>
+            </div>
+            <input type="hidden" id="addPlan" value="65" />
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;margin-bottom:20px">
+            <div>
+              <label class="form-label" for="addIp">Dirección IP Asignada</label>
+              <input type="text" id="addIp" class="form-input" placeholder="Ej. 192.168.10.45" />
+            </div>
+
+            <div>
+              <label class="form-label" for="addCable">Metros de Cable (m)</label>
+              <input type="number" id="addCable" class="form-input" placeholder="Ej. 85" min="0" max="1000" />
+            </div>
+
+            <div>
+              <label class="form-label" for="addEstado">Estado Inicial</label>
+              <select id="addEstado" class="form-select">
+                <option value="ACTIVO" selected>ACTIVO</option>
+                <option value="PENDIENTE">PENDIENTE (Instalación)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label" for="addFecha">Fecha de Inicio / Alta</label>
+              <input type="date" id="addFecha" class="form-input" />
+            </div>
+          </div>
+
+          <div style="margin-bottom:24px">
+            <label class="form-label" for="addNotas">Detalles Técnicos / Equipo ONT / Caja NAP</label>
+            <textarea id="addNotas" class="form-input" rows="2" placeholder="Ej. Router Huawei EG8145V5, conectado al Puerto 4 de la Caja NAP 02 en poste de la esquina"></textarea>
+          </div>
+
+          <div style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap">
+            <button type="button" class="btn btn-outline" onclick="limpiarFormulario()">🔄 Limpiar Formulario</button>
+            <button type="submit" class="btn btn-primary" id="btnGuardarCli" style="padding:10px 24px;font-size:0.95rem">
+              💾 Guardar Cliente
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/db.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSidebar('agregar');
+      // Fecha de hoy por defecto
+      const hoy = new Date().toISOString().split('T')[0];
+      const fEl = document.getElementById('addFecha');
+      if (fEl) fEl.value = hoy;
+    });
+
+    function seleccionarPlan(precio) {
+      document.getElementById('addPlan').value = precio;
+      [50, 60, 65].forEach(p => {
+        const el = document.getElementById('optPlan' + p);
+        if (!el) return;
+        if (p === precio) {
+          el.style.border = '2px solid var(--azul)';
+          el.style.background = '#EFF6FF';
+        } else {
+          el.style.border = '2px solid var(--borde)';
+          el.style.background = '#fff';
+        }
+      });
+    }
+
+    function limpiarFormulario() {
+      document.getElementById('formAgregarCliente').reset();
+      seleccionarPlan(65);
+      const hoy = new Date().toISOString().split('T')[0];
+      const fEl = document.getElementById('addFecha');
+      if (fEl) fEl.value = hoy;
+    }
+
+    async function guardarCliente(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnGuardarCli');
+      btn.disabled = true;
+      btn.textContent = '⏳ Guardando...';
+
+      try {
+        const nombre    = document.getElementById('addNombre').value.trim();
+        const dni       = document.getElementById('addDni').value.trim();
+        const celular   = document.getElementById('addCelular').value.trim();
+        const zona      = document.getElementById('addZona').value;
+        const direccion = document.getElementById('addDireccion').value.trim();
+        const ip        = document.getElementById('addIp').value.trim();
+        const plan      = Number(document.getElementById('addPlan').value) || 65;
+        const cable     = Number(document.getElementById('addCable').value) || 0;
+        const estado    = document.getElementById('addEstado').value || 'ACTIVO';
+        const fecha     = document.getElementById('addFecha').value || new Date().toISOString().split('T')[0];
+        const notas     = document.getElementById('addNotas').value.trim();
+
+        if (!nombre) {
+          toast('Por favor ingrese el nombre del cliente', 'warn');
+          btn.disabled = false;
+          btn.textContent = '💾 Guardar Cliente';
+          return;
+        }
+
+        const nuevoCliente = {
+          nombre,
+          dni,
+          celular,
+          zona,
+          direccion,
+          ip,
+          plan,
+          cable,
+          estado,
+          fecha_inicio: fecha,
+          notas,
+          creado_el: new Date().toISOString()
+        };
+
+        const id = await IDB.add('clientes', nuevoCliente);
+        toast(`✅ ¡Cliente "${nombre}" registrado con éxito (ID #${id})!`);
+        actualizarEstadisticasSidebar();
+
+        // Preguntar o redirigir
+        setTimeout(() => {
+          if (confirm(`Cliente "${nombre}" guardado con éxito.\n¿Deseas ir al listado de clientes? (Presiona Cancelar para registrar otro)`)) {
+            window.location.href = 'clientes.html';
+          } else {
+            limpiarFormulario();
+            btn.disabled = false;
+            btn.textContent = '💾 Guardar Cliente';
+          }
+        }, 300);
+
+      } catch (err) {
+        console.error('Error al guardar cliente:', err);
+        toast('❌ Error al guardar el cliente: ' + (err.message || ''), 'error');
+        btn.disabled = false;
+        btn.textContent = '💾 Guardar Cliente';
+      }
+    }
+  </script>
+</body>
+</html>

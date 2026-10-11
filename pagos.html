@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LEYTRIX ISP — Pagos y Recibos</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    /* Estilos del Recibo BCP */
+    .bcp-voucher-card {
+      background: #FFFFFF;
+      border: 2px solid #002A8F;
+      border-radius: 16px;
+      overflow: hidden;
+      max-width: 440px;
+      margin: 0 auto;
+      box-shadow: 0 10px 25px -5px rgba(0, 42, 143, 0.2);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .bcp-voucher-header {
+      background: linear-gradient(135deg, #002A8F 0%, #001B5E 100%);
+      color: #FFFFFF;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+    }
+    .bcp-voucher-header h3 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+      color: #FF7800;
+    }
+    .bcp-voucher-header p {
+      font-size: 0.8rem;
+      opacity: 0.9;
+      margin: 0;
+    }
+    .bcp-voucher-body {
+      padding: 22px;
+    }
+    .bcp-voucher-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px dashed #E2E8F0;
+      font-size: 0.85rem;
+    }
+    .bcp-voucher-row:last-child {
+      border-bottom: none;
+    }
+    .bcp-voucher-label {
+      color: #64748B;
+      font-weight: 500;
+    }
+    .bcp-voucher-val {
+      color: #0F172A;
+      font-weight: 700;
+      text-align: right;
+    }
+    .bcp-voucher-total {
+      background: #F8FAFC;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bcp-voucher-total .monto {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: #002A8F;
+    }
+    .bcp-voucher-footer {
+      background: #F1F5F9;
+      padding: 12px;
+      text-align: center;
+      font-size: 0.72rem;
+      color: #64748B;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #areaImpresionRecibo, #areaImpresionRecibo * {
+        visibility: visible !important;
+      }
+      #areaImpresionRecibo {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div class="page-header" style="margin-bottom:0">
+        <h2>💰 Registro de Pagos &amp; Comprobantes</h2>
+        <p>Registra mensualidades, emite recibos tipo BCP/Yape e imprime o envía por WhatsApp</p>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Pagos</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(320px, 420px) 1fr;gap:22px;align-items:start" id="pagosGridContainer">
+      
+      <!-- FORMULARIO DE REGISTRO DE PAGO -->
+      <div class="card" style="padding:22px 24px">
+        <h3 style="font-size:1.05rem;color:var(--azul);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span>💳</span> Nuevo Pago
+        </h3>
+
+        <form id="formPago" onsubmit="registrarPago(event)">
+          <!-- Buscador / Selector de Cliente -->
+          <div style="margin-bottom:14px">
+            <label class="form-label" for="busCliPago">Buscar Cliente <span style="color:var(--rojo)">*</span></label>
+            <input type="text" id="busCliPago" class="form-input" placeholder="🔍 Escribe nombre, IP o DNI..." autocomplete="off" oninput="filtrarClientesPago()" />
+            <div id="listaSugClientes" style="display:none;position:relative;background:#fff;border:1.5px solid var(--azul);border-radius:8px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 8px 18px rgba(0,0,0,0.1);margin-top:4px"></div>
+            <input type="hidden" id="pagoIdCliente" required />
+          </div>
+
+          <!-- Tarjeta informativa del cliente seleccionado -->
+          <div id="infoCliSel" style="display:none;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;padding:12px;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong id="infoCliNombre" style="color:#166534;font-size:0.9rem">Cliente</strong>
+              <span id="infoCliEstado" class="badge badge-act">ACTIVO</span>
+            </div>
+            <div style="font-size:0.78rem;color:#15803D;margin-top:4px;display:flex;gap:12px;flex-wrap:wrap">
+              <span>Zona: <b id="infoCliZona">—</b></span>
+              <span>IP: <b id="infoCliIp">—</b></span>
+              <span>Plan: <b id="infoCliPlan">S/. 65</b></span>
+            </div>
+          </div>
+
+          <!-- Mes Correspondiente -->
+          <div style="margin-bottom:14px">
+            <label class="form-label" for="pagoMes">Mes a Cancelar <span style="color:var(--rojo)">*</span></label>
+            <input type="month" id="pagoMes" class="form-input" required />
+          </div>
+
+          <!-- Monto a Pagar -->
+          <div style="margin-bottom:14px">
+            <label class="form-label" for="pagoMonto">Monto en Soles (S/.) <span style="color:var(--rojo)">*</span></label>
+            <div style="display:flex;gap:8px">
+              <input type="number" step="0.50" id="pagoMonto" class="form-input" placeholder="65.00" required style="font-size:1.1rem;font-weight:700;color:var(--azul)" />
+              <button type="button" class="btn btn-outline btn-sm" onclick="setMontoRapido(50)">S/.50</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setMontoRapido(60)">S/.60</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setMontoRapido(65)">S/.65</button>
+            </div>
+          </div>
+
+          <!-- Método de Pago -->
+          <div style="margin-bottom:14px">
+            <label class="form-label" for="pagoMetodo">Método de Pago</label>
+            <select id="pagoMetodo" class="form-select" onchange="actualizarCamposMetodo()">
+              <option value="Efectivo" selected>💵 Efectivo</option>
+              <option value="Yape">📱 Yape</option>
+              <option value="Plin">📱 Plin</option>
+              <option value="BCP">🏦 BCP / Transferencia</option>
+              <option value="Otro">💳 Otro</option>
+            </select>
+          </div>
+
+          <!-- N° de Operación (visible si no es efectivo o siempre opcional) -->
+          <div style="margin-bottom:14px" id="grpNumOperacion">
+            <label class="form-label" for="pagoNumOperacion">N° de Operación / Ref. BCP o Yape</label>
+            <input type="text" id="pagoNumOperacion" class="form-input" placeholder="Ej. OP-982341 / Ref. 4509" />
+          </div>
+
+          <!-- Fecha de Pago -->
+          <div style="margin-bottom:14px">
+            <label class="form-label" for="pagoFecha">Fecha del Pago</label>
+            <input type="date" id="pagoFecha" class="form-input" />
+          </div>
+
+          <!-- Observación -->
+          <div style="margin-bottom:20px">
+            <label class="form-label" for="pagoNotas">Observación / Nota</label>
+            <input type="text" id="pagoNotas" class="form-input" placeholder="Opcional: Canceló mitad, adelantado, etc." />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full" id="btnGuardarPago" style="padding:12px;font-size:0.95rem;background:#16A34A;border-color:#16A34A">
+            💾 Registrar Pago &amp; Emitir Recibo
+          </button>
+        </form>
+      </div>
+
+      <!-- HISTORIAL Y RESUMEN DE PAGOS -->
+      <div>
+        <div class="card" style="margin-bottom:18px;padding:16px 20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1">
+              <input type="month" id="filtHistMes" class="form-input" style="max-width:180px;padding:7px 10px" onchange="cargarHistorialPagos()" />
+              <input type="text" id="filtHistBus" placeholder="🔍 Filtrar en historial..." class="form-input" style="flex:1;min-width:160px;padding:7px 10px" oninput="filtrarTablaHistorial()" />
+            </div>
+            <div style="background:#EFF6FF;border:1px solid #BFDBFE;padding:8px 14px;border-radius:10px;text-align:right">
+              <span style="font-size:0.75rem;color:var(--gris);display:block">Total Recaudado</span>
+              <strong id="lblTotalRecaudado" style="font-size:1.15rem;color:var(--azul)">S/. 0.00</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Zona</th>
+                <th>Mes</th>
+                <th>Monto</th>
+                <th>Método</th>
+                <th>N° Operación</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="bodyHistPagos">
+              <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gris)">Cargando pagos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL RECIBO BCP / VOUCHER -->
+  <div class="modal-bg" id="modalVoucher">
+    <div class="modal" style="max-width:480px;background:#F8FAFC">
+      <div class="modal-header">
+        <h3>🧾 Comprobante de Pago</h3>
+        <button class="modal-close" onclick="cerrarModal('modalVoucher')">✕</button>
+      </div>
+
+      <!-- Área de Recibo imprimible y descargable -->
+      <div id="areaImpresionRecibo">
+        <div class="bcp-voucher-card" id="bcpVoucherVisual">
+          <div class="bcp-voucher-header">
+            <h3>LEYTRIX INTERNET</h3>
+            <p>Comprobante de Servicio de Internet ISP</p>
+            <div style="margin-top:8px;font-size:0.75rem;background:rgba(255,255,255,0.15);display:inline-block;padding:3px 12px;border-radius:20px">
+              CONSTANCIA DE ABONO
+            </div>
+          </div>
+
+          <div class="bcp-voucher-body">
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">N° Operación / Recibo:</span>
+              <span class="bcp-voucher-val" id="vouchNumOp">OP-000000</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">Fecha y Hora:</span>
+              <span class="bcp-voucher-val" id="vouchFechaHora">—</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">Cliente:</span>
+              <span class="bcp-voucher-val" id="vouchCliente" style="color:var(--azul)">—</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">DNI / Celular:</span>
+              <span class="bcp-voucher-val" id="vouchDniCel">—</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">Zona / Dirección:</span>
+              <span class="bcp-voucher-val" id="vouchZonaDir">—</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">Mes Cancelado:</span>
+              <span class="bcp-voucher-val" id="vouchMes" style="color:#16A34A;font-weight:800">—</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">Método de Pago:</span>
+              <span class="bcp-voucher-val" id="vouchMetodo">Efectivo</span>
+            </div>
+
+            <div class="bcp-voucher-total">
+              <div>
+                <span style="font-size:0.75rem;color:#64748B;display:block">IMPORTE TOTAL</span>
+                <strong style="font-size:0.85rem;color:#0F172A">Servicio de Internet</strong>
+              </div>
+              <div class="monto" id="vouchMonto">S/. 65.00</div>
+            </div>
+
+            <p id="vouchNotas" style="font-size:0.75rem;color:#64748B;font-style:italic;text-align:center;margin:4px 0 0"></p>
+          </div>
+
+          <div class="bcp-voucher-footer">
+            ¡Gracias por su puntualidad! Su servicio se encuentra activo y garantizado.<br/>
+            Soporte y Atención Leytrix: 987654321
+          </div>
+        </div>
+      </div>
+
+      <!-- Botones de Acción del Recibo -->
+      <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="imprimirRecibo()" style="flex:1;background:#002A8F;border-color:#002A8F">
+          🖨️ Imprimir
+        </button>
+        <button class="btn btn-success" onclick="compartirWhatsappRecibo()" style="flex:1">
+          📲 WhatsApp
+        </button>
+        <button class="btn btn-outline" onclick="descargarVoucherImagen()" style="flex:1">
+          📥 Descargar PNG
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/db.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let todosClientes = [];
+    let historialPagos = [];
+    let voucherActual = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderSidebar('pagos');
+      
+      const hoy = new Date().toISOString().split('T')[0];
+      const mes = mesActual();
+
+      document.getElementById('pagoFecha').value = hoy;
+      document.getElementById('pagoMes').value = mes;
+      document.getElementById('filtHistMes').value = mes;
+
+      // Cargar lista de clientes
+      todosClientes = await IDB.getAll('clientes');
+
+      // Si viene un ID por parámetro en la URL (?id=X)
+      const urlParams = new URLSearchParams(window.location.search);
+      const preId = urlParams.get('id');
+      if (preId) {
+        seleccionarClientePorId(Number(preId));
+      }
+
+      await cargarHistorialPagos();
+    });
+
+    function setMontoRapido(monto) {
+      document.getElementById('pagoMonto').value = Number(monto).toFixed(2);
+    }
+
+    function actualizarCamposMetodo() {
+      const metodo = document.getElementById('pagoMetodo').value;
+      const grp = document.getElementById('grpNumOperacion');
+      if (metodo === 'Efectivo') {
+        grp.style.opacity = '0.7';
+      } else {
+        grp.style.opacity = '1';
+      }
+    }
+
+    function filtrarClientesPago() {
+      const q = (document.getElementById('busCliPago').value || '').toLowerCase().trim();
+      const wrap = document.getElementById('listaSugClientes');
+      
+      if (!q || q.length < 1) {
+        wrap.style.display = 'none';
+        return;
+      }
+
+      const match = todosClientes.filter(c => 
+        (c.nombre && c.nombre.toLowerCase().includes(q)) ||
+        (c.dni && c.dni.includes(q)) ||
+        (c.ip && c.ip.includes(q)) ||
+        (c.zona && c.zona.toLowerCase().includes(q))
+      ).slice(0, 8);
+
+      if (match.length === 0) {
+        wrap.innerHTML = `<div style="padding:10px;font-size:0.8rem;color:var(--gris);text-align:center">No se encontraron clientes con "${esc(q)}"</div>`;
+        wrap.style.display = 'block';
+        return;
+      }
+
+      wrap.innerHTML = match.map(c => `
+        <div onclick="seleccionarClientePorId(${c.id})" style="padding:8px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:0.82rem;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='#fff'">
+          <div>
+            <strong>${esc(c.nombre)}</strong>
+            <span style="font-size:0.75rem;color:var(--gris);display:block">${esc(c.zona)} • IP: ${esc(c.ip || '—')}</span>
+          </div>
+          <span class="badge ${c.estado === 'ACTIVO' ? 'badge-act' : 'badge-cort'}">${esc(c.estado)}</span>
+        </div>
+      `).join('');
+      wrap.style.display = 'block';
+    }
+
+    function seleccionarClientePorId(id) {
+      const cli = todosClientes.find(c => c.id === id);
+      if (!cli) return;
+
+      document.getElementById('pagoIdCliente').value = cli.id;
+      document.getElementById('busCliPago').value = cli.nombre;
+      document.getElementById('listaSugClientes').style.display = 'none';
+
+      // Info card
+      document.getElementById('infoCliSel').style.display = 'block';
+      document.getElementById('infoCliNombre').textContent = cli.nombre;
+      document.getElementById('infoCliZona').textContent = cli.zona || '—';
+      document.getElementById('infoCliIp').textContent = cli.ip || '—';
+      document.getElementById('infoCliPlan').textContent = `S/. ${cli.plan || 65} (${labelPlan(cli.plan)})`;
+      
+      const badgeEstado = document.getElementById('infoCliEstado');
+      badgeEstado.textContent = cli.estado;
+      badgeEstado.className = 'badge ' + (cli.estado === 'ACTIVO' ? 'badge-act' : 'badge-cort');
+
+      // Prellenar monto con el plan del cliente
+      document.getElementById('pagoMonto').value = Number(cli.plan || 65).toFixed(2);
+    }
+
+    async function registrarPago(e) {
+      e.preventDefault();
+      const cliId = Number(document.getElementById('pagoIdCliente').value);
+      if (!cliId) {
+        toast('Selecciona un cliente antes de guardar', 'warn');
+        document.getElementById('busCliPago').focus();
+        return;
+      }
+
+      const cli = todosClientes.find(c => c.id === cliId);
+      if (!cli) {
+        toast('Cliente no encontrado en la base de datos', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btnGuardarPago');
+      btn.disabled = true;
+      btn.textContent = '⏳ Registrando...';
+
+      try {
+        const mes       = document.getElementById('pagoMes').value;
+        const monto     = Number(document.getElementById('pagoMonto').value) || 0;
+        const metodo    = document.getElementById('pagoMetodo').value;
+        const numOp     = document.getElementById('pagoNumOperacion').value.trim() || `OP-${Date.now().toString().slice(-6)}`;
+        const fecha     = document.getElementById('pagoFecha').value || new Date().toISOString().split('T')[0];
+        const notas     = document.getElementById('pagoNotas').value.trim();
+
+        const nuevoPago = {
+          id_cliente: cli.id,
+          cliente_nombre: cli.nombre,
+          cliente_zona: cli.zona,
+          mes,
+          monto,
+          metodo,
+          numero_operacion: numOp,
+          fecha,
+          notas,
+          creado_el: new Date().toISOString()
+        };
+
+        const pagoId = await IDB.add('pagos', nuevoPago);
+        nuevoPago.id = pagoId;
+
+        // Si el cliente estaba CORTADO o PENDIENTE, reactivarlo automáticamente
+        if (cli.estado === 'CORTADO' || cli.estado === 'PENDIENTE') {
+          cli.estado = 'ACTIVO';
+          await IDB.put('clientes', cli);
+          toast(`⚡ El cliente "${cli.nombre}" ha sido RECONECTADO automáticamente a estado ACTIVO.`, 'info');
+        }
+
+        toast(`✅ ¡Pago registrado con éxito! Recibo emitido: ${numOp}`);
+        actualizarEstadisticasSidebar();
+
+        // Mostrar Voucher
+        mostrarVoucherModal(nuevoPago, cli);
+
+        // Recargar historial
+        await cargarHistorialPagos();
+
+        // Resetear campos del formulario
+        document.getElementById('pagoIdCliente').value = '';
+        document.getElementById('busCliPago').value = '';
+        document.getElementById('infoCliSel').style.display = 'none';
+        document.getElementById('pagoNumOperacion').value = '';
+        document.getElementById('pagoNotas').value = '';
+
+      } catch (err) {
+        console.error('Error registrando pago:', err);
+        toast('❌ Error al registrar pago: ' + (err.message || ''), 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Registrar Pago & Emitir Recibo';
+      }
+    }
+
+    async function cargarHistorialPagos() {
+      const mesFiltro = document.getElementById('filtHistMes').value;
+      const tbody = document.getElementById('bodyHistPagos');
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--gris)">Cargando pagos...</td></tr>';
+
+      try {
+        let pagos = await IDB.getAll('pagos');
+        // Ordenar más recientes primero
+        pagos.sort((a, b) => (b.id || 0) - (a.id || 0));
+
+        if (mesFiltro) {
+          pagos = pagos.filter(p => p.mes === mesFiltro);
+        }
+
+        historialPagos = pagos;
+        renderTablaHistorial(pagos);
+
+        // Total recaudado
+        const total = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+        document.getElementById('lblTotalRecaudado').textContent = `S/. ${total.toFixed(2)}`;
+
+      } catch(err) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--rojo)">Error al cargar pagos: ${esc(err.message)}</td></tr>`;
+      }
+    }
+
+    function renderTablaHistorial(pagos) {
+      const tbody = document.getElementById('bodyHistPagos');
+      if (!pagos.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--gris)">No hay pagos registrados para este mes.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = pagos.map(p => `
+        <tr>
+          <td><strong style="color:var(--azul)">#${p.id}</strong></td>
+          <td><strong>${esc(p.cliente_nombre || 'Cliente #' + p.id_cliente)}</strong></td>
+          <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(p.cliente_zona || '—')}</span></td>
+          <td><strong style="color:#0284C7">${esc(p.mes)}</strong></td>
+          <td><strong style="color:#16A34A">S/. ${Number(p.monto).toFixed(2)}</strong></td>
+          <td>${esc(p.metodo || 'Efectivo')}</td>
+          <td><code style="font-size:0.75rem;background:#F8FAFC;padding:2px 6px;border-radius:4px">${esc(p.numero_operacion || '—')}</code></td>
+          <td style="font-size:0.8rem;color:var(--gris)">${esc(p.fecha || '—')}</td>
+          <td>
+            <div class="btn-group">
+              <button class="btn btn-outline btn-sm" onclick="verVoucherHistorial(${p.id})" title="Ver / Imprimir Recibo">
+                🧾 Recibo
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="eliminarPago(${p.id})" title="Eliminar Pago">
+                🗑️
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filtrarTablaHistorial() {
+      const q = (document.getElementById('filtHistBus').value || '').toLowerCase().trim();
+      if (!q) {
+        renderTablaHistorial(historialPagos);
+        return;
+      }
+      const filtrados = historialPagos.filter(p =>
+        (p.cliente_nombre && p.cliente_nombre.toLowerCase().includes(q)) ||
+        (p.cliente_zona && p.cliente_zona.toLowerCase().includes(q)) ||
+        (p.numero_operacion && p.numero_operacion.toLowerCase().includes(q)) ||
+        (p.metodo && p.metodo.toLowerCase().includes(q))
+      );
+      renderTablaHistorial(filtrados);
+    }
+
+    async function verVoucherHistorial(id) {
+      const pago = historialPagos.find(p => p.id === id);
+      if (!pago) return;
+      const cli = todosClientes.find(c => c.id === pago.id_cliente) || {
+        nombre: pago.cliente_nombre,
+        zona: pago.cliente_zona,
+        dni: '—',
+        celular: '—',
+        direccion: '—'
+      };
+      mostrarVoucherModal(pago, cli);
+    }
+
+    function mostrarVoucherModal(pago, cli) {
+      voucherActual = { pago, cli };
+
+      document.getElementById('vouchNumOp').textContent = pago.numero_operacion || `OP-${pago.id}`;
+      document.getElementById('vouchFechaHora').textContent = `${pago.fecha || 'Hoy'} - ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+      document.getElementById('vouchCliente').textContent = cli.nombre || pago.cliente_nombre || 'Cliente';
+      document.getElementById('vouchDniCel').textContent = `${cli.dni ? 'DNI: ' + cli.dni : ''} ${cli.celular ? '• Cel: ' + cli.celular : ''}`.trim() || '—';
+      document.getElementById('vouchZonaDir').textContent = `${cli.zona || '—'} ${cli.direccion ? '• ' + cli.direccion : ''}`;
+      document.getElementById('vouchMes').textContent = pago.mes || '—';
+      document.getElementById('vouchMetodo').textContent = pago.metodo || 'Efectivo';
+      document.getElementById('vouchMonto').textContent = `S/. ${Number(pago.monto).toFixed(2)}`;
+      
+      const elNotas = document.getElementById('vouchNotas');
+      elNotas.textContent = pago.notas ? `Nota: "${pago.notas}"` : '';
+
+      document.getElementById('modalVoucher').classList.add('open');
+    }
+
+    function imprimirRecibo() {
+      window.print();
+    }
+
+    function compartirWhatsappRecibo() {
+      if (!voucherActual) return;
+      const { pago, cli } = voucherActual;
+      
+      const cel = (cli.celular || '').replace(/\D/g, '');
+      const mensaje = 
+`*📡 LEYTRIX INTERNET — CONSTANCIA DE PAGO*
+━━━━━━━━━━━━━━━━━━━━━
+👤 *Cliente:* ${cli.nombre}
+🏢 *Zona:* ${cli.zona || '—'}
+📅 *Mes Cancelado:* ${pago.mes}
+💰 *Importe:* S/. ${Number(pago.monto).toFixed(2)}
+💳 *Método:* ${pago.metodo}
+🔢 *N° Operación:* ${pago.numero_operacion || 'OP-' + pago.id}
+📆 *Fecha:* ${pago.fecha}
+━━━━━━━━━━━━━━━━━━━━━
+✅ *¡Su servicio está 100% ACTIVO!*
+Gracias por su puntual preferencia.`;
+
+      const numDestino = cel.length >= 9 ? (cel.startsWith('51') ? cel : '51' + cel) : '';
+      const url = `https://api.whatsapp.com/send?phone=${numDestino}&text=${encodeURIComponent(mensaje)}`;
+      window.open(url, '_blank');
+    }
+
+    async function descargarVoucherImagen() {
+      const el = document.getElementById('bcpVoucherVisual');
+      try {
+        toast('📸 Generando imagen del comprobante...');
+        const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+        const imgData = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `Recibo_Leytrix_${voucherActual ? voucherActual.pago.numero_operacion : 'pago'}.png`;
+        link.href = imgData;
+        link.click();
+        toast('✅ Comprobante descargado en imagen PNG');
+      } catch(err) {
+        console.error('Error html2canvas:', err);
+        toast('No se pudo generar la imagen, usa el botón Imprimir', 'warn');
+      }
+    }
+
+    async function eliminarPago(id) {
+      if (!confirm(`¿Estás seguro de anular el pago #${id}? Esta acción revertirá el registro.`)) return;
+      try {
+        await IDB.delete('pagos', id);
+        toast(`🗑️ Pago #${id} eliminado con éxito.`);
+        await cargarHistorialPagos();
+        actualizarEstadisticasSidebar();
+      } catch(err) {
+        toast('Error al eliminar pago: ' + err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

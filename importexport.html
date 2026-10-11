@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LEYTRIX ISP — Importar y Exportar</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div class="page-header" style="margin-bottom:0">
+        <h2>📊 Importar, Exportar &amp; Copias de Seguridad</h2>
+        <p>Respalda tu información en Excel (.xlsx), archivos JSON y sincroniza con Supabase Cloud</p>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
+      </div>
+    </div>
+
+    <!-- TARJETAS DE ACCIÓN PRINCIPALES -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:20px;margin-bottom:28px">
+      
+      <!-- EXPORTAR EXCEL Y BACKUP -->
+      <div class="card" style="padding:24px">
+        <h3 style="font-size:1.1rem;color:var(--azul);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <span>📤</span> Exportar Datos de la Red
+        </h3>
+        <p style="font-size:0.82rem;color:var(--gris);margin-bottom:18px;line-height:1.4">
+          Descarga tus bases de datos directamente a tu computadora en formato compatible con Microsoft Excel o como respaldo seguro.
+        </p>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-primary" onclick="exportarClientesExcel()" style="justify-content:flex-start;background:#15803D;border-color:#15803D">
+            📊 Exportar Clientes a Excel (.xlsx)
+          </button>
+          <button class="btn btn-primary" onclick="exportarPagosExcel()" style="justify-content:flex-start;background:#0284C7;border-color:#0284C7">
+            💰 Exportar Historial de Pagos a Excel (.xlsx)
+          </button>
+          <button class="btn btn-outline" onclick="descargarBackupCompletoJSON()" style="justify-content:flex-start">
+            💾 Copia de Seguridad Completa (.json)
+          </button>
+          <button class="btn btn-outline" onclick="exportarScriptMySQL()" style="justify-content:flex-start">
+            🗄️ Exportar a Script SQL (INSERTs)
+          </button>
+        </div>
+      </div>
+
+      <!-- IMPORTAR DESDE EXCEL -->
+      <div class="card" style="padding:24px">
+        <h3 style="font-size:1.1rem;color:var(--azul);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <span>📥</span> Importar Clientes desde Excel
+        </h3>
+        <p style="font-size:0.82rem;color:var(--gris);margin-bottom:16px;line-height:1.4">
+          Sube un archivo de Excel (.xlsx, .xls) o CSV con tu lista de clientes para agregarlos automáticamente al sistema.
+        </p>
+
+        <div style="border:2px dashed var(--borde);padding:20px;border-radius:10px;text-align:center;background:#F8FAFC;cursor:pointer;margin-bottom:14px" onclick="document.getElementById('inputImportExcel').click()">
+          <span style="font-size:2rem;display:block;margin-bottom:6px">📗</span>
+          <strong style="color:var(--azul);font-size:0.88rem">Seleccionar Archivo Excel o CSV</strong>
+          <p style="font-size:0.75rem;color:var(--gris);margin:4px 0 0">Columnas admitidas: Nombre, DNI, Celular, Zona, IP, Plan, etc.</p>
+          <input type="file" id="inputImportExcel" accept=".xlsx, .xls, .csv" style="display:none" onchange="procesarArchivoExcel(event)" />
+        </div>
+
+        <button class="btn btn-outline btn-full" onclick="document.getElementById('inputImportJson').click()" style="font-size:0.82rem">
+          🔄 Restaurar Copia JSON
+        </button>
+        <input type="file" id="inputImportJson" accept=".json" style="display:none" onchange="restaurarBackupJSON(event)" />
+      </div>
+
+    </div>
+
+    <!-- VISTA PREVIA DE IMPORTACIÓN (Si el usuario sube un archivo) -->
+    <div class="card" id="cardPreviewImport" style="display:none;padding:24px;margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+        <div>
+          <h3 style="font-size:1.05rem;color:var(--azul);margin-bottom:2px">👁️ Vista Previa de Clientes Detectados</h3>
+          <p style="font-size:0.8rem;color:var(--gris);margin:0" id="lblInfoDetectados">Se detectaron 0 filas listas para importar.</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-outline" onclick="cancelarImportacion()">Cancelar</button>
+          <button class="btn btn-primary" id="btnConfirmarImport" onclick="confirmarImportacion()" style="background:#16A34A;border-color:#16A34A">
+            ✅ Confirmar e Importar al Sistema
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="max-height:360px;overflow-y:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nombre</th>
+              <th>Zona</th>
+              <th>IP</th>
+              <th>Plan</th>
+              <th>Celular</th>
+              <th>DNI</th>
+              <th>Dirección</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyPreview"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MANTENIMIENTO DEL SISTEMA -->
+    <div class="card" style="padding:22px 26px;border-left:4px solid var(--rojo)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">
+        <div>
+          <h4 style="color:var(--rojo);font-size:0.95rem;margin-bottom:4px">⚠️ Mantenimiento y Reinicio de Datos</h4>
+          <p style="font-size:0.8rem;color:var(--gris);margin:0">
+            Si deseas vaciar la base de datos local para empezar desde cero, descarga primero una copia de seguridad.
+          </p>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="vaciarBaseDatosLocal()">
+          🗑️ Vaciar Base de Datos Local
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/db.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let clientesParaImportar = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSidebar('importexport');
+    });
+
+    // 1. EXPORTAR CLIENTES A EXCEL
+    async function exportarClientesExcel() {
+      try {
+        toast('⏳ Preparando reporte de clientes en Excel...');
+        const clientes = await IDB.getAll('clientes');
+        if (!clientes.length) {
+          toast('No hay clientes registrados para exportar', 'warn');
+          return;
+        }
+
+        const dataXlsx = clientes.map(c => ({
+          'ID': c.id,
+          'Nombre Completo': c.nombre || '',
+          'DNI / RUC': c.dni || '',
+          'Celular / WhatsApp': c.celular || '',
+          'Zona': c.zona || '',
+          'Dirección': c.direccion || '',
+          'Dirección IP': c.ip || '',
+          'Plan Mensual (S/.)': c.plan || 65,
+          'Nombre Plan': labelPlan(c.plan),
+          'Metros Cable': c.cable || 0,
+          'Estado': c.estado || 'ACTIVO',
+          'Fecha Inicio': c.fecha_inicio || '',
+          'Notas': c.notas || ''
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(dataXlsx);
+        XLSX.utils.book_append_sheet(wb, ws, "Clientes_Leytrix");
+        
+        const fecha = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `Leytrix_Clientes_${fecha}.xlsx`);
+        toast('✅ Archivo Excel descargado exitosamente');
+      } catch(err) {
+        console.error('Error exportando clientes:', err);
+        toast('Error al exportar: ' + err.message, 'error');
+      }
+    }
+
+    // 2. EXPORTAR PAGOS A EXCEL
+    async function exportarPagosExcel() {
+      try {
+        toast('⏳ Preparando reporte de pagos en Excel...');
+        const pagos = await IDB.getAll('pagos');
+        if (!pagos.length) {
+          toast('No hay pagos registrados para exportar', 'warn');
+          return;
+        }
+
+        const dataXlsx = pagos.map(p => ({
+          'ID Pago': p.id,
+          'ID Cliente': p.id_cliente,
+          'Nombre Cliente': p.cliente_nombre || '',
+          'Zona': p.cliente_zona || '',
+          'Mes Pagado': p.mes || '',
+          'Monto (S/.)': Number(p.monto || 0).toFixed(2),
+          'Método': p.metodo || 'Efectivo',
+          'N° Operación / Ref': p.numero_operacion || '',
+          'Fecha Pago': p.fecha || '',
+          'Observaciones': p.notas || ''
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(dataXlsx);
+        XLSX.utils.book_append_sheet(wb, ws, "Pagos_Leytrix");
+
+        const fecha = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `Leytrix_Pagos_${fecha}.xlsx`);
+        toast('✅ Archivo de pagos en Excel descargado exitosamente');
+      } catch(err) {
+        console.error('Error exportando pagos:', err);
+        toast('Error al exportar: ' + err.message, 'error');
+      }
+    }
+
+    // 3. BACKUP COMPLETO JSON
+    async function descargarBackupCompletoJSON() {
+      try {
+        toast('⏳ Empaquetando copia de seguridad...');
+        const [clientes, pagos, cortes, fotos] = await Promise.all([
+          IDB.getAll('clientes'),
+          IDB.getAll('pagos'),
+          IDB.getAll('cortes'),
+          IDB.getAll('fotos')
+        ]);
+
+        const backup = {
+          sistema: 'LEYTRIX ISP',
+          version: '2.0',
+          fecha_exportacion: new Date().toISOString(),
+          estadisticas: {
+            clientes: clientes.length,
+            pagos: pagos.length,
+            cortes: cortes.length,
+            fotos: fotos.length
+          },
+          datos: { clientes, pagos, cortes, fotos }
+        };
+
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Backup_Leytrix_ISP_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast('✅ Copia de seguridad JSON descargada');
+      } catch(err) {
+        toast('Error al generar backup: ' + err.message, 'error');
+      }
+    }
+
+    // 4. EXPORTAR A SCRIPT SQL
+    async function exportarScriptMySQL() {
+      try {
+        const clientes = await IDB.getAll('clientes');
+        const pagos    = await IDB.getAll('pagos');
+
+        let sql = `-- LEYTRIX ISP - BACKUP SQL\n-- Fecha: ${new Date().toISOString()}\n\n`;
+        sql += `CREATE TABLE IF NOT EXISTS clientes (id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(150), dni VARCHAR(20), celular VARCHAR(20), zona VARCHAR(50), direccion TEXT, ip VARCHAR(50), plan DECIMAL(10,2), cable INT, estado VARCHAR(30), fecha_inicio DATE, notas TEXT);\n\n`;
+
+        clientes.forEach(c => {
+          sql += `INSERT INTO clientes (id, nombre, dni, celular, zona, direccion, ip, plan, cable, estado, fecha_inicio, notas) VALUES (${c.id}, '${(c.nombre||'').replace(/'/g, "\\'")}', '${c.dni||''}', '${c.celular||''}', '${c.zona||''}', '${(c.direccion||'').replace(/'/g, "\\'")}', '${c.ip||''}', ${c.plan||65}, ${c.cable||0}, '${c.estado||'ACTIVO'}', '${c.fecha_inicio||'2026-01-01'}', '${(c.notas||'').replace(/'/g, "\\'")}');\n`;
+        });
+
+        const blob = new Blob([sql], { type: 'text/sql' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Leytrix_Dump_${new Date().toISOString().split('T')[0]}.sql`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast('✅ Script SQL generado y descargado');
+      } catch(err) {
+        toast('Error al generar SQL: ' + err.message, 'error');
+      }
+    }
+
+    // 5. PROCESAR EXCEL PARA IMPORTAR
+    function procesarArchivoExcel(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.SheetNames[0];
+          const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: '' });
+
+          if (!rawRows.length) {
+            toast('El archivo Excel está vacío', 'warn');
+            return;
+          }
+
+          // Normalizar columnas
+          clientesParaImportar = rawRows.map((row, idx) => {
+            const getVal = (...keys) => {
+              for (const k of keys) {
+                const found = Object.keys(row).find(x => x.toLowerCase().trim() === k.toLowerCase());
+                if (found && row[found] !== undefined && row[found] !== '') return String(row[found]).trim();
+              }
+              return '';
+            };
+
+            const nombre    = getVal('nombre completo', 'nombre', 'cliente', 'abonado', 'apellidos y nombres');
+            const dni       = getVal('dni / ruc', 'dni', 'ruc', 'documento', 'cedula');
+            const celular   = getVal('celular / whatsapp', 'celular', 'telefono', 'tel', 'whatsapp');
+            const zona      = getVal('zona', 'sector', 'comunidad') || 'Loboyacu';
+            const direccion = getVal('direccion', 'dirección', 'referencia', 'domicilio');
+            const ip        = getVal('direccion ip', 'ip', 'ip asignada');
+            const planVal   = Number(getVal('plan mensual (s/.)', 'plan', 'precio', 'tarifa')) || 65;
+            const cable     = Number(getVal('metros cable', 'cable', 'metros')) || 0;
+            const estado    = (getVal('estado') || 'ACTIVO').toUpperCase();
+            const fecha     = getVal('fecha inicio', 'fecha', 'alta') || new Date().toISOString().split('T')[0];
+
+            return {
+              nombre: nombre || `Cliente Importado #${idx + 1}`,
+              dni,
+              celular,
+              zona,
+              direccion,
+              ip,
+              plan: planVal,
+              cable,
+              estado: ['ACTIVO','CORTADO','PENDIENTE','RETIRADO'].includes(estado) ? estado : 'ACTIVO',
+              fecha_inicio: fecha,
+              creado_el: new Date().toISOString()
+            };
+          });
+
+          mostrarPreviewImport(clientesParaImportar);
+
+        } catch(err) {
+          console.error('Error leyendo Excel:', err);
+          toast('Error al procesar archivo Excel: ' + err.message, 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function mostrarPreviewImport(lista) {
+      document.getElementById('cardPreviewImport').style.display = 'block';
+      document.getElementById('lblInfoDetectados').textContent = `Se detectaron ${lista.length} clientes listos para importar.`;
+      
+      const tbody = document.getElementById('tbodyPreview');
+      tbody.innerHTML = lista.slice(0, 15).map((c, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${esc(c.nombre)}</strong></td>
+          <td>${esc(c.zona)}</td>
+          <td><code>${esc(c.ip || '—')}</code></td>
+          <td>S/. ${c.plan}</td>
+          <td>${esc(c.celular || '—')}</td>
+          <td>${esc(c.dni || '—')}</td>
+          <td style="font-size:0.75rem;color:var(--gris)">${esc(c.direccion || '—')}</td>
+        </tr>
+      `).join('') + (lista.length > 15 ? `<tr><td colspan="8" style="text-align:center;color:var(--gris);padding:10px">... y ${lista.length - 15} clientes más</td></tr>` : '');
+    }
+
+    function cancelarImportacion() {
+      clientesParaImportar = [];
+      document.getElementById('cardPreviewImport').style.display = 'none';
+      document.getElementById('inputImportExcel').value = '';
+    }
+
+    async function confirmarImportacion() {
+      if (!clientesParaImportar.length) return;
+      const btn = document.getElementById('btnConfirmarImport');
+      btn.disabled = true;
+      btn.textContent = '⏳ Importando...';
+
+      try {
+        toast(`Guardando ${clientesParaImportar.length} clientes en el sistema...`);
+        for (const cli of clientesParaImportar) {
+          await IDB.add('clientes', cli);
+        }
+
+        toast(`🎉 ¡${clientesParaImportar.length} clientes importados con éxito!`);
+        cancelarImportacion();
+        actualizarEstadisticasSidebar();
+
+        setTimeout(() => {
+          if (confirm('Importación completada con éxito.\n¿Deseas ir al listado de clientes ahora?')) {
+            window.location.href = 'clientes.html';
+          }
+        }, 300);
+
+      } catch(err) {
+        toast('Error al importar clientes: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✅ Confirmar e Importar al Sistema';
+      }
+    }
+
+    // 6. RESTAURAR BACKUP JSON
+    function restaurarBackupJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        try {
+          const backup = JSON.parse(evt.target.result);
+          if (!backup.datos) {
+            toast('Archivo de respaldo no válido', 'error');
+            return;
+          }
+
+          if (!confirm(`¿Restaurar respaldo del ${backup.fecha_exportacion || 'archivo'}?\nSe agregarán los clientes y pagos contenidos.`)) return;
+
+          toast('⏳ Restaurando datos...');
+          const { clientes, pagos, cortes, fotos } = backup.datos;
+
+          if (clientes && clientes.length) await IDB.bulkPut('clientes', clientes);
+          if (pagos && pagos.length)       await IDB.bulkPut('pagos', pagos);
+          if (cortes && cortes.length)     await IDB.bulkPut('cortes', cortes);
+          if (fotos && fotos.length)       await IDB.bulkPut('fotos', fotos);
+
+          toast('✅ ¡Copia de seguridad restaurada exitosamente!');
+          actualizarEstadisticasSidebar();
+        } catch(err) {
+          toast('Error al restaurar JSON: ' + err.message, 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // 7. VACIAR BASE DE DATOS
+    async function vaciarBaseDatosLocal() {
+      const confirmacion = prompt('⚠️ ATENCIÓN: Esta acción borrará los datos locales en este navegador.\nPara confirmar, escribe "BORRAR" en mayúsculas:');
+      if (confirmacion !== 'BORRAR') {
+        toast('Acción cancelada');
+        return;
+      }
+
+      try {
+        await Promise.all([
+          IDB.clear('clientes'),
+          IDB.clear('pagos'),
+          IDB.clear('cortes'),
+          IDB.clear('fotos')
+        ]);
+        toast('🧹 Base de datos local vaciada con éxito.');
+        actualizarEstadisticasSidebar();
+        setTimeout(() => { window.location.href = 'index.html'; }, 800);
+      } catch(err) {
+        toast('Error al vaciar: ' + err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

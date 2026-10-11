@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LEYTRIX ISP — Pendientes del Mes</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div class="page-header" style="margin-bottom:0">
+        <h2>📅 Clientes Pendientes de Pago (Morosidad)</h2>
+        <p>Listado de abonados que aún no registran pago en el mes seleccionado</p>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir Lista de Cobro</button>
+        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar</button>
+      </div>
+    </div>
+
+    <!-- KPIs del Mes -->
+    <div class="kpi-grid" style="margin-bottom:20px">
+      <div class="kpi kpi-red">
+        <div class="val" id="kpiPendientesCount">0</div>
+        <div class="lbl">Clientes Pendientes de Pago</div>
+      </div>
+      <div class="kpi kpi-orange">
+        <div class="val" id="kpiPorCobrarTotal">S/. 0.00</div>
+        <div class="lbl">Monto Total por Cobrar</div>
+      </div>
+      <div class="kpi kpi-green">
+        <div class="val" id="kpiPagadosCount">0</div>
+        <div class="lbl">Clientes al Día (Pagaron)</div>
+      </div>
+      <div class="kpi kpi-blue">
+        <div class="val" id="kpiEfectividadCobro">0%</div>
+        <div class="lbl">Efectividad de Cobranza</div>
+      </div>
+    </div>
+
+    <!-- Filtros de Búsqueda y Selección de Mes -->
+    <div class="card" style="padding:16px 20px;margin-bottom:18px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label class="form-label" style="margin:0;font-weight:700">Mes:</label>
+          <input type="month" id="selMesPendiente" class="form-input" style="padding:7px 10px;max-width:170px" onchange="calcularPendientes()" />
+        </div>
+
+        <div style="flex:1;min-width:200px">
+          <input type="text" id="busPendiente" placeholder="🔍 Buscar por nombre, IP o celular..." class="form-input" style="padding:7px 12px;font-size:0.85rem" oninput="filtrarTablaPendientes()" />
+        </div>
+
+        <select id="filtZonaPend" class="form-select" style="max-width:190px;padding:7px 10px" onchange="filtrarTablaPendientes()">
+          <option value="">Todas las Zonas</option>
+          <option value="Loboyacu">Loboyacu</option>
+          <option value="Huayranga">Huayranga</option>
+          <option value="Pacotillo">Pacotillo</option>
+          <option value="Ramal de Cachiyacu">Ramal de Cachiyacu</option>
+          <option value="Palmeras">Palmeras</option>
+          <option value="Shishiyacu">Shishiyacu</option>
+        </select>
+
+        <select id="filtEstadoPend" class="form-select" style="max-width:160px;padding:7px 10px" onchange="filtrarTablaPendientes()">
+          <option value="">Todos los Estados</option>
+          <option value="ACTIVO">Solo Activos</option>
+          <option value="CORTADO">Solo Cortados</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tabla de Pendientes -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>Zona</th>
+            <th>IP</th>
+            <th>Plan (S/.)</th>
+            <th>Estado Red</th>
+            <th>Celular</th>
+            <th>Dirección</th>
+            <th>Acciones de Cobranza</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyPendientes">
+          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gris)">Calculando pendientes del mes...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <script src="js/db.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let clientesLista = [];
+    let pagosLista = [];
+    let listaPendientes = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderSidebar('pendientes');
+      
+      const mes = mesActual();
+      document.getElementById('selMesPendiente').value = mes;
+
+      await cargarDatos();
+    });
+
+    async function cargarDatos() {
+      clientesLista = await IDB.getAll('clientes');
+      pagosLista    = await IDB.getAll('pagos');
+      calcularPendientes();
+    }
+
+    function calcularPendientes() {
+      const mesSel = document.getElementById('selMesPendiente').value;
+      if (!mesSel) return;
+
+      // Filtrar pagos del mes
+      const pagosDelMes = pagosLista.filter(p => p.mes === mesSel);
+      const clientesQuePagaron = new Set(pagosDelMes.map(p => Number(p.id_cliente)));
+
+      // Identificar pendientes (excluir RETIRADO)
+      listaPendientes = clientesLista.filter(c => {
+        if (c.estado === 'RETIRADO') return false;
+        return !clientesQuePagaron.has(c.id);
+      });
+
+      // KPIs
+      const totalClientesRed = clientesLista.filter(c => c.estado !== 'RETIRADO').length;
+      const cantPagaron = totalClientesRed - listaPendientes.length;
+      const montoPorCobrar = listaPendientes.reduce((s, c) => s + (Number(c.plan) || 65), 0);
+      const efectividad = totalClientesRed > 0 ? Math.round((cantPagaron / totalClientesRed) * 100) : 0;
+
+      document.getElementById('kpiPendientesCount').textContent = listaPendientes.length;
+      document.getElementById('kpiPorCobrarTotal').textContent = `S/. ${montoPorCobrar.toFixed(2)}`;
+      document.getElementById('kpiPagadosCount').textContent = cantPagaron;
+      document.getElementById('kpiEfectividadCobro').textContent = `${efectividad}%`;
+
+      filtrarTablaPendientes();
+    }
+
+    function filtrarTablaPendientes() {
+      const q = (document.getElementById('busPendiente').value || '').toLowerCase().trim();
+      const z = document.getElementById('filtZonaPend').value;
+      const e = document.getElementById('filtEstadoPend').value;
+
+      let filtrados = listaPendientes;
+      if (z) filtrados = filtrados.filter(c => c.zona === z);
+      if (e) filtrados = filtrados.filter(c => c.estado === e);
+      if (q) {
+        filtrados = filtrados.filter(c => 
+          (c.nombre && c.nombre.toLowerCase().includes(q)) ||
+          (c.ip && c.ip.includes(q)) ||
+          (c.dni && c.dni.includes(q)) ||
+          (c.celular && c.celular.includes(q))
+        );
+      }
+
+      renderTablaPendientes(filtrados);
+    }
+
+    function renderTablaPendientes(lista) {
+      const tbody = document.getElementById('tbodyPendientes');
+      const mesSel = document.getElementById('selMesPendiente').value;
+
+      if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:36px;color:#16A34A;font-weight:700">🎉 ¡Excelente! No hay clientes pendientes con los filtros actuales.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = lista.map(c => `
+        <tr>
+          <td><strong style="color:var(--azul)">#${c.id}</strong></td>
+          <td><strong>${esc(c.nombre)}</strong></td>
+          <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
+          <td><code>${esc(c.ip || '—')}</code></td>
+          <td><strong style="color:var(--rojo)">S/. ${c.plan || 65}</strong> (${labelPlan(c.plan)})</td>
+          <td>
+            <span class="badge ${c.estado === 'ACTIVO' ? 'badge-act' : 'badge-cort'}">
+              ${esc(c.estado)}
+            </span>
+          </td>
+          <td>${esc(c.celular || '—')}</td>
+          <td style="font-size:0.75rem;color:var(--gris);max-width:180px">${esc(c.direccion || '—')}</td>
+          <td>
+            <div class="btn-group">
+              <a href="pagos.html?id=${c.id}" class="btn btn-success btn-sm" title="Registrar Pago">
+                💳 Cobrar
+              </a>
+              <button class="btn btn-outline btn-sm" onclick="enviarRecordatorioWA(${c.id})" title="Enviar Aviso WhatsApp">
+                📲 WA
+              </button>
+              ${c.estado === 'ACTIVO' ? `
+                <button class="btn btn-danger btn-sm" onclick="cortarPorMora(${c.id})" title="Cortar Servicio">
+                  ✂️
+                </button>
+              ` : ''}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function enviarRecordatorioWA(id) {
+      const cli = clientesLista.find(c => c.id === id);
+      if (!cli) return;
+
+      const mesSel = document.getElementById('selMesPendiente').value;
+      const cel = (cli.celular || '').replace(/\D/g, '');
+
+      const mensaje = 
+`*📡 RECORDATORIO DE PAGO — LEYTRIX INTERNET*
+━━━━━━━━━━━━━━━━━━━━━
+Estimado(a) *${cli.nombre}*:
+Le recordamos que se encuentra pendiente el pago de su servicio de internet correspondiente al mes *${mesSel}*.
+
+💰 *Monto a pagar:* S/. ${cli.plan || 65}.00 (${labelPlan(cli.plan)})
+🏢 *Zona:* ${cli.zona}
+
+Le agradeceremos realizar su abono a tiempo para evitar la suspensión del servicio. Puede pagar por Yape, Plin o BCP y enviar su constancia por este chat.
+
+¡Muchas gracias por su preferencia!
+*Leytrix ISP*`;
+
+      const numDestino = cel.length >= 9 ? (cel.startsWith('51') ? cel : '51' + cel) : '';
+      const url = `https://api.whatsapp.com/send?phone=${numDestino}&text=${encodeURIComponent(mensaje)}`;
+      window.open(url, '_blank');
+    }
+
+    async function cortarPorMora(id) {
+      const cli = clientesLista.find(c => c.id === id);
+      if (!cli) return;
+
+      if (!confirm(`¿Estás seguro de suspender el servicio al cliente "${cli.nombre}" por falta de pago?`)) return;
+
+      try {
+        cli.estado = 'CORTADO';
+        await IDB.put('clientes', cli);
+
+        const fechaHoy = new Date().toISOString().split('T')[0];
+        await IDB.add('cortes', {
+          id_cliente: cli.id,
+          cliente_nombre: cli.nombre,
+          zona: cli.zona,
+          fecha_corte: fechaHoy,
+          motivo: 'Falta de Pago (Morosidad)',
+          estado: 'CORTADO',
+          notas: `Suspendido desde módulo de pendientes para el mes ${document.getElementById('selMesPendiente').value}`,
+          creado_el: new Date().toISOString()
+        });
+
+        toast(`✂️ Cliente "${cli.nombre}" cortado por mora.`);
+        actualizarEstadisticasSidebar();
+        await cargarDatos();
+
+      } catch(err) {
+        toast('Error al cortar: ' + err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>
