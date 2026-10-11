@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LEYTRIX ISP — Clientes</title>
+  <title>FASTNET LOBOYACU — Clientes</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/ai-cobranza.js"></script>
@@ -17,7 +17,7 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>👥 Clientes Registrados</h2>
+        <h2>👥 Clientes Registrados — FastNet Loboyacu</h2>
         <p id="txtContadorClientes">Cargando clientes...</p>
       </div>
       <div class="btn-group">
@@ -30,7 +30,7 @@
     <div class="card" style="padding:16px 20px;margin-bottom:18px">
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
         <div style="flex:1;min-width:240px">
-          <input type="text" id="filtBus" placeholder="🔍 Buscar por nombre, IP, DNI, celular, dirección..."
+          <input type="text" id="filtBus" placeholder="🔍 Buscar por nombre, IP, celular o zona..."
             style="width:100%;padding:9px 14px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;outline:none"/>
         </div>
         <select id="filtZona" style="padding:9px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;outline:none">
@@ -59,25 +59,24 @@
       </div>
     </div>
 
-    <!-- Tabla de Clientes -->
+    <!-- Tabla de Clientes (Limpia y Profesional) -->
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>ID</th>
-            <th>Nombre</th>
+            <th>Nombre Completo</th>
             <th>Zona</th>
             <th>Dirección IP</th>
             <th>Plan</th>
-            <th>Cable</th>
             <th>Estado</th>
-            <th>Inicio</th>
-            <th>Celular</th>
+            <th>Fecha Inicio</th>
+            <th>Celular / WhatsApp</th>
             <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="bodyClientes">
-          <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--gris)">Cargando lista de clientes...</td></tr>
+          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gris)">Cargando lista de clientes...</td></tr>
         </tbody>
       </table>
     </div>
@@ -92,27 +91,23 @@
     </div>
   </main>
 
-  <!-- MODAL EDITAR CLIENTE -->
+  <!-- MODAL EDITAR CLIENTE (Sin campos eliminados) -->
   <div class="modal-bg" id="modalEditar">
-    <div class="modal">
+    <div class="modal" style="max-width:580px">
       <div class="modal-header">
-        <h3>✏️ Editar Cliente</h3>
+        <h3>✏️ Editar Cliente — FastNet Loboyacu</h3>
         <button class="modal-close" onclick="cerrarModal('modalEditar')">✕</button>
       </div>
       <form id="formEditar">
         <input type="hidden" id="eId"/>
         <div class="form-grid">
-          <div class="form-group">
-            <label>Nombre y Apellidos *</label>
+          <div class="form-group form-full">
+            <label>Nombre Completo *</label>
             <input id="eNombre" required maxlength="100"/>
           </div>
           <div class="form-group">
-            <label>DNI (8 dígitos)</label>
-            <input id="eDni" maxlength="8"/>
-          </div>
-          <div class="form-group">
-            <label>Celular</label>
-            <input id="eCelular" maxlength="15"/>
+            <label>Celular / WhatsApp *</label>
+            <input id="eCelular" required maxlength="15"/>
           </div>
           <div class="form-group">
             <label>Fecha de Inicio</label>
@@ -120,10 +115,10 @@
           </div>
           <div class="form-group">
             <label>Dirección IP *</label>
-            <input id="eIp" required maxlength="15"/>
+            <input id="eIp" required maxlength="25" style="font-family:monospace"/>
           </div>
           <div class="form-group">
-            <label>Zona</label>
+            <label>Zona de Cobertura</label>
             <select id="eZona">
               <option value="Loboyacu">Loboyacu</option>
               <option value="Huayranga">Huayranga</option>
@@ -142,13 +137,6 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Cable Instalado</label>
-            <select id="eCable">
-              <option value="false">❌ Sin cable</option>
-              <option value="true">✅ Con cable</option>
-            </select>
-          </div>
-          <div class="form-group">
             <label>Estado del Servicio</label>
             <select id="eEstado">
               <option value="ACTIVO">ACTIVO</option>
@@ -156,14 +144,6 @@
               <option value="PENDIENTE">PENDIENTE</option>
               <option value="RETIRADO">RETIRADO</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label>Dirección Física</label>
-            <input id="eDireccion" maxlength="200"/>
-          </div>
-          <div class="form-group form-full">
-            <label>Observaciones</label>
-            <textarea id="eObs" rows="2" maxlength="400"></textarea>
           </div>
         </div>
         <div class="btn-group" style="margin-top:20px;justify-content:flex-end">
@@ -222,7 +202,7 @@
       const bus    = safe(document.getElementById('filtBus').value).toLowerCase();
 
       const tbody = document.getElementById('bodyClientes');
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--gris)"><span class="spinner"></span> Cargando...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--gris)"><span class="spinner"></span> Cargando...</td></tr>';
 
       try {
         let indexName = null;
@@ -247,7 +227,7 @@
           if (estado && c.estado !== estado) return false;
           if (plan && Number(c.plan) !== Number(plan)) return false;
           if (bus) {
-            const txt = `${c.id} ${c.nombre || ''} ${c.ip || ''} ${c.dni || ''} ${c.celular || ''} ${c.direccion || ''}`.toLowerCase();
+            const txt = `${c.id} ${c.nombre || ''} ${c.ip || ''} ${c.celular || ''} ${c.zona || ''}`.toLowerCase();
             if (!txt.includes(bus)) return false;
           }
           return true;
@@ -263,22 +243,21 @@
 
         _totalClientes = total;
         document.getElementById('txtContadorClientes').textContent =
-          `👥 ${total.toLocaleString()} cliente(s) encontrado(s)`;
+          `👥 ${total.toLocaleString()} cliente(s) registrado(s) en FastNet`;
 
         if (!results.length) {
-          tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="e-icon">👥</div>No hay clientes con los filtros seleccionados</div></td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="e-icon">👥</div>No hay clientes con los filtros seleccionados</div></td></tr>';
         } else {
           tbody.innerHTML = results.map(c => `
             <tr class="${c.estado === 'CORTADO' ? 'row-cortado' : ''}">
               <td>${Number(c.id)}</td>
               <td><strong>${esc(c.nombre)}</strong></td>
-              <td>${esc(c.zona)}</td>
+              <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
               <td><code>${esc(c.ip) || '—'}</code></td>
-              <td><strong>S/. ${Number(c.plan || 0).toFixed(2)}</strong></td>
-              <td>${badgeCable(c.cable)}</td>
+              <td><strong style="color:var(--azul)">S/. ${Number(c.plan || 0).toFixed(2)}</strong></td>
               <td>${badgeEstado(c.estado)}</td>
-              <td><span style="font-size:0.78rem;color:var(--gris)">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
-              <td>${esc(c.celular) || '—'}</td>
+              <td><span style="font-size:0.8rem;color:var(--gris)">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
+              <td><strong>${esc(c.celular) || '—'}</strong></td>
               <td>
                 <div class="btn-group">
                   <a href="pagos.html?id=${c.id}" class="btn btn-success btn-sm" title="Registrar pago">💳 Pagar</a>
@@ -299,7 +278,7 @@
         document.getElementById('btnPagNext').disabled = ((_paginaActual + 1) >= pagTotal);
       } catch(err) {
         console.error('cargarClientes error:', err);
-        tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes</td></tr>';
       }
     }
 
@@ -322,16 +301,12 @@
 
       document.getElementById('eId').value          = c.id;
       document.getElementById('eNombre').value      = c.nombre || '';
-      document.getElementById('eDni').value         = c.dni || '';
       document.getElementById('eCelular').value     = c.celular || '';
       document.getElementById('eFechaInicio').value = c.fecha_inicio || '';
       document.getElementById('eIp').value          = c.ip || '';
-      document.getElementById('eDireccion').value   = c.direccion || '';
       document.getElementById('eZona').value        = c.zona || 'Loboyacu';
       document.getElementById('ePlan').value        = String(c.plan || 65);
-      document.getElementById('eCable').value       = String(!!c.cable);
       document.getElementById('eEstado').value      = c.estado || 'ACTIVO';
-      document.getElementById('eObs').value         = c.obs || '';
 
       document.getElementById('modalEditar').classList.add('open');
     }
@@ -343,20 +318,16 @@
       if (!c) return;
 
       c.nombre       = safe(document.getElementById('eNombre').value, 100);
-      c.dni          = safe(document.getElementById('eDni').value, 8);
       c.celular      = safe(document.getElementById('eCelular').value, 15);
       c.fecha_inicio = document.getElementById('eFechaInicio').value || null;
-      c.ip           = safe(document.getElementById('eIp').value, 15);
-      c.direccion    = safe(document.getElementById('eDireccion').value, 200);
+      c.ip           = safe(document.getElementById('eIp').value, 25);
       c.zona         = document.getElementById('eZona').value;
       c.plan         = Number(document.getElementById('ePlan').value);
-      c.cable        = document.getElementById('eCable').value === 'true';
       c.estado       = document.getElementById('eEstado').value;
-      c.obs          = safe(document.getElementById('eObs').value, 400);
 
       await IDB.put('clientes', c);
       cerrarModal('modalEditar');
-      toast('✅ Cliente actualizado correctamente');
+      toast('✅ Cliente actualizado correctamente en FastNet');
       cargarClientes(_paginaActual);
       actualizarEstadisticasSidebar();
     }
@@ -397,7 +368,7 @@
       const c = await IDB.get('clientes', Number(id));
       if (!c) return;
 
-      if (confirm(`¿Está seguro de eliminar permanentemente al cliente "${c.nombre}" y todo su historial de pagos y cortes?`)) {
+      if (confirm(`¿Está seguro de eliminar permanentemente al cliente "${c.nombre}" de FastNet Loboyacu y todo su historial de pagos y cortes?`)) {
         await IDB.eliminarClienteCompleto(Number(id));
         toast('🗑️ Cliente eliminado');
         cargarClientes(_paginaActual);

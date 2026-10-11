@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LEYTRIX ISP — Pendientes & IA Cobranzas</title>
+  <title>FASTNET LOBOYACU — Pendientes &amp; IA Cobranzas</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
@@ -51,8 +51,8 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>📅 Pendientes del Mes &amp; Asistente IA WhatsApp</h2>
-        <p>Genera mensajes persuasivos automáticos con IA y envíalos a los abonados por cobrar</p>
+        <h2>📅 Pendientes del Mes &amp; Asistente IA WhatsApp — FastNet Loboyacu</h2>
+        <p>Cobranza inteligente con IA para FastNet Loboyacu • Contacto: +51 993 053 643 • fastnetloboyacu@gmail.com</p>
       </div>
       <div class="btn-group">
         <button class="btn btn-primary" onclick="abrirModalCobranzaIA()" style="background:#7C3AED;border-color:#7C3AED">
@@ -146,13 +146,12 @@
             <th>IP</th>
             <th>Plan (S/.)</th>
             <th>Estado Red</th>
-            <th>Celular</th>
-            <th>Dirección</th>
+            <th>Celular / WhatsApp</th>
             <th>Acciones de Cobranza</th>
           </tr>
         </thead>
         <tbody id="tbodyPendientes">
-          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gris)">Calculando pendientes del mes...</td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--gris)">Calculando pendientes del mes...</td></tr>
         </tbody>
       </table>
     </div>
@@ -353,7 +352,7 @@
     function renderTablaPendientes(lista) {
       const tbody = document.getElementById('tbodyPendientes');
       if (!lista.length) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:36px;color:#16A34A;font-weight:700">🎉 ¡Excelente! No hay clientes pendientes con los filtros actuales.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:#16A34A;font-weight:700">🎉 ¡Excelente! No hay clientes pendientes con los filtros actuales.</td></tr>';
         return;
       }
 
@@ -369,8 +368,7 @@
               ${esc(c.estado)}
             </span>
           </td>
-          <td>${esc(c.celular || '—')}</td>
-          <td style="font-size:0.75rem;color:var(--gris);max-width:180px">${esc(c.direccion || '—')}</td>
+          <td><strong>${esc(c.celular || '—')}</strong></td>
           <td>
             <div class="btn-group">
               <button class="btn btn-primary btn-sm" onclick="abrirModalCobranzaIA(${c.id})" style="background:#7C3AED;border-color:#7C3AED" title="Generar mensaje con IA y enviar a WhatsApp">

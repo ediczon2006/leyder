@@ -24,8 +24,11 @@ function renderSidebar(activePage) {
   sidebar.innerHTML = `
     <div class="sidebar-logo">
       <span class="icon">📡</span>
-      <h1>LEYTRIX ISP</h1>
-      <p>Gestión de Clientes Internet</p>
+      <h1>FASTNET LOBOYACU</h1>
+      <p>Internet Banda Ancha</p>
+      <div style="margin-top:6px;font-size:0.7rem;color:#38BDF8;font-weight:600">
+        📞 +51 993 053 643
+      </div>
       <div class="sidebar-supa-pill" onclick="abrirModalSupabase()" title="Configuración de Supabase Cloud">
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:0.95rem">☁️</span>
@@ -125,6 +128,6 @@ async function actualizarEstadisticasSidebar() {
       <p>💰 <strong>Cobrado:</strong> S/. ${cobrado.toFixed(2)}</p>
     `;
   } catch(err) {
-    statsEl.innerHTML = '<p>LEYTRIX ISP v2.0</p>';
+    statsEl.innerHTML = '<p>FASTNET LOBOYACU v2.0</p>';
   }
 }

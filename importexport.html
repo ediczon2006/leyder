@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LEYTRIX ISP — Importar y Exportar</title>
+  <title>FASTNET LOBOYACU — Importar y Exportar</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -102,8 +102,8 @@
               <th>IP</th>
               <th>Plan</th>
               <th>Celular</th>
-              <th>DNI</th>
-              <th>Dirección</th>
+              <th>Estado</th>
+              <th>Fecha Inicio</th>
             </tr>
           </thead>
           <tbody id="tbodyPreview"></tbody>
@@ -150,25 +150,21 @@
         const dataXlsx = clientes.map(c => ({
           'ID': c.id,
           'Nombre Completo': c.nombre || '',
-          'DNI / RUC': c.dni || '',
           'Celular / WhatsApp': c.celular || '',
           'Zona': c.zona || '',
-          'Dirección': c.direccion || '',
           'Dirección IP': c.ip || '',
           'Plan Mensual (S/.)': c.plan || 65,
           'Nombre Plan': labelPlan(c.plan),
-          'Metros Cable': c.cable || 0,
           'Estado': c.estado || 'ACTIVO',
-          'Fecha Inicio': c.fecha_inicio || '',
-          'Notas': c.notas || ''
+          'Fecha Inicio': c.fecha_inicio || ''
         }));
 
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(dataXlsx);
-        XLSX.utils.book_append_sheet(wb, ws, "Clientes_Leytrix");
+        XLSX.utils.book_append_sheet(wb, ws, "Clientes_FastNet");
         
         const fecha = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(wb, `Leytrix_Clientes_${fecha}.xlsx`);
+        XLSX.writeFile(wb, `FastNet_Clientes_${fecha}.xlsx`);
         toast('✅ Archivo Excel descargado exitosamente');
       } catch(err) {
         console.error('Error exportando clientes:', err);
@@ -352,8 +348,8 @@
           <td><code>${esc(c.ip || '—')}</code></td>
           <td>S/. ${c.plan}</td>
           <td>${esc(c.celular || '—')}</td>
-          <td>${esc(c.dni || '—')}</td>
-          <td style="font-size:0.75rem;color:var(--gris)">${esc(c.direccion || '—')}</td>
+          <td>${esc(c.estado || 'ACTIVO')}</td>
+          <td style="font-size:0.75rem;color:var(--gris)">${esc(c.fecha_inicio || '—')}</td>
         </tr>
       `).join('') + (lista.length > 15 ? `<tr><td colspan="8" style="text-align:center;color:var(--gris);padding:10px">... y ${lista.length - 15} clientes más</td></tr>` : '');
     }

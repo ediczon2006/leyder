@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LEYTRIX ISP — Vista por Zonas</title>
+  <title>FASTNET LOBOYACU — Vista por Zonas</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
@@ -75,8 +75,8 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>🗺️ Distribución por Zonas de Cobertura</h2>
-        <p>Control de clientes, cableado e ingresos por sector geográfico</p>
+        <h2>🗺️ Distribución por Zonas — FastNet Loboyacu</h2>
+        <p>Control de clientes e ingresos por sector geográfico • +51 993 053 643 • fastnetloboyacu@gmail.com</p>
       </div>
       <div class="btn-group">
         <a href="agregar.html" class="btn btn-primary">➕ Nuevo Cliente</a>
@@ -115,15 +115,13 @@
               <th>Zona</th>
               <th>IP Asignada</th>
               <th>Plan</th>
-              <th>Cable (m)</th>
               <th>Estado</th>
-              <th>Celular</th>
-              <th>Dirección / Ref</th>
+              <th>Celular / WhatsApp</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tbodyClientesZona">
-            <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--gris)">Cargando clientes de la zona...</td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--gris)">Cargando clientes de la zona...</td></tr>
           </tbody>
         </table>
       </div>
@@ -158,7 +156,6 @@
         const activos = cliZ.filter(c => c.estado === 'ACTIVO').length;
         const cortados = cliZ.filter(c => c.estado === 'CORTADO').length;
         const ingresoMes = cliZ.filter(c => c.estado === 'ACTIVO').reduce((s, c) => s + (Number(c.plan) || 65), 0);
-        const metrosCable = cliZ.reduce((s, c) => s + (Number(c.cable) || 0), 0);
 
         return `
           <div class="zona-card ${zonaActiva === z ? 'selected' : ''}" onclick="seleccionarZona('${z}')">
@@ -181,12 +178,12 @@
                 <strong style="color:#DC2626">${cortados}</strong>
               </div>
               <div class="zona-stat-item">
-                <span>Cable Instalado</span>
-                <strong>${metrosCable} m</strong>
-              </div>
-              <div class="zona-stat-item">
                 <span>Plan Promedio</span>
                 <strong>S/. ${total > 0 ? (cliZ.reduce((s,c)=>s+(Number(c.plan)||65),0)/total).toFixed(0) : '65'}</strong>
+              </div>
+              <div class="zona-stat-item">
+                <span>% Activos</span>
+                <strong>${total > 0 ? Math.round((activos/total)*100) : 0}%</strong>
               </div>
             </div>
           </div>
@@ -205,7 +202,7 @@
 
       if (!z) {
         tit.textContent = '📍 Todos los Clientes (Todas las Zonas)';
-        sub.textContent = 'Mostrando todos los clientes de la red';
+        sub.textContent = 'Mostrando todos los clientes de la red FastNet Loboyacu';
       } else {
         const cant = todosClientes.filter(c => c.zona === z).length;
         tit.textContent = `📍 Zona: ${z} (${cant} clientes)`;
@@ -228,13 +225,12 @@
         lista = lista.filter(c => 
           (c.nombre && c.nombre.toLowerCase().includes(q)) ||
           (c.ip && c.ip.includes(q)) ||
-          (c.dni && c.dni.includes(q)) ||
-          (c.direccion && c.direccion.toLowerCase().includes(q))
+          (c.celular && c.celular.includes(q))
         );
       }
 
       if (!lista.length) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:36px;color:var(--gris)">No hay clientes en esta selección.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gris)">No hay clientes en esta selección.</td></tr>';
         return;
       }
 
@@ -245,14 +241,12 @@
           <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
           <td><code>${esc(c.ip || '—')}</code></td>
           <td><strong>S/. ${c.plan || 65}</strong> (${labelPlan(c.plan)})</td>
-          <td>${c.cable ? c.cable + ' m' : '—'}</td>
           <td>
             <span class="badge ${c.estado === 'ACTIVO' ? 'badge-act' : c.estado === 'CORTADO' ? 'badge-cort' : 'badge-pend'}">
               ${esc(c.estado)}
             </span>
           </td>
-          <td>${esc(c.celular || '—')}</td>
-          <td style="font-size:0.75rem;color:var(--gris);max-width:180px">${esc(c.direccion || '—')}</td>
+          <td><strong>${esc(c.celular || '—')}</strong></td>
           <td>
             <div class="btn-group">
               <a href="pagos.html?id=${c.id}" class="btn btn-outline btn-sm" title="Registrar Pago">💳</a>

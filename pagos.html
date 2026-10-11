@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LEYTRIX ISP — Pagos y Vouchers Bancarios</title>
+  <title>FASTNET LOBOYACU — Pagos y Vouchers Bancarios</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -209,8 +209,8 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>💰 Pagos &amp; Vouchers de Banco Oficiales</h2>
-        <p>Genera comprobantes estilo BCP, guárdalos en la nube y compártelos por WhatsApp</p>
+        <h2>💰 Pagos &amp; Vouchers Bancarios — FastNet Loboyacu</h2>
+        <p>Genera comprobantes oficiales estilo BCP, guárdalos en la nube y compártelos por WhatsApp • Soporte: +51 993 053 643</p>
       </div>
       <div class="btn-group">
         <a href="explorador.html" class="btn btn-outline">📸 Ver Vouchers Guardados</a>
@@ -230,7 +230,7 @@
           <!-- Buscador / Selector de Cliente -->
           <div style="margin-bottom:14px">
             <label class="form-label" for="busCliPago">Buscar Cliente <span style="color:var(--rojo)">*</span></label>
-            <input type="text" id="busCliPago" class="form-input" placeholder="🔍 Escribe nombre, IP o DNI..." autocomplete="off" oninput="filtrarClientesPago()" />
+            <input type="text" id="busCliPago" class="form-input" placeholder="🔍 Escribe nombre, IP o celular..." autocomplete="off" oninput="filtrarClientesPago()" />
             <div id="listaSugClientes" style="display:none;position:relative;background:#fff;border:1.5px solid var(--azul);border-radius:8px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 8px 18px rgba(0,0,0,0.1);margin-top:4px"></div>
             <input type="hidden" id="pagoIdCliente" required />
           </div>
@@ -362,7 +362,7 @@
               </div>
               <span class="bcp-agente-tag">AGENTE BCP</span>
             </div>
-            <p class="bcp-voucher-title">CONSTANCIA DE ABONO ELECTRÓNICO — LEYTRIX ISP</p>
+            <p class="bcp-voucher-title">CONSTANCIA DE ABONO ELECTRÓNICO — FASTNET LOBOYACU</p>
           </div>
 
           <div class="bcp-voucher-body">
@@ -374,7 +374,7 @@
               </div>
               <div class="bcp-meta-item">
                 <span>TERMINAL / AGENTE:</span>
-                <strong>AG-00492 LEYTRIX</strong>
+                <strong>AG-00492 FASTNET</strong>
               </div>
               <div class="bcp-meta-item">
                 <span>FECHA Y HORA:</span>
@@ -388,7 +388,7 @@
 
             <div class="bcp-voucher-row">
               <span class="bcp-voucher-label">EMPRESA RECAUDADORA:</span>
-              <span class="bcp-voucher-val" style="color:#002A8F">LEYTRIX INTERNET RURAL SAC</span>
+              <span class="bcp-voucher-val" style="color:#002A8F">FASTNET LOBOYACU (INTERNET BANDA ANCHA)</span>
             </div>
             <div class="bcp-voucher-row">
               <span class="bcp-voucher-label">SERVICIO:</span>
@@ -399,12 +399,12 @@
               <span class="bcp-voucher-val" id="vouchCliente" style="color:var(--azul)">—</span>
             </div>
             <div class="bcp-voucher-row">
-              <span class="bcp-voucher-label">DNI / CELULAR:</span>
-              <span class="bcp-voucher-val" id="vouchDniCel">—</span>
+              <span class="bcp-voucher-label">CELULAR / WHATSAPP:</span>
+              <span class="bcp-voucher-val" id="vouchCelular">—</span>
             </div>
             <div class="bcp-voucher-row">
-              <span class="bcp-voucher-label">ZONA / SECTOR:</span>
-              <span class="bcp-voucher-val" id="vouchZonaDir">—</span>
+              <span class="bcp-voucher-label">ZONA DE COBERTURA:</span>
+              <span class="bcp-voucher-val" id="vouchZona">—</span>
             </div>
             <div class="bcp-voucher-row">
               <span class="bcp-voucher-label">MES FACTURADO:</span>
@@ -442,7 +442,8 @@
 
           <div class="bcp-voucher-footer">
             CONSERVE SU COMPROBANTE DE PAGO BANCARIO.<br/>
-            SERVICIO DE INTERNET 100% ACTIVO Y GARANTIZADO POR LEYTRIX ISP.
+            SERVICIO DE INTERNET 100% ACTIVO Y GARANTIZADO POR FASTNET LOBOYACU.<br/>
+            <span style="font-size:0.7rem;color:#0F2A4A;font-weight:600">Soporte: +51 993 053 643 • fastnetloboyacu@gmail.com</span>
           </div>
         </div>
       </div>
@@ -514,7 +515,7 @@
 
       const match = todosClientes.filter(c => 
         (c.nombre && c.nombre.toLowerCase().includes(q)) ||
-        (c.dni && c.dni.includes(q)) ||
+        (c.celular && c.celular.includes(q)) ||
         (c.ip && c.ip.includes(q)) ||
         (c.zona && c.zona.toLowerCase().includes(q))
       ).slice(0, 8);
@@ -706,9 +707,7 @@
       const cli = todosClientes.find(c => c.id === pago.id_cliente) || {
         nombre: pago.cliente_nombre,
         zona: pago.cliente_zona,
-        dni: '—',
-        celular: '—',
-        direccion: '—'
+        celular: '—'
       };
       await mostrarVoucherModal(pago, cli, false);
     }
@@ -725,8 +724,8 @@
       document.getElementById('vouchFechaHora').textContent = `${pago.fecha || 'Hoy'} ${horaStr}`;
       
       document.getElementById('vouchCliente').textContent = (cli.nombre || pago.cliente_nombre || 'Cliente').toUpperCase();
-      document.getElementById('vouchDniCel').textContent = `${cli.dni ? 'DNI: ' + cli.dni : ''} ${cli.celular ? '• CEL: ' + cli.celular : ''}`.trim() || '—';
-      document.getElementById('vouchZonaDir').textContent = `${cli.zona || '—'}`.toUpperCase();
+      document.getElementById('vouchCelular').textContent = cli.celular ? `${cli.celular}` : '—';
+      document.getElementById('vouchZona').textContent = `${cli.zona || '—'}`.toUpperCase();
       document.getElementById('vouchMes').textContent = `${pago.mes} (PERIODO CANCELADO)`;
       document.getElementById('vouchMetodo').textContent = (pago.metodo || 'Yape').toUpperCase();
       document.getElementById('vouchMonto').textContent = `S/. ${Number(pago.monto).toFixed(2)}`;
@@ -740,7 +739,7 @@
 
       // Generar Código QR de Seguridad
       const qrCanvas = document.getElementById('canvasQrVoucher');
-      const qrPayload = `LEYTRIX ISP BCP | OP:${numOp} | CLI:${cli.nombre} | MES:${pago.mes} | MONTO:S/.${Number(pago.monto).toFixed(2)} | ESTADO:CONFORME`;
+      const qrPayload = `FASTNET LOBOYACU BCP | OP:${numOp} | CLI:${cli.nombre} | MES:${pago.mes} | MONTO:S/.${Number(pago.monto).toFixed(2)} | ESTADO:CONFORME`;
       try {
         if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
           QRCode.toCanvas(qrCanvas, qrPayload, { width: 80, margin: 1 });
@@ -768,7 +767,7 @@
               cliente_nombre: cli.nombre,
               zona: cli.zona,
               data_url: imgData,
-              notas: `Voucher bancario emitido automáticamente para el mes ${pago.mes} (S/. ${pago.monto})`,
+              notas: `Voucher bancario emitido automáticamente para el mes ${pago.mes} (S/. ${pago.monto}) - FastNet Loboyacu`,
               creado_el: new Date().toISOString()
             });
 
@@ -791,7 +790,7 @@
       const cel = (cli.celular || '').replace(/\D/g, '');
       const numOp = pago.numero_operacion || `OP-${pago.id}`;
       const mensaje = 
-`*🏦 CONSTANCIA OFICIAL DE PAGO — AGENTE BCP / LEYTRIX ISP*
+`*🏦 CONSTANCIA OFICIAL DE PAGO — AGENTE BCP / FASTNET LOBOYACU*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ *ESTADO:* PAGO CONFORME Y VALIDADO
 🔢 *N° OPERACIÓN:* ${numOp}
@@ -804,7 +803,7 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🌐 *¡Su servicio de internet se encuentra 100% ACTIVO y garantizado!*
 ¡Muchas gracias por su puntual preferencia!
-_Leytrix Internet Rural — Soporte: 987654321_`;
+_FastNet Loboyacu — Soporte: +51 993 053 643 | fastnetloboyacu@gmail.com_`;
 
       const numDestino = cel.length >= 9 ? (cel.startsWith('51') ? cel : '51' + cel) : '';
       const url = `https://api.whatsapp.com/send?phone=${numDestino}&text=${encodeURIComponent(mensaje)}`;
@@ -827,8 +826,8 @@ _Leytrix Internet Rural — Soporte: 987654321_`;
 
           const file = new File([blob], `Voucher_BCP_${voucherActual?.pago?.numero_operacion || 'pago'}.png`, { type: 'image/png' });
           const shareData = {
-            title: 'Voucher de Pago BCP - Leytrix Internet',
-            text: `Voucher oficial de pago del servicio de internet Leytrix ISP para ${voucherActual?.cli?.nombre}. Operación: ${voucherActual?.pago?.numero_operacion}`,
+            title: 'Voucher de Pago BCP - FastNet Loboyacu',
+            text: `Voucher oficial de pago del servicio de internet FastNet Loboyacu para ${voucherActual?.cli?.nombre}. Operación: ${voucherActual?.pago?.numero_operacion}`,
             files: [file]
           };
 
