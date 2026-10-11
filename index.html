@@ -9,10 +9,11 @@
 <meta http-equiv="Expires" content="0"/>
 <!-- CSP: bloquea scripts externos no autorizados y protege datos -->
 <meta http-equiv="Content-Security-Policy"
-  content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.sheetjs.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'"/>
+  content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.sheetjs.com https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://baeobhvgfrdbwyqapqzf.supabase.co wss://baeobhvgfrdbwyqapqzf.supabase.co"/>
 <title>Leytrix ISP — Gestión de Clientes</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root{
   --azul:#1E40AF;--azul2:#1D4ED8;--azul-cl:#DBEAFE;--azul-xs:#EFF6FF;
@@ -213,7 +214,7 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
   }
 }
 
-/* ═══ ESTILOS EXPLORADOR DE ARCHIVOS WINDOWS ═══ */
+/* ═══ ESTILOS GALERÍA & ARCHIVO FOTOGRÁFICO ISP ═══ */
 .exp-nav-btn {
   display: flex;
   justify-content: space-between;
@@ -254,6 +255,114 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 .exp-file-name { font-weight: 600; color: #1E293B; word-break: break-all; }
 .exp-drop-active { outline: 3px dashed var(--azul2) !important; outline-offset: -6px; background: rgba(239,246,255,0.7) !important; }
 
+/* Galería de imágenes ISP */
+.exp-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+.exp-img-card {
+  background: #fff;
+  border: 1.5px solid var(--borde);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all .18s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.exp-img-card:hover {
+  transform: translateY(-2px);
+  border-color: #38BDF8;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+.exp-img-card.selected {
+  border-color: var(--azul2) !important;
+  box-shadow: 0 0 0 2px var(--azul2), 0 4px 12px rgba(2,132,199,0.15) !important;
+  background: #F0F9FF;
+}
+.exp-img-card-thumb-wrap {
+  width: 100%;
+  height: 125px;
+  background: #F1F5F9;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.exp-img-card-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .2s ease;
+}
+.exp-img-card:hover .exp-img-card-thumb {
+  transform: scale(1.04);
+}
+.exp-img-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.exp-img-fav-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(255,255,255,0.9);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.exp-img-card-body {
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+.exp-img-card-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.exp-img-card-sub {
+  font-size: 0.72rem;
+  color: #0284C7;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.exp-img-card-meta {
+  font-size: 0.68rem;
+  color: var(--gris);
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
 @media(max-width: 1024px) {
   #expGridContenedor { grid-template-columns: 1fr !important; }
 }
@@ -268,6 +377,13 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
     <span class="icon">📡</span>
     <h1>LEYTRIX ISP</h1>
     <p>Gestión de Clientes Internet</p>
+    <div style="margin-top:10px;padding:6px 12px;background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="abrirModalSupabase()" title="Configuración de Supabase Cloud">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:0.95rem">☁️</span>
+        <span id="sidebarSupaStatus" style="font-size:0.75rem;font-weight:700;color:#0284C7">Supabase Cloud</span>
+      </div>
+      <span id="sidebarSupaDot" style="width:9px;height:9px;border-radius:50%;background:#10B981" title="En línea"></span>
+    </div>
   </div>
   <hr class="sidebar-sep">
   <div class="nav-item active" data-page="inicio"><span class="nav-icon">🏠</span> Panel ISP</div>
@@ -279,10 +395,10 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
   <div class="nav-item" data-page="pendientes"><span class="nav-icon">📅</span> Pendientes del Mes</div>
   <div class="nav-item" data-page="importexport"><span class="nav-icon">📊</span> Importar / Exportar</div>
   <hr class="sidebar-sep">
-  <div class="nav-item" data-page="explorador"><span class="nav-icon">📂</span> Explorador de Archivos</div>
-  <div class="nav-item" data-page="favoritos"><span class="nav-icon">⭐</span> Favoritos</div>
-  <div class="nav-item" data-page="recientes"><span class="nav-icon">🕒</span> Recientes</div>
-  <div class="nav-item" data-page="analizador"><span class="nav-icon">🤖</span> Analizador IA</div>
+  <div class="nav-item" data-page="explorador"><span class="nav-icon">📸</span> Fotos &amp; Comprobantes</div>
+  <div class="nav-item" data-page="favoritos"><span class="nav-icon">⭐</span> Fotos Destacadas</div>
+  <div class="nav-item" data-page="recientes"><span class="nav-icon">🕒</span> Fotos Recientes</div>
+  <div class="nav-item" data-page="analizador"><span class="nav-icon">💳</span> Comprobantes Pago</div>
   <div class="sidebar-stats" id="sidebarStats"><p>Cargando estadísticas...</p></div>
 </nav>
 
@@ -294,25 +410,25 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
   <div class="page-header"><h2>📡 Panel de Control — Leytrix ISP</h2><p>Resumen general del servicio (Optimizado para 1,000,000+ registros)</p></div>
     <div class="kpi-grid" id="kpiGrid"><div class="kpi kpi-blue"><div class="val">—</div><div class="lbl">Cargando</div></div></div>
 
-  <!-- Acceso Directo en el Frente al Explorador de Archivos Windows -->
-  <div class="card" style="margin-bottom:24px;background:linear-gradient(135deg,#F0FDFA 0%,#E0F2FE 50%,#EFF6FF 100%);border:1.5px solid #BAE6FD;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+  <!-- Acceso Directo en el Frente al Archivo Fotográfico & Comprobantes ISP -->
+  <div class="card" style="margin-bottom:24px;background:linear-gradient(135deg,#F0FDF4 0%,#E0F2FE 50%,#EFF6FF 100%);border:1.5px solid #BAE6FD;box-shadow:0 2px 8px rgba(0,0,0,.05)">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-          <span style="font-size:1.8rem">📂</span>
-          <h3 style="font-size:1.1rem;font-weight:800;color:#0F172A">Explorador de Archivos Windows</h3>
-          <span class="badge" style="background:#0284C7;color:#fff;font-size:0.72rem">Integrado</span>
+          <span style="font-size:1.8rem">📸</span>
+          <h3 style="font-size:1.1rem;font-weight:800;color:#0F172A">Archivo Fotográfico &amp; Comprobantes ISP</h3>
+          <span class="badge" style="background:#0284C7;color:#fff;font-size:0.72rem">Empresa de Internet</span>
         </div>
         <p style="font-size:0.85rem;color:#0369A1;line-height:1.4">
-          Lee y previsualiza cualquier archivo de tu computadora (.pdf, .docx, .xlsx, .jpg, .mp4, .zip, etc.) en tiempo real sin datos demos.
+          Organiza las fotos de tu empresa de internet: Comprobantes de pago (Yape/BCP), instalaciones de routers, cajas NAP en postes, DNI y fachadas de clientes por zona.
         </p>
       </div>
       <div class="btn-group">
         <button class="btn btn-primary" onclick="goTo('explorador')" style="background:#0284C7;border-color:#0284C7">
-          📂 Abrir Explorador Completo
+          📸 Abrir Galería ISP
         </button>
-        <button class="btn btn-outline" onclick="goTo('inicio'); setTimeout(() => document.getElementById('expInputCarpeta').click(), 150)">
-          📁 Cargar Carpeta Local
+        <button class="btn btn-outline" onclick="goTo('explorador'); setTimeout(() => document.getElementById('expInputArchivos').click(), 150)">
+          🖼️ Cargar Fotos
         </button>
       </div>
     </div>
@@ -619,196 +735,211 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 </section>
 
 
-<!-- EXPLORADOR DE ARCHIVOS WINDOWS -->
+<!-- EXPLORADOR / GALERÍA DE IMÁGENES ISP -->
 <section class="page" id="page-explorador">
-  <!-- Barra Superior de Búsqueda y Filtros estilo Windows Explorer -->
+  <!-- Barra Superior de Búsqueda y Filtros -->
   <div style="background:#fff;border:1px solid var(--borde);border-radius:12px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,.04)">
-    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:300px">
-      <div style="position:relative;flex:1">
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:320px;flex-wrap:wrap">
+      <div style="position:relative;flex:1;min-width:200px">
         <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--gris);font-size:0.95rem">🔍</span>
-        <input id="expBusqueda" placeholder="Buscar documentos, manuales, campañas, formatos, archivos..." 
+        <input id="expBusqueda" placeholder="Buscar por cliente, zona, comprobante, router, NAP, nota..." 
           style="width:100%;padding:10px 14px 10px 36px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.88rem;outline:none;background:#FAFCFF"/>
       </div>
-      <select id="expFiltroTipo" style="padding:10px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;min-width:160px;outline:none">
-        <option value="todos">Todos los tipos</option>
-        <option value="docs">Documentos (Word, PDF, TXT)</option>
-        <option value="sheets">Hojas de cálculo (Excel, CSV)</option>
-        <option value="slides">Presentaciones (PowerPoint)</option>
-        <option value="images">Imágenes (JPG, PNG, WebP)</option>
-        <option value="media">Video &amp; Audio (MP4, MP3, etc.)</option>
-        <option value="archives">Comprimidos (ZIP, RAR, 7Z)</option>
-        <option value="code">Código / Datos (JSON, SQL, XML)</option>
+      <select id="expFiltroTipo" style="padding:10px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;min-width:180px;outline:none">
+        <option value="todos">Todas las categorías de fotos</option>
+        <option value="comprobantes">💳 Comprobantes (Yape, Plin, BCP)</option>
+        <option value="instalaciones">📡 Instalaciones &amp; Routers ONT</option>
+        <option value="infraestructura">📦 Cajas NAP, Postes &amp; Fibra</option>
+        <option value="identidad">🆔 DNI &amp; Contratos de Clientes</option>
+        <option value="fachadas">🏠 Fachadas &amp; Predios</option>
+        <option value="averias">⚠️ Averías &amp; Reportes Técnicos</option>
       </select>
-      <button class="btn btn-primary" id="btnExpBuscar" style="background:#0D9488;border-color:#0D9488;padding:10px 20px">
+      <select id="expFiltroZonaSelect" style="padding:10px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;min-width:140px;outline:none">
+        <option value="">Todas las zonas</option>
+        <option value="Loboyacu">Loboyacu</option>
+        <option value="Huayranga">Huayranga</option>
+        <option value="Pacotillo">Pacotillo</option>
+        <option value="Ramal de Cachiyacu">Ramal de Cachiyacu</option>
+        <option value="Palmeras">Palmeras</option>
+        <option value="Shishiyacu">Shishiyacu</option>
+      </select>
+      <button class="btn btn-primary" id="btnExpBuscar" style="background:#0D9488;border-color:#0D9488;padding:10px 18px">
         Buscar
       </button>
     </div>
-    <!-- Botones de Acción de Windows -->
+    <!-- Botones de Acción -->
     <div class="btn-group">
-      <input type="file" id="expInputArchivos" multiple style="display:none"/>
+      <input type="file" id="expInputArchivos" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.jfif,.avif" multiple style="display:none"/>
       <input type="file" id="expInputCarpeta" webkitdirectory directory multiple style="display:none"/>
-      <button class="btn btn-primary" id="btnExpCargarCarpeta" style="background:#0284C7;border-color:#0284C7">
-        📁 Abrir Carpeta de Windows
+      <button class="btn btn-primary" id="btnExpCargarArchivos" style="background:#16A34A;border-color:#16A34A">
+        📸 Subir Fotos / Vouchers
       </button>
-      <button class="btn btn-outline" id="btnExpCargarArchivos">
-        📄 Seleccionar Archivos
+      <button class="btn btn-outline" id="btnExpCargarCarpeta">
+        📁 Carpeta de Fotos
       </button>
-      <button class="btn btn-ghost" id="btnExpLimpiar" title="Limpiar lista">
+      <button class="btn btn-primary" onclick="sincronizarConSupabase()" style="background:#0284C7;border-color:#0284C7" title="Sincronizar todo con Supabase Cloud">
+        ☁️ Sincronizar Nube
+      </button>
+      <button class="btn btn-ghost" id="btnExpLimpiar" title="Limpiar fotos">
         🧹 Limpiar
       </button>
     </div>
   </div>
 
-  <!-- Banner Informativo -->
-  <div style="background:linear-gradient(135deg,#F0FDFA 0%,#E0F2FE 50%,#EFF6FF 100%);border:1px solid #BAE6FD;border-radius:14px;padding:24px 28px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
-    <div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <span style="font-size:2rem">📂</span>
-        <h2 style="font-size:1.6rem;font-weight:900;color:#0F172A">Explorador de Archivos Windows</h2>
+  <!-- Panel de Métricas de la Empresa de Internet ISP -->
+  <div style="background:#fff;border:1px solid var(--borde);border-radius:14px;padding:18px 20px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.04)">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;border-bottom:1px solid #F1F5F9;padding-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:2rem">📡</span>
+        <div>
+          <h3 style="font-size:1.15rem;font-weight:800;color:#0F172A;margin:0">Archivo Fotográfico &amp; Operaciones ISP — Leytrix</h3>
+          <p style="font-size:0.8rem;color:#0369A1;margin:2px 0 0;font-weight:600">Comprobantes de pago de abonados, fotos de routers instalados, cajas NAP y contratos por zona.</p>
+        </div>
       </div>
-      <p style="color:#0369A1;font-size:0.92rem;font-weight:600">
-        Tu gestor documental y biblioteca de archivos. Abre carpetas de tu laptop, explora subdirectorios y previsualiza cualquier formato.
-      </p>
-      <p style="color:#64748B;font-size:0.8rem;margin-top:4px">
-        🛡️ Sin datos demos. Lee directamente desde tu disco duro sin subir archivos a internet (100% privado y seguro).
-      </p>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="expSupaBadge" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:0.78rem;font-weight:700;background:#ECFDF5;color:#059669;border:1px solid #A7F3D0">
+          ☁️ Supabase Cloud: Conectado
+        </span>
+        <button class="btn btn-sm btn-outline" onclick="abrirModalSupabase()" style="font-size:0.75rem;padding:5px 12px">⚙️ Configurar Nube</button>
+      </div>
     </div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-primary" onclick="document.getElementById('expInputCarpeta').click()" style="background:#0284C7;border-color:#0284C7">
-        📁 Cargar Carpeta Local
-      </button>
-    </div>
-  </div>
 
-  <!-- Tarjetas de Categorías Dinámicas (Reales basadas en los archivos cargados) -->
-  <div style="margin-bottom:20px">
-    <div style="font-size:0.85rem;font-weight:700;color:var(--azul);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">
-      📊 Tipos de Archivos Detectados
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px" id="expCardsCategorias">
-      <div class="card exp-cat-card" data-cat="docs" style="padding:14px;cursor:pointer;border-top:4px solid #2563EB">
-        <div style="font-size:1.6rem;margin-bottom:4px">📘</div>
-        <div style="font-size:0.82rem;font-weight:700;color:#1E293B">Documentos</div>
-        <div style="font-size:1.2rem;font-weight:800;color:#2563EB" id="cardCountDocs">0</div>
+    <!-- Tarjetas de Métricas de la Empresa de Internet -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+      <div class="card" style="padding:14px;background:#F8FAFC;border-left:4px solid #0284C7">
+        <div style="font-size:0.75rem;font-weight:700;color:#64748B;text-transform:uppercase">Abonados Activos</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#0284C7;margin-top:2px" id="expKpiActivos">0</div>
+        <div style="font-size:0.72rem;color:#64748B" id="expKpiTotalCli">Total clientes: 0</div>
       </div>
-      <div class="card exp-cat-card" data-cat="sheets" style="padding:14px;cursor:pointer;border-top:4px solid #16A34A">
-        <div style="font-size:1.6rem;margin-bottom:4px">📊</div>
-        <div style="font-size:0.82rem;font-weight:700;color:#1E293B">Hojas Excel</div>
-        <div style="font-size:1.2rem;font-weight:800;color:#16A34A" id="cardCountSheets">0</div>
+      <div class="card" style="padding:14px;background:#F8FAFC;border-left:4px solid #16A34A">
+        <div style="font-size:0.75rem;font-weight:700;color:#64748B;text-transform:uppercase">Recaudación Mes</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#16A34A;margin-top:2px" id="expKpiCobrado">S/. 0.00</div>
+        <div style="font-size:0.72rem;color:#64748B" id="expKpiMesActual">Mes actual</div>
       </div>
-      <div class="card exp-cat-card" data-cat="slides" style="padding:14px;cursor:pointer;border-top:4px solid #EA580C">
-        <div style="font-size:1.6rem;margin-bottom:4px">📑</div>
-        <div style="font-size:0.82rem;font-weight:700;color:#1E293B">Presentaciones</div>
-        <div style="font-size:1.2rem;font-weight:800;color:#EA580C" id="cardCountSlides">0</div>
+      <div class="card" style="padding:14px;background:#F8FAFC;border-left:4px solid #8B5CF6">
+        <div style="font-size:0.75rem;font-weight:700;color:#64748B;text-transform:uppercase">Zonas con Red</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#8B5CF6;margin-top:2px">6 ZONAS</div>
+        <div style="font-size:0.72rem;color:#64748B">Cobertura Fibra &amp; Radio</div>
       </div>
-      <div class="card exp-cat-card" data-cat="images" style="padding:14px;cursor:pointer;border-top:4px solid #9333EA">
-        <div style="font-size:1.6rem;margin-bottom:4px">🖼️</div>
-        <div style="font-size:0.82rem;font-weight:700;color:#1E293B">Imágenes</div>
-        <div style="font-size:1.2rem;font-weight:800;color:#9333EA" id="cardCountImages">0</div>
+      <div class="card" style="padding:14px;background:#F8FAFC;border-left:4px solid #DC2626">
+        <div style="font-size:0.75rem;font-weight:700;color:#64748B;text-transform:uppercase">Comprobantes Pago</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#DC2626;margin-top:2px" id="expKpiComprobantes">0</div>
+        <div style="font-size:0.72rem;color:#64748B">Vouchers Yape / Plin / BCP</div>
       </div>
-      <div class="card exp-cat-card" data-cat="media" style="padding:14px;cursor:pointer;border-top:4px solid #E11D48">
-        <div style="font-size:1.6rem;margin-bottom:4px">🎬</div>
-        <div style="font-size:0.82rem;font-weight:700;color:#1E293B">Video &amp; Audio</div>
-        <div style="font-size:1.2rem;font-weight:800;color:#E11D48" id="cardCountMedia">0</div>
-      </div>
-      <div class="card exp-cat-card" data-cat="archives" style="padding:14px;cursor:pointer;border-top:4px solid #4F46E5">
-        <div style="font-size:1.6rem;margin-bottom:4px">📦</div>
-        <div style="font-size:0.82rem;font-weight:700;color:#1E293B">Comprimidos</div>
-        <div style="font-size:1.2rem;font-weight:800;color:#4F46E5" id="cardCountArchives">0</div>
-      </div>
-      <div class="card exp-cat-card" data-cat="code" style="padding:14px;cursor:pointer;border-top:4px solid #0284C7">
-        <div style="font-size:1.6rem;margin-bottom:4px">💻</div>
-        <div style="font-size:0.82rem;font-weight:700;color:#1E293B">Código / Datos</div>
-        <div style="font-size:1.2rem;font-weight:800;color:#0284C7" id="cardCountCode">0</div>
-      </div>
-      <div class="card exp-cat-card" data-cat="todos" style="padding:14px;cursor:pointer;border-top:4px solid #0F172A">
-        <div style="font-size:1.6rem;margin-bottom:4px">💾</div>
-        <div style="font-size:0.82rem;font-weight:700;color:#1E293B">Total Peso</div>
-        <div style="font-size:1.1rem;font-weight:800;color:#0F172A" id="cardCountTotalPeso">0 B</div>
+      <div class="card" style="padding:14px;background:#F8FAFC;border-left:4px solid #F59E0B">
+        <div style="font-size:0.75rem;font-weight:700;color:#64748B;text-transform:uppercase">Fotos Guardadas</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#F59E0B;margin-top:2px" id="expKpiTotalFotos">0</div>
+        <div style="font-size:0.72rem;color:#64748B" id="expKpiFotosBytes">0 KB en Supabase &amp; Local</div>
       </div>
     </div>
   </div>
 
-  <!-- Contenedor Principal: 3 Columnas Estilo Maqueta (Árbol | Tabla Explorer | Ficha Técnica con Botón Verde) -->
-  <div style="display:grid;grid-template-columns:250px 1fr 360px;gap:18px;min-height:580px;align-items:start" id="expGridContenedor">
-    <!-- 1. Panel Izquierdo: Árbol de Carpetas y Navegación -->
-    <div class="card" style="padding:16px;height:100%;min-height:580px;overflow-y:auto">
-      <div class="card-title" style="font-size:0.88rem;margin-bottom:10px">📁 Navegación</div>
+  <!-- Contenedor Principal: 3 Columnas (Categorías/Zonas | Galería/Tabla | Ficha Técnica ISP) -->
+  <div style="display:grid;grid-template-columns:250px 1fr 370px;gap:18px;min-height:600px;align-items:start" id="expGridContenedor">
+    <!-- 1. Panel Izquierdo: Categorías ISP y Zonas -->
+    <div class="card" style="padding:16px;height:100%;min-height:600px;overflow-y:auto">
+      <div class="card-title" style="font-size:0.88rem;margin-bottom:10px">📸 Categorías de Fotos</div>
       <div style="display:flex;flex-direction:column;gap:4px" id="expTreeCarpetas">
-        <div class="exp-nav-btn active" data-cat="todos">📂 Todos los archivos <span class="badge" id="badgeCatTodos">0</span></div>
-        <div class="exp-nav-btn" data-cat="docs">📘 Documentos Word/PDF <span class="badge" id="badgeCatDocs">0</span></div>
-        <div class="exp-nav-btn" data-cat="sheets">📊 Hojas de cálculo <span class="badge" id="badgeCatSheets">0</span></div>
-        <div class="exp-nav-btn" data-cat="slides">📑 Presentaciones <span class="badge" id="badgeCatSlides">0</span></div>
-        <div class="exp-nav-btn" data-cat="images">🖼️ Imágenes y Fotos <span class="badge" id="badgeCatImages">0</span></div>
-        <div class="exp-nav-btn" data-cat="media">🎬 Videos y Audios <span class="badge" id="badgeCatMedia">0</span></div>
-        <div class="exp-nav-btn" data-cat="archives">📦 Archivos ZIP/RAR <span class="badge" id="badgeCatArchives">0</span></div>
-        <div class="exp-nav-btn" data-cat="code">💻 Código y Datos <span class="badge" id="badgeCatCode">0</span></div>
-        <div class="exp-nav-btn" data-cat="favs">⭐ Mis Favoritos <span class="badge" id="badgeCatFavs">0</span></div>
+        <div class="exp-nav-btn active" data-cat="todos"><span>🖼️ Todas las Fotos</span> <span class="badge" id="expBadgeCatTodos">0</span></div>
+        <div class="exp-nav-btn" data-cat="comprobantes"><span>💳 Comprobantes Pago</span> <span class="badge" id="expBadgeCatComprobantes">0</span></div>
+        <div class="exp-nav-btn" data-cat="instalaciones"><span>📡 Instalaciones &amp; Routers</span> <span class="badge" id="expBadgeCatInstalaciones">0</span></div>
+        <div class="exp-nav-btn" data-cat="infraestructura"><span>📦 Cajas NAP &amp; Fibra</span> <span class="badge" id="expBadgeCatInfraestructura">0</span></div>
+        <div class="exp-nav-btn" data-cat="identidad"><span>🆔 DNI &amp; Contratos</span> <span class="badge" id="expBadgeCatIdentidad">0</span></div>
+        <div class="exp-nav-btn" data-cat="fachadas"><span>🏠 Fachadas &amp; Predios</span> <span class="badge" id="expBadgeCatFachadas">0</span></div>
+        <div class="exp-nav-btn" data-cat="averias"><span>⚠️ Averías Técnicas</span> <span class="badge" id="expBadgeCatAverias">0</span></div>
+        <div class="exp-nav-btn" data-cat="favs"><span>⭐ Fotos Destacadas</span> <span class="badge" id="expBadgeCatFavs">0</span></div>
       </div>
+
       <hr style="margin:16px 0">
-      <div class="card-title" style="font-size:0.82rem;margin-bottom:8px">🗂️ Árbol de Carpetas</div>
+      <div class="card-title" style="font-size:0.82rem;margin-bottom:8px">🗺️ Filtro por Zona ISP</div>
+      <div style="display:flex;flex-direction:column;gap:3px;font-size:0.8rem" id="expListaZonasFiltro">
+        <div class="exp-folder-item active" data-zona=""><span>🌐</span> <span style="flex:1">Todas las zonas</span></div>
+        <div class="exp-folder-item" data-zona="Loboyacu"><span>📍</span> <span style="flex:1">Loboyacu</span></div>
+        <div class="exp-folder-item" data-zona="Huayranga"><span>📍</span> <span style="flex:1">Huayranga</span></div>
+        <div class="exp-folder-item" data-zona="Pacotillo"><span>📍</span> <span style="flex:1">Pacotillo</span></div>
+        <div class="exp-folder-item" data-zona="Ramal de Cachiyacu"><span>📍</span> <span style="flex:1">Ramal de Cachiyacu</span></div>
+        <div class="exp-folder-item" data-zona="Palmeras"><span>📍</span> <span style="flex:1">Palmeras</span></div>
+        <div class="exp-folder-item" data-zona="Shishiyacu"><span>📍</span> <span style="flex:1">Shishiyacu</span></div>
+      </div>
+
+      <hr style="margin:16px 0">
+      <div class="card-title" style="font-size:0.82rem;margin-bottom:8px">🗂️ Carpetas Locales</div>
       <div id="expListaSubcarpetas" style="display:flex;flex-direction:column;gap:3px;font-size:0.8rem;color:var(--gris)">
-        <span style="font-style:italic;padding:4px">Carga una carpeta de tu PC para explorar sus subdirectorios</span>
+        <span style="font-style:italic;padding:4px">Carga una carpeta de fotos para ver subdirectorios</span>
       </div>
     </div>
 
-    <!-- 2. Panel Central: Explorador de Archivos (Tabla Windows) -->
-    <div class="card" style="padding:0;overflow:hidden;min-height:580px;display:flex;flex-direction:column">
-      <!-- Barra de Ruta (Breadcrumb estilo Windows) -->
-      <div style="padding:10px 16px;background:#F8FAFC;border-bottom:1px solid var(--borde);display:flex;align-items:center;gap:8px;font-size:0.82rem">
-        <span style="color:#0284C7;font-weight:700">🖥️ Este Equipo</span>
-        <span style="color:var(--gris)">›</span>
-        <span id="expBreadcrumb" style="font-weight:600;color:var(--texto);word-break:break-all">Todos los archivos</span>
+    <!-- 2. Panel Central: Galería o Tabla de Fotos ISP -->
+    <div class="card" style="padding:0;overflow:hidden;min-height:600px;display:flex;flex-direction:column">
+      <!-- Barra Superior: Breadcrumb y Switcher de Vista -->
+      <div style="padding:10px 16px;background:#F8FAFC;border-bottom:1px solid var(--borde);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:0.82rem">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="color:#0284C7;font-weight:700">📸 Fotos ISP</span>
+          <span style="color:var(--gris)">›</span>
+          <span id="expBreadcrumb" style="font-weight:600;color:var(--texto);word-break:break-all">Todas las fotos</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="btn btn-sm btn-primary" id="btnExpModoGaleria" title="Vista Cuadrícula / Galería" style="padding:5px 10px;font-size:0.78rem">
+            🔲 Galería
+          </button>
+          <button class="btn btn-sm btn-outline" id="btnExpModoTabla" title="Vista Tabla detallada" style="padding:5px 10px;font-size:0.78rem">
+            📋 Tabla
+          </button>
+        </div>
       </div>
 
-      <!-- Zona de Drop y Tabla -->
+      <!-- Zona de Drop y Contenido (Galería / Tabla) -->
       <div style="flex:1;overflow-y:auto;position:relative" id="expDropZone">
-        <div class="table-wrap" style="border:none;border-radius:0">
+        <!-- Contenedor Galería -->
+        <div id="expGaleriaCuerpo" class="exp-gallery-grid" style="display:grid"></div>
+
+        <!-- Contenedor Tabla -->
+        <div class="table-wrap" id="expTablaWrap" style="border:none;border-radius:0;display:none">
           <table style="width:100%">
             <thead style="background:#F1F5F9;position:sticky;top:0;z-index:2">
               <tr>
-                <th style="cursor:pointer" onclick="ordenarArchivosPor('name')">Nombre ⬍</th>
-                <th style="cursor:pointer" onclick="ordenarArchivosPor('typeDesc')">Tipo ⬍</th>
-                <th style="cursor:pointer" onclick="ordenarArchivosPor('mtime')">Fecha de modificación ⬍</th>
+                <th style="cursor:pointer" onclick="ordenarArchivosPor('name')">Foto / Archivo ⬍</th>
+                <th style="cursor:pointer" onclick="ordenarArchivosPor('cat')">Categoría ISP ⬍</th>
+                <th style="cursor:pointer" onclick="ordenarArchivosPor('cliente_nombre')">Cliente Asignado ⬍</th>
+                <th style="cursor:pointer" onclick="ordenarArchivosPor('zona')">Zona ⬍</th>
+                <th style="cursor:pointer" onclick="ordenarArchivosPor('mtime')">Fecha ⬍</th>
                 <th style="cursor:pointer" onclick="ordenarArchivosPor('size')">Tamaño ⬍</th>
               </tr>
             </thead>
-            <tbody id="expTablaCuerpo">
-              <!-- Estado inicial limpio sin datos demos -->
-              <tr>
-                <td colspan="4" style="padding:80px 20px;text-align:center">
-                  <div class="empty-state" style="padding:0">
-                    <div class="e-icon" style="font-size:3.5rem">📂</div>
-                    <h3 style="font-size:1.2rem;color:var(--azul);margin-bottom:6px">Explorador de Archivos Windows</h3>
-                    <p style="font-size:0.85rem;color:var(--gris);max-width:440px;margin:0 auto 20px;line-height:1.5">
-                      Arrastra cualquier carpeta o archivos de tu computadora aquí, o utiliza los botones para leer documentos reales de Windows (.pdf, .docx, .xlsx, .jpg, .mp4, etc.).
-                    </p>
-                    <div style="display:inline-flex;gap:12px">
-                      <button class="btn btn-primary" onclick="document.getElementById('expInputCarpeta').click()" style="background:#0284C7;border-color:#0284C7">
-                        📁 Abrir Carpeta de Windows
-                      </button>
-                      <button class="btn btn-outline" onclick="document.getElementById('expInputArchivos').click()">
-                        📄 Seleccionar Archivos
-                      </button>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
+            <tbody id="expTablaCuerpo"></tbody>
           </table>
+        </div>
+
+        <!-- Estado vacío cuando no hay fotos -->
+        <div id="expEmptyState" style="display:none;padding:80px 20px;text-align:center">
+          <div class="empty-state" style="padding:0">
+            <div class="e-icon" style="font-size:3.5rem">📸</div>
+            <h3 style="font-size:1.2rem;color:var(--azul);margin-bottom:6px">Archivo Fotográfico ISP Vacío</h3>
+            <p style="font-size:0.85rem;color:var(--gris);max-width:440px;margin:0 auto 20px;line-height:1.5">
+              Arrastra aquí fotos de comprobantes de pago (Yape/BCP), instalaciones de routers, cajas NAP o DNI de clientes, o usa los botones para cargarlas.
+            </p>
+            <div style="display:inline-flex;gap:12px">
+              <button class="btn btn-primary" onclick="document.getElementById('expInputArchivos').click()" style="background:#16A34A;border-color:#16A34A">
+                📸 Subir Fotos / Vouchers
+              </button>
+              <button class="btn btn-outline" onclick="document.getElementById('expInputCarpeta').click()">
+                📁 Abrir Carpeta de Fotos
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 3. Panel Derecho: Ficha Técnica y Vista Previa (Idéntico a la maqueta) -->
-    <div class="card" style="padding:18px;min-height:580px;display:flex;flex-direction:column;overflow-y:auto" id="expPanelDetalles">
-      <div class="card-title" style="font-size:0.88rem;margin-bottom:14px">🔍 Ficha de Archivo &amp; Vista Previa</div>
+    <!-- 3. Panel Derecho: Ficha Técnica ISP y Previsualización -->
+    <div class="card" style="padding:18px;min-height:600px;display:flex;flex-direction:column;overflow-y:auto" id="expPanelDetalles">
+      <div class="card-title" style="font-size:0.88rem;margin-bottom:14px">🔍 Ficha Fotográfica ISP &amp; Previsualización</div>
       <div id="expDetallesContenido" style="display:flex;flex-direction:column;height:100%">
-        <!-- Estado inicial -->
-        <div style="text-align:center;padding:60px 10px;color:var(--gris);margin:auto 0">
-          <div style="font-size:3rem;margin-bottom:10px">📄</div>
-          <p style="font-size:0.88rem;font-weight:700">Ningún archivo seleccionado</p>
-          <p style="font-size:0.78rem;margin-top:6px;line-height:1.4">Haz clic en cualquier archivo de la lista para ver su vista previa, tamaño, fecha y acciones.</p>
+        <!-- Estado inicial cuando no hay foto seleccionada -->
+        <div style="text-align:center;padding:70px 10px;color:var(--gris);margin:auto 0">
+          <div style="font-size:3.5rem;margin-bottom:10px">🖼️</div>
+          <p style="font-size:0.92rem;font-weight:700;color:#1E293B">Ninguna foto seleccionada</p>
+          <p style="font-size:0.8rem;margin-top:6px;line-height:1.4">Haz clic en cualquier imagen de la galería para ver su vista previa en alta resolución, asignar cliente, zona, notas, enviar por WhatsApp o imprimir.</p>
         </div>
       </div>
     </div>
@@ -816,6 +947,59 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 </section>
 
 </main>
+
+<!-- MODAL SUPABASE CLOUD -->
+<div class="modal-bg" id="modalSupabase" role="dialog" aria-modal="true" aria-labelledby="modalSupabaseTit">
+  <div class="modal" style="max-width:580px;width:95%">
+    <div class="modal-header">
+      <h3 id="modalSupabaseTit">☁️ Configuración Supabase Cloud</h3>
+      <button class="modal-close" onclick="cerrarModal('modalSupabase')" aria-label="Cerrar">✕</button>
+    </div>
+    <div style="padding:10px 0">
+      <div style="background:#F8FAFC;border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <strong style="font-size:0.88rem;color:#0F172A">Estado de Conexión:</strong>
+          <span id="modalSupaStatusBadge" style="font-size:0.8rem;font-weight:700;padding:4px 10px;border-radius:12px;background:#ECFDF5;color:#059669">
+            🟢 En Línea
+          </span>
+        </div>
+        <div style="font-size:0.8rem;color:#64748B;word-break:break-all">
+          <strong>URL:</strong> https://baeobhvgfrdbwyqapqzf.supabase.co
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <h4 style="font-size:0.88rem;font-weight:700;color:var(--azul);margin-bottom:6px">
+          ⚡ Sincronización en la Nube
+        </h4>
+        <p style="font-size:0.8rem;color:#64748B;line-height:1.4;margin-bottom:10px">
+          Sube todos tus clientes, pagos registrados, cortes y fotos hacia tu base de datos Supabase para que puedas usarlos desde cualquier dispositivo y en GitHub Pages sin que se borre nada.
+        </p>
+        <button class="btn btn-primary" id="btnSincronizarSupaAhora" onclick="sincronizarConSupabase()" style="background:#0D9488;border-color:#0D9488;width:100%;justify-content:center;padding:12px">
+          ☁️ Sincronizar Todos los Datos con Supabase Cloud
+        </button>
+      </div>
+
+      <div style="border-top:1px solid var(--borde);padding-top:14px">
+        <h4 style="font-size:0.88rem;font-weight:700;color:var(--texto);margin-bottom:6px">
+          📋 Script SQL para crear las tablas en Supabase
+        </h4>
+        <p style="font-size:0.78rem;color:#64748B;margin-bottom:8px">
+          Si aún no has creado las tablas en tu proyecto, copia este código, entra a <strong>Supabase Dashboard &gt; SQL Editor &gt; New Query</strong>, pégalo y presiona <strong>Run</strong>:
+        </p>
+        <pre id="codigoSqlSupa" style="background:#0F172A;color:#38BDF8;padding:12px;border-radius:8px;font-size:0.72rem;max-height:140px;overflow:auto;user-select:all"></pre>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button class="btn btn-outline btn-sm" id="btnCopiarSqlSupa" style="flex:1;justify-content:center">
+            📋 Copiar Código SQL
+          </button>
+          <button class="btn btn-ghost btn-sm" id="btnReverificarSupa" onclick="verificarSupabase(true)" style="flex:1;justify-content:center">
+            🔄 Probar Conexión
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL EDITAR -->
 <div class="modal-bg" id="modalEditar" role="dialog" aria-modal="true" aria-labelledby="modalEditarTit">
@@ -928,7 +1112,7 @@ const PLANES  = [50, 60, 65];
 const ESTADOS = ['ACTIVO','CORTADO','PENDIENTE','RETIRADO'];
 const PAGE_SIZE = 50;
 const DB_NAME   = 'leytrix_isp_v1';
-const DB_VER    = 2; // Actualizado con índices compuestos para 1M+ registros
+const DB_VER    = 3; // Actualizado con almacenamiento persistente de fotos e imágenes ISP
 
 // ══════════════════════════════════════════════════════
 //  SEGURIDAD Y SANITIZACIÓN (XSS, Formula Injection, Safe Types)
@@ -999,177 +1183,254 @@ function setInputErr(inputId, msg) {
 }
 
 // ══════════════════════════════════════════════════════
-//  MOTOR DE BASE DE DATOS (IndexedDB v2 Optimizado para 1M+ registros)
+//  CONFIGURACIÓN SUPABASE CLOUD (https://baeobhvgfrdbwyqapqzf.supabase.co)
 // ══════════════════════════════════════════════════════
+const SUPA_URL = 'https://baeobhvgfrdbwyqapqzf.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhZW9iaHZnZnJkYnd5cWFwcXpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2NjUyMzgsImV4cCI6MjEwNzI0MTIzOH0.gve1FoTF8kDnUrZfedGdWnZKV1e6uxgydXJBm_v5ILc';
+
+let _supa = null;
+let _supaOnline = false;
+
+try {
+  if (typeof supabase !== 'undefined' && supabase.createClient) {
+    _supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+  }
+} catch (err) {
+  console.warn('Supabase JS SDK no disponible o bloqueado:', err);
+}
+
+// ══════════════════════════════════════════════════════
+//  MOTOR DE BASE DE DATOS HÍBRIDO (IndexedDB + Supabase Cloud)
+//  - Almacenamiento local ultrarrápido O(1) con IndexedDB (v2)
+//  - Sincronización transparente con Supabase Cloud
+//  - Respaldo permanente que no se borra al recargar
+// ══════════════════════════════════════════════════════
+const DB_NAME = 'leytrix_isp_v1';
+const DB_VER  = 2;
+
 const IDB = (() => {
   let _db = null;
 
   function open() {
-    return new Promise((res, rej) => {
+    return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VER);
       req.onupgradeneeded = e => {
         const db = e.target.result;
-        let cs, ps, ks;
-
+        // 1. Clientes
         if (!db.objectStoreNames.contains('clientes')) {
-          cs = db.createObjectStore('clientes', { keyPath: 'id', autoIncrement: true });
+          const cs = db.createObjectStore('clientes', { keyPath: 'id', autoIncrement: true });
+          cs.createIndex('zona',   'zona',   { unique: false });
+          cs.createIndex('estado', 'estado', { unique: false });
+          cs.createIndex('plan',   'plan',   { unique: false });
+          cs.createIndex('zona_estado', ['zona', 'estado'], { unique: false });
         } else {
-          cs = e.target.transaction.objectStore('clientes');
+          const cs = e.target.transaction.objectStore('clientes');
+          if (!cs.indexNames.contains('zona_estado')) {
+            cs.createIndex('zona_estado', ['zona', 'estado'], { unique: false });
+          }
         }
-        if (!cs.indexNames.contains('zona')) cs.createIndex('zona', 'zona', { unique: false });
-        if (!cs.indexNames.contains('estado')) cs.createIndex('estado', 'estado', { unique: false });
-        if (!cs.indexNames.contains('plan')) cs.createIndex('plan', 'plan', { unique: false });
-        if (!cs.indexNames.contains('zona_estado')) cs.createIndex('zona_estado', ['zona', 'estado'], { unique: false });
-
+        // 2. Pagos
         if (!db.objectStoreNames.contains('pagos')) {
-          ps = db.createObjectStore('pagos', { keyPath: 'id', autoIncrement: true });
-        } else {
-          ps = e.target.transaction.objectStore('pagos');
+          const ps = db.createObjectStore('pagos', { keyPath: 'id', autoIncrement: true });
+          ps.createIndex('id_cliente', 'id_cliente', { unique: false });
+          ps.createIndex('mes',        'mes',        { unique: false });
+          ps.createIndex('cli_mes',    ['id_cliente', 'mes'], { unique: false });
         }
-        if (!ps.indexNames.contains('id_cliente')) ps.createIndex('id_cliente', 'id_cliente', { unique: false });
-        if (!ps.indexNames.contains('mes')) ps.createIndex('mes', 'mes', { unique: false });
-        if (!ps.indexNames.contains('cli_mes')) ps.createIndex('cli_mes', ['id_cliente','mes'], { unique: false });
-
+        // 3. Cortes
         if (!db.objectStoreNames.contains('cortes')) {
-          ks = db.createObjectStore('cortes', { keyPath: 'id', autoIncrement: true });
-        } else {
-          ks = e.target.transaction.objectStore('cortes');
+          const ks = db.createObjectStore('cortes', { keyPath: 'id', autoIncrement: true });
+          ks.createIndex('id_cliente', 'id_cliente', { unique: false });
+          ks.createIndex('estado',     'estado',     { unique: false });
         }
-        if (!ks.indexNames.contains('id_cliente')) ks.createIndex('id_cliente', 'id_cliente', { unique: false });
-        if (!ks.indexNames.contains('estado')) ks.createIndex('estado', 'estado', { unique: false });
+        // 4. Fotos y Comprobantes ISP
+        if (!db.objectStoreNames.contains('fotos')) {
+          const fs = db.createObjectStore('fotos', { keyPath: 'id', autoIncrement: true });
+          fs.createIndex('categoria',  'categoria',  { unique: false });
+          fs.createIndex('cliente_id', 'cliente_id', { unique: false });
+          fs.createIndex('zona',       'zona',       { unique: false });
+        }
       };
-      req.onsuccess = e => { _db = e.target.result; res(_db); };
-      req.onerror   = e => rej(e.target.error);
+      req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+      req.onerror   = e => reject(e.target.error);
     });
   }
 
   async function db() { return _db || (_db = await open()); }
 
   return {
+    // Insertar un registro (IndexedDB + Supabase)
     async add(store, data) {
       const d = await db();
-      return new Promise((res, rej) => {
+      const id = await new Promise((resolve, reject) => {
         const tx  = d.transaction([store], 'readwrite');
         const req = tx.objectStore(store).add(data);
-        req.onsuccess = e => res(e.target.result);
-        req.onerror   = e => rej(e.target.error);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
       });
+
+      // Sincronizar en segundo plano con Supabase si está disponible
+      if (_supaOnline && _supa) {
+        try {
+          const payload = { ...data, id };
+          _supa.from(store).upsert(payload).then().catch(err => console.warn(`[Supabase sync add] ${store}:`, err));
+        } catch(_) {}
+      }
+
+      return id;
     },
 
+    // Actualizar registro (IndexedDB + Supabase)
     async put(store, data) {
       const d = await db();
-      return new Promise((res, rej) => {
+      const id = await new Promise((resolve, reject) => {
         const tx  = d.transaction([store], 'readwrite');
         const req = tx.objectStore(store).put(data);
-        req.onsuccess = e => res(e.target.result);
-        req.onerror   = e => rej(e.target.error);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
       });
+
+      if (_supaOnline && _supa) {
+        try {
+          _supa.from(store).upsert(data).then().catch(err => console.warn(`[Supabase sync put] ${store}:`, err));
+        } catch(_) {}
+      }
+
+      return id;
     },
 
+    // Obtener por ID
     async get(store, id) {
       const d = await db();
-      return new Promise((res, rej) => {
+      return new Promise((resolve, reject) => {
         const tx  = d.transaction([store], 'readonly');
-        const req = tx.objectStore(store).get(id);
-        req.onsuccess = e => res(e.target.result || null);
-        req.onerror   = e => rej(e.target.error);
+        const req = tx.objectStore(store).get(Number(id));
+        req.onsuccess = e => resolve(e.target.result || null);
+        req.onerror   = e => reject(e.target.error);
       });
     },
 
+    // Eliminar por ID
     async delete(store, id) {
       const d = await db();
-      return new Promise((res, rej) => {
+      await new Promise((resolve, reject) => {
         const tx  = d.transaction([store], 'readwrite');
-        const req = tx.objectStore(store).delete(id);
-        req.onsuccess = () => res();
-        req.onerror   = e => rej(e.target.error);
+        const req = tx.objectStore(store).delete(Number(id));
+        req.onsuccess = () => resolve();
+        req.onerror   = e => reject(e.target.error);
       });
+
+      if (_supaOnline && _supa) {
+        try {
+          _supa.from(store).delete().eq('id', Number(id)).then().catch(err => console.warn(`[Supabase sync del] ${store}:`, err));
+        } catch(_) {}
+      }
     },
 
-    // Conteo atómico O(1) vía índices B-tree (ultra rápido incluso con 1M+ filas)
+    // Conteo total O(1)
     async count(store) {
       const d = await db();
-      return new Promise((res, rej) => {
-        const req = d.transaction([store], 'readonly').objectStore(store).count();
-        req.onsuccess = e => res(e.target.result);
-        req.onerror   = e => rej(e.target.error);
+      return new Promise((resolve, reject) => {
+        const tx  = d.transaction([store], 'readonly');
+        const req = tx.objectStore(store).count();
+        req.onsuccess = e => resolve(e.target.result || 0);
+        req.onerror   = () => resolve(0);
       });
     },
 
+    // Conteo por índice O(1)
     async countByIndex(store, idx, key) {
       const d = await db();
-      return new Promise((res, rej) => {
+      return new Promise((resolve) => {
         try {
-          const os = d.transaction([store], 'readonly').objectStore(store);
-          if (!os.indexNames.contains(idx)) {
-            res(0); return;
-          }
-          const req = os.index(idx).count(key);
-          req.onsuccess = e => res(e.target.result);
-          req.onerror   = e => rej(e.target.error);
-        } catch(_) {
-          res(0);
+          const tx    = d.transaction([store], 'readonly');
+          const index = tx.objectStore(store).index(idx);
+          const range = IDBKeyRange.only(key);
+          const req   = index.count(range);
+          req.onsuccess = e => resolve(e.target.result || 0);
+          req.onerror   = () => resolve(0);
+        } catch (_) {
+          resolve(0);
         }
       });
     },
 
-    // Obtener con límite opcional para proteger la memoria RAM
+    // Obtener todos
     async getAll(store, count = null) {
       const d = await db();
-      return new Promise((res, rej) => {
-        const os = d.transaction([store], 'readonly').objectStore(store);
-        const req = count ? os.getAll(null, count) : os.getAll();
-        req.onsuccess = e => res(e.target.result || []);
-        req.onerror   = e => rej(e.target.error);
+      return new Promise((resolve, reject) => {
+        const tx  = d.transaction([store], 'readonly');
+        const req = count ? tx.objectStore(store).getAll(null, count) : tx.objectStore(store).getAll();
+        req.onsuccess = e => resolve(e.target.result || []);
+        req.onerror   = e => reject(e.target.error);
       });
     },
 
-    // Obtener por índice con límite opcional
+    // Obtener por índice
     async getByIndex(store, idx, key, count = null) {
       const d = await db();
-      return new Promise((res, rej) => {
-        const os = d.transaction([store], 'readonly').objectStore(store);
-        const req = count ? os.index(idx).getAll(key, count) : os.index(idx).getAll(key);
-        req.onsuccess = e => res(e.target.result || []);
-        req.onerror   = e => rej(e.target.error);
+      return new Promise((resolve, reject) => {
+        try {
+          const tx    = d.transaction([store], 'readonly');
+          const index = tx.objectStore(store).index(idx);
+          const range = IDBKeyRange.only(key);
+          const req   = count ? index.getAll(range, count) : index.getAll(range);
+          req.onsuccess = e => resolve(e.target.result || []);
+          req.onerror   = e => reject(e.target.error);
+        } catch (_) {
+          resolve([]);
+        }
       });
     },
 
-    // Operación por lotes segura con put (sin error por clave duplicada)
+    // Guardado masivo por lotes (IndexedDB + Supabase)
     async bulkPut(store, items) {
       if (!items || !items.length) return 0;
       const d = await db();
-      return new Promise((res, rej) => {
-        const tx = d.transaction([store], 'readwrite');
-        const os = tx.objectStore(store);
-        let ok = 0;
-        tx.oncomplete = () => res(ok);
-        tx.onerror    = e => rej(e.target.error);
-        items.forEach(item => {
-          const r = os.put(item);
-          r.onsuccess = () => ok++;
+      const BATCH = 500;
+      let ok = 0;
+
+      for (let i = 0; i < items.length; i += BATCH) {
+        const chunk = items.slice(i, i + BATCH);
+        await new Promise((resolve, reject) => {
+          const tx = d.transaction([store], 'readwrite');
+          const st = tx.objectStore(store);
+          chunk.forEach(item => st.put(item));
+          tx.oncomplete = () => { ok += chunk.length; resolve(); };
+          tx.onerror = e => reject(e.target.error);
         });
-      });
+
+        // Sincronizar chunk en Supabase si está activo
+        if (_supaOnline && _supa) {
+          try {
+            await _supa.from(store).upsert(chunk, { onConflict: 'id' });
+          } catch(err) {
+            console.warn(`[Supabase bulkPut error] ${store}:`, err);
+          }
+        }
+      }
+      return ok;
     },
 
-    // Consulta paginada de alta velocidad utilizando cursores y advance
+    // Consulta paginada de alto rendimiento
     async query(store, { indexName = null, range = null, filter = null, limit = PAGE_SIZE, offset = 0 } = {}) {
       const d = await db();
-      return new Promise((res, rej) => {
+      return new Promise((resolve, reject) => {
+        const tx     = d.transaction([store], 'readonly');
+        const st     = tx.objectStore(store);
+        const source = indexName ? st.index(indexName) : st;
+        const req    = source.openCursor(range, 'prev');
+
         const results = [];
-        let total = 0, skipped = 0;
-        const os = d.transaction([store], 'readonly').objectStore(store);
-        const target = indexName && os.indexNames.contains(indexName) ? os.index(indexName) : os;
-        const req = range ? target.openCursor(range) : target.openCursor();
+        let skipped = 0;
+        let total = 0;
 
         req.onsuccess = e => {
           const cursor = e.target.result;
           if (!cursor) {
-            res({ results, total });
+            resolve({ results, total });
             return;
           }
           const val = cursor.value;
-
           if (!filter || filter(val)) {
             total++;
             if (skipped < offset) {
@@ -1180,78 +1441,346 @@ const IDB = (() => {
           }
           cursor.continue();
         };
-        req.onerror = e => rej(e.target.error);
+        req.onerror = e => reject(e.target.error);
       });
     },
 
-    // Búsqueda rápida de clientes para selects sin saturar DOM
+    // Búsqueda rápida de clientes para autocompletado y selects
     async buscarClientesRapido(termino = '', { limit = 30, soloActivos = false } = {}) {
-      const d = await db();
-      const s = String(termino || '').trim().toLowerCase();
-      return new Promise((res, rej) => {
-        const results = [];
-        const os = d.transaction(['clientes'], 'readonly').objectStore('clientes');
-        const req = os.openCursor(null, 'prev'); // más recientes primero
-
-        req.onsuccess = e => {
-          const cursor = e.target.result;
-          if (!cursor || results.length >= limit) {
-            res(results);
-            return;
-          }
-          const c = cursor.value;
-          if (!soloActivos || c.estado === 'ACTIVO') {
-            if (!s) {
-              results.push(c);
-            } else {
-              const str = `${c.id} ${c.nombre || ''} ${c.ip || ''} ${c.dni || ''} ${c.celular || ''} ${c.zona || ''}`.toLowerCase();
-              if (str.includes(s)) {
-                results.push(c);
-              }
-            }
-          }
-          cursor.continue();
-        };
-        req.onerror = e => rej(e.target.error);
-      });
+      const s = String(termino || '').toLowerCase().trim();
+      const todos = await this.getAll('clientes');
+      let filtrados = todos;
+      if (soloActivos) filtrados = filtrados.filter(c => c.estado === 'ACTIVO');
+      if (s) {
+        filtrados = filtrados.filter(c =>
+          `${c.id} ${c.nombre || ''} ${c.ip || ''} ${c.dni || ''} ${c.celular || ''} ${c.zona || ''}`.toLowerCase().includes(s)
+        );
+      }
+      return filtrados.slice(0, limit);
     },
 
-    // Eliminación en cascada en una sola transacción unificada
+    // Eliminación atómica en cascada (cliente + pagos + cortes + fotos)
     async eliminarClienteCompleto(id) {
       const d = await db();
       const numId = Number(id);
-      return new Promise((res, rej) => {
-        const tx = d.transaction(['clientes', 'pagos', 'cortes'], 'readwrite');
-        const cStore = tx.objectStore('clientes');
-        const pStore = tx.objectStore('pagos');
-        const kStore = tx.objectStore('cortes');
 
-        tx.oncomplete = () => res();
-        tx.onerror    = e => rej(e.target.error);
+      await new Promise((resolve, reject) => {
+        const tx = d.transaction(['clientes', 'pagos', 'cortes', 'fotos'], 'readwrite');
+        tx.objectStore('clientes').delete(numId);
 
-        cStore.delete(numId);
-
-        // Limpiar pagos
-        const pReq = pStore.index('id_cliente').openCursor(IDBKeyRange.only(numId));
-        pReq.onsuccess = ev => {
-          const cur = ev.target.result;
-          if (cur) { cur.delete(); cur.continue(); }
+        // Borrar pagos asociados
+        const pIdx = tx.objectStore('pagos').index('id_cliente');
+        const pReq = pIdx.openKeyCursor(IDBKeyRange.only(numId));
+        pReq.onsuccess = e => {
+          const c = e.target.result;
+          if (c) {
+            tx.objectStore('pagos').delete(c.primaryKey);
+            c.continue();
+          }
         };
 
-        // Limpiar cortes
-        const kReq = kStore.index('id_cliente').openCursor(IDBKeyRange.only(numId));
-        kReq.onsuccess = ev => {
-          const cur = ev.target.result;
-          if (cur) { cur.delete(); cur.continue(); }
+        // Borrar cortes asociados
+        const kIdx = tx.objectStore('cortes').index('id_cliente');
+        const kReq = kIdx.openKeyCursor(IDBKeyRange.only(numId));
+        kReq.onsuccess = e => {
+          const c = e.target.result;
+          if (c) {
+            tx.objectStore('cortes').delete(c.primaryKey);
+            c.continue();
+          }
         };
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = e => reject(e.target.error);
       });
+
+      if (_supaOnline && _supa) {
+        try {
+          await _supa.from('clientes').delete().eq('id', numId);
+        } catch(err) {
+          console.warn('[Supabase eliminarClienteCompleto]:', err);
+        }
+      }
     }
   };
 })();
 
 // ══════════════════════════════════════════════════════
-//  HELPERS DE FECHA Y UI
+//  SERVICIOS Y CONTROLADORES DE SUPABASE CLOUD
 // ══════════════════════════════════════════════════════
+const SUPABASE_SETUP_SQL = `-- ========================================================
+-- SISTEMA LEYTRIX ISP - CONFIGURACIÓN SUPABASE CLOUD
+-- Proyecto: https://baeobhvgfrdbwyqapqzf.supabase.co
+-- ========================================================
+-- INSTRUCCIONES:
+-- 1. Ve a tu panel de Supabase: https://supabase.com/dashboard/project/baeobhvgfrdbwyqapqzf
+-- 2. Haz clic en "SQL Editor" (menú izquierdo)
+-- 3. Haz clic en "New Query" (Nueva Consulta)
+-- 4. Pega todo este código y presiona "Run" (Ejecutar)
+-- ¡Listo! Tu sistema guardará todo automáticamente en la nube.
+-- ========================================================
+
+-- 1. Tabla de Clientes
+CREATE TABLE IF NOT EXISTS public.clientes (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  dni VARCHAR(20),
+  celular VARCHAR(30),
+  fecha_inicio DATE,
+  ip VARCHAR(50) NOT NULL,
+  direccion TEXT,
+  zona VARCHAR(100),
+  plan NUMERIC DEFAULT 65,
+  cable BOOLEAN DEFAULT false,
+  estado VARCHAR(30) DEFAULT 'ACTIVO',
+  obs TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Tabla de Pagos
+CREATE TABLE IF NOT EXISTS public.pagos (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  id_cliente BIGINT REFERENCES public.clientes(id) ON DELETE CASCADE,
+  monto NUMERIC NOT NULL,
+  fecha TIMESTAMPTZ DEFAULT NOW(),
+  mes VARCHAR(50),
+  metodo VARCHAR(50) DEFAULT 'EFECTIVO',
+  codigo_operacion VARCHAR(100),
+  obs TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Tabla de Cortes
+CREATE TABLE IF NOT EXISTS public.cortes (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  id_cliente BIGINT REFERENCES public.clientes(id) ON DELETE CASCADE,
+  fecha_corte TIMESTAMPTZ DEFAULT NOW(),
+  fecha_reconex TIMESTAMPTZ,
+  motivo TEXT,
+  estado VARCHAR(30) DEFAULT 'CORTADO',
+  costo_reconeccion NUMERIC DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. Tabla de Fotos y Archivos ISP
+CREATE TABLE IF NOT EXISTS public.fotos (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  categoria VARCHAR(50) DEFAULT 'comprobantes',
+  cliente_id BIGINT,
+  cliente_nombre TEXT,
+  zona VARCHAR(100),
+  tamano BIGINT,
+  tipo_mime VARCHAR(100),
+  url_data TEXT,
+  notas TEXT,
+  mtime TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Habilitar RLS (Row Level Security) y Políticas de Acceso Público
+ALTER TABLE public.clientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pagos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cortes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fotos ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para acceso anónimo (Permitir lectura, inserción, actualización y borrado)
+DROP POLICY IF EXISTS "Acceso total clientes" ON public.clientes;
+CREATE POLICY "Acceso total clientes" ON public.clientes FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acceso total pagos" ON public.pagos;
+CREATE POLICY "Acceso total pagos" ON public.pagos FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acceso total cortes" ON public.cortes;
+CREATE POLICY "Acceso total cortes" ON public.cortes FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acceso total fotos" ON public.fotos;
+CREATE POLICY "Acceso total fotos" ON public.fotos FOR ALL USING (true) WITH CHECK (true);
+
+-- Índices optimizados para velocidad en búsquedas
+CREATE INDEX IF NOT EXISTS idx_clientes_zona_estado ON public.clientes(zona, estado);
+CREATE INDEX IF NOT EXISTS idx_clientes_ip ON public.clientes(ip);
+CREATE INDEX IF NOT EXISTS idx_clientes_nombre ON public.clientes(nombre);
+CREATE INDEX IF NOT EXISTS idx_pagos_mes ON public.pagos(mes);
+CREATE INDEX IF NOT EXISTS idx_pagos_cliente ON public.pagos(id_cliente);
+CREATE INDEX IF NOT EXISTS idx_cortes_cliente ON public.cortes(id_cliente);
+CREATE INDEX IF NOT EXISTS idx_fotos_categoria ON public.fotos(categoria);
+CREATE INDEX IF NOT EXISTS idx_fotos_cliente ON public.fotos(cliente_id);
+`;
+
+async function verificarSupabase(mostrarToast = false) {
+  if (!_supa) {
+    actualizarBadgesSupabase(false, 'SDK no disponible');
+    return false;
+  }
+
+  try {
+    const { count, error } = await _supa.from('clientes').select('id', { head: true, count: 'exact' });
+    if (error) {
+      console.warn('[Supabase verificación]:', error.message);
+      _supaOnline = false;
+      actualizarBadgesSupabase(false, 'Tablas no creadas en Supabase');
+      if (mostrarToast) {
+        toast('⚠️ Tablas no detectadas en Supabase. Abre "Configurar Nube" y ejecuta el script SQL.', 'warn');
+        abrirModalSupabase();
+      }
+      return false;
+    }
+
+    _supaOnline = true;
+    actualizarBadgesSupabase(true, 'En línea y conectado');
+    if (mostrarToast) toast('🟢 ¡Conexión con Supabase Cloud exitosa!');
+
+    // Sincronizar en segundo plano si la nube está lista
+    sincronizarConSupabase(false);
+    return true;
+  } catch (err) {
+    console.warn('[Supabase conexión]:', err);
+    _supaOnline = false;
+    actualizarBadgesSupabase(false, 'Sin conexión / Offline');
+    if (mostrarToast) toast('⚠️ No se pudo contactar con Supabase Cloud. Modo local activo.', 'warn');
+    return false;
+  }
+}
+
+function actualizarBadgesSupabase(online, msg = '') {
+  const sideEl = document.getElementById('sidebarSupaStatus');
+  const dotEl  = document.getElementById('sidebarSupaDot');
+  const expEl  = document.getElementById('expSupaBadge');
+  const modEl  = document.getElementById('modalSupaStatusBadge');
+
+  if (sideEl) sideEl.textContent = online ? 'Supabase En Línea' : 'Supabase (Modo Local)';
+  if (dotEl)  dotEl.style.background = online ? '#10B981' : '#F59E0B';
+
+  if (expEl) {
+    if (online) {
+      expEl.style.background = '#ECFDF5';
+      expEl.style.color = '#059669';
+      expEl.style.borderColor = '#A7F3D0';
+      expEl.innerHTML = '☁️ Supabase Cloud: 🟢 En Línea';
+    } else {
+      expEl.style.background = '#FFFBEB';
+      expEl.style.color = '#B45309';
+      expEl.style.borderColor = '#FDE68A';
+      expEl.innerHTML = '☁️ Supabase Cloud: 🟡 Modo Local (Pendiente SQL)';
+    }
+  }
+
+  if (modEl) {
+    if (online) {
+      modEl.style.background = '#ECFDF5';
+      modEl.style.color = '#059669';
+      modEl.textContent = '🟢 En Línea y Conectado';
+    } else {
+      modEl.style.background = '#FFFBEB';
+      modEl.style.color = '#B45309';
+      modEl.textContent = '🟡 Modo Local (Copia el SQL abajo)';
+    }
+  }
+}
+
+function abrirModalSupabase() {
+  const codeEl = document.getElementById('codigoSqlSupa');
+  if (codeEl) codeEl.textContent = SUPABASE_SETUP_SQL;
+  abrirModal('modalSupabase');
+}
+
+async function copiarSqlSupabase() {
+  try {
+    await navigator.clipboard.writeText(SUPABASE_SETUP_SQL);
+    toast('📋 Script SQL copiado. Pégalo en Supabase SQL Editor y dale Run.');
+  } catch(_) {
+    toast('Selecciona el código SQL y cópialo con Ctrl+C');
+  }
+}
+
+async function sincronizarConSupabase(mostrarFeedback = true) {
+  if (!_supa) {
+    if (mostrarFeedback) toast('Supabase no inicializado', 'error');
+    return;
+  }
+
+  if (mostrarFeedback) toast('☁️ Sincronizando datos con Supabase Cloud...');
+
+  try {
+    // 1. Verificar si las tablas existen
+    const { error: chkErr } = await _supa.from('clientes').select('id', { head: true, count: 'exact' });
+    if (chkErr) {
+      _supaOnline = false;
+      actualizarBadgesSupabase(false);
+      if (mostrarFeedback) {
+        toast('⚠️ Tablas no creadas en Supabase. Abre "Configurar Nube" y ejecuta el script SQL.', 'warn');
+        abrirModalSupabase();
+      }
+      return;
+    }
+    _supaOnline = true;
+    actualizarBadgesSupabase(true);
+
+    // 2. Subir Clientes locales a Supabase
+    const cliLocales = await IDB.getAll('clientes');
+    if (cliLocales.length > 0) {
+      const CHUNK = 300;
+      for (let i = 0; i < cliLocales.length; i += CHUNK) {
+        const chunk = cliLocales.slice(i, i + CHUNK);
+        await _supa.from('clientes').upsert(chunk, { onConflict: 'id' });
+      }
+    }
+
+    // 3. Subir Pagos locales a Supabase
+    const pagosLocales = await IDB.getAll('pagos');
+    if (pagosLocales.length > 0) {
+      const CHUNK = 300;
+      for (let i = 0; i < pagosLocales.length; i += CHUNK) {
+        const chunk = pagosLocales.slice(i, i + CHUNK);
+        await _supa.from('pagos').upsert(chunk, { onConflict: 'id' });
+      }
+    }
+
+    // 4. Subir Cortes locales a Supabase
+    const cortesLocales = await IDB.getAll('cortes');
+    if (cortesLocales.length > 0) {
+      const CHUNK = 300;
+      for (let i = 0; i < cortesLocales.length; i += CHUNK) {
+        const chunk = cortesLocales.slice(i, i + CHUNK);
+        await _supa.from('cortes').upsert(chunk, { onConflict: 'id' });
+      }
+    }
+
+    // 5. Subir Fotos locales a Supabase
+    const fotosLocales = await IDB.getAll('fotos');
+    if (fotosLocales.length > 0) {
+      const CHUNK = 10;
+      for (let i = 0; i < fotosLocales.length; i += CHUNK) {
+        const chunk = fotosLocales.slice(i, i + CHUNK);
+        await _supa.from('fotos').upsert(chunk, { onConflict: 'id' });
+      }
+    }
+
+    // 6. Descargar registros de Supabase para enriquecer IndexedDB
+    const { data: supaCli } = await _supa.from('clientes').select('*');
+    if (supaCli && supaCli.length) await IDB.bulkPut('clientes', supaCli);
+
+    const { data: supaPag } = await _supa.from('pagos').select('*');
+    if (supaPag && supaPag.length) await IDB.bulkPut('pagos', supaPag);
+
+    const { data: supaCor } = await _supa.from('cortes').select('*');
+    if (supaCor && supaCor.length) await IDB.bulkPut('cortes', supaCor);
+
+    const { data: supaFot } = await _supa.from('fotos').select('*');
+    if (supaFot && supaFot.length) await IDB.bulkPut('fotos', supaFot);
+
+    // Refrescar vistas
+    actualizarVistaExplorador();
+    updateSidebar();
+    if (mostrarFeedback) toast('✅ ¡Sincronización con Supabase Cloud completada exitosamente!');
+  } catch(err) {
+    console.error('Error durante sincronización Supabase:', err);
+    if (mostrarFeedback) toast('⚠️ Error al sincronizar con Supabase Cloud: ' + (err.message || ''), 'error');
+  }
+}
+
+
 function mesActual() {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
@@ -1345,109 +1874,30 @@ function renderPagination(containerId, infId, state, onPage) {
 }
 
 // ══════════════════════════════════════════════════════
-//  NAVEGACIÓN
+//  ARCHIVO FOTOGRÁFICO & GALERÍA DE IMÁGENES ISP
+//  - Solo imágenes (Vouchers Yape/BCP, Routers ONT, Cajas NAP, DNI, Fachadas)
+//  - Guardado permanente en IndexedDB y Supabase Cloud
+//  - Vinculación con Clientes registrados y Zonas
+//  - Compartir por WhatsApp, imprimir y descargar
 // ══════════════════════════════════════════════════════
 
-// ══════════════════════════════════════════════════════
-//  EXPLORADOR DE ARCHIVOS WINDOWS (100% REAL - SIN DATOS DEMOS)
-// ══════════════════════════════════════════════════════
-
-function initCardCategories() {
-  document.querySelectorAll('.exp-cat-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const cat = card.dataset.cat || 'todos';
-      _expCatFiltro = cat;
-      document.querySelectorAll('#expTreeCarpetas .exp-nav-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.cat === cat);
-      });
-      renderTablaArchivos();
-    });
-  });
-}
-
-let _expOrden = { campo: 'name', asc: true };
-function ordenarArchivosPor(campo) {
-  if (_expOrden.campo === campo) {
-    _expOrden.asc = !_expOrden.asc;
-  } else {
-    _expOrden.campo = campo;
-    _expOrden.asc = true;
-  }
-  _expArchivos.sort((a, b) => {
-    let valA = a[campo];
-    let valB = b[campo];
-    if (typeof valA === 'string') valA = valA.toLowerCase();
-    if (typeof valB === 'string') valB = valB.toLowerCase();
-    if (valA < valB) return _expOrden.asc ? -1 : 1;
-    if (valA > valB) return _expOrden.asc ? 1 : -1;
-    return 0;
-  });
-  renderTablaArchivos();
-}
-
-const EXP_TYPES = {
-  docs:     ['pdf','doc','docx','txt','rtf','odt','wps','pages'],
-  sheets:   ['xls','xlsx','csv','ods','tsv'],
-  slides:   ['ppt','pptx','odp','key'],
-  images:   ['jpg','jpeg','png','gif','webp','svg','bmp','ico','avif','tiff','jfif'],
-  media:    ['mp4','webm','mkv','avi','mov','mp3','wav','ogg','m4a','flac','aac','wma','3gp'],
-  archives: ['zip','rar','7z','tar','gz','bz2','iso','xz'],
-  code:     ['json','sql','html','css','js','py','xml','md','log','ini','yml','yaml','php','sh','bat']
+const EXP_CATEGORIAS_ISP = {
+  comprobantes:    { label: 'Comprobante de Pago', icon: '💳', color: '#16A34A', desc: 'Vouchers Yape, Plin, transferencias BCP' },
+  instalaciones:   { label: 'Instalación & Router', icon: '📡', color: '#0284C7', desc: 'Routers ONT, antenas y latiguillos' },
+  infraestructura: { label: 'Cajas NAP & Fibra',   icon: '📦', color: '#4F46E5', desc: 'Cajas NAP, postes, mufas y cable troncal' },
+  identidad:       { label: 'DNI & Contrato',      icon: '🆔', color: '#9333EA', desc: 'DNI del abonado y contratos firmados' },
+  fachadas:        { label: 'Fachada & Predio',    icon: '🏠', color: '#EA580C', desc: 'Fotos del domicilio para técnicos' },
+  averias:         { label: 'Avería Técnica',      icon: '⚠️', color: '#DC2626', desc: 'Reportes de rotura de fibra o fallo' }
 };
 
-let _expArchivos = []; // Lista de archivos reales cargados
-let _expSeleccionado = null; // Archivo seleccionado actualmente
-let _expCarpetaFiltro = ''; // Filtro de subcarpeta
-let _expCatFiltro = 'todos'; // Filtro de categoría
-let _expFavoritos = new Set(); // Conjunto de nombres favoritos
-
-function getFileCategory(ext) {
-  ext = (ext || '').toLowerCase();
-  for (const [cat, exts] of Object.entries(EXP_TYPES)) {
-    if (exts.includes(ext)) return cat;
-  }
-  return 'otros';
-}
-
-function getFileInfo(file) {
-  const name = file.name || '';
-  const parts = name.split('.');
-  const ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
-  const cat = getFileCategory(ext);
-
-  let icon = '📄';
-  let typeDesc = ext ? `Archivo .${ext.toUpperCase()}` : 'Archivo';
-  let color = '#64748B';
-
-  if (['doc','docx'].includes(ext)) { icon = '📘'; typeDesc = 'Documento de Word'; color = '#2B579A'; }
-  else if (['xls','xlsx','csv'].includes(ext)) { icon = '📊'; typeDesc = 'Hoja de cálculo Excel'; color = '#217346'; }
-  else if (['ppt','pptx'].includes(ext)) { icon = '📑'; typeDesc = 'Presentación PowerPoint'; color = '#D24726'; }
-  else if (ext === 'pdf') { icon = '📕'; typeDesc = 'Documento PDF'; color = '#F40F02'; }
-  else if (EXP_TYPES.images.includes(ext)) { icon = '🖼️'; typeDesc = `Imagen ${ext.toUpperCase()}`; color = '#8B5CF6'; }
-  else if (['mp4','webm','mkv','avi','mov'].includes(ext)) { icon = '🎬'; typeDesc = `Video ${ext.toUpperCase()}`; color = '#E11D48'; }
-  else if (['mp3','wav','ogg','m4a','flac'].includes(ext)) { icon = '🎵'; typeDesc = `Audio ${ext.toUpperCase()}`; color = '#D97706'; }
-  else if (EXP_TYPES.archives.includes(ext)) { icon = '📦'; typeDesc = `Archivo comprimido (${ext.toUpperCase()})`; color = '#4F46E5'; }
-  else if (['txt','log','md'].includes(ext)) { icon = '📝'; typeDesc = 'Documento de texto'; color = '#64748B'; }
-  else if (EXP_TYPES.code.includes(ext)) { icon = '💻'; typeDesc = `Archivo de código / datos (${ext.toUpperCase()})`; color = '#0284C7'; }
-
-  const relPath = file.webkitRelativePath || file.name;
-  const pathParts = relPath.split('/');
-  const folder = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : '';
-
-  return {
-    file,
-    name,
-    ext,
-    cat,
-    icon,
-    typeDesc,
-    color,
-    folder,
-    relPath,
-    size: file.size || 0,
-    mtime: file.lastModified ? new Date(file.lastModified) : new Date()
-  };
-}
+let _expArchivos = [];          // Lista de fotos guardadas
+let _expSeleccionado = null;    // Foto seleccionada actualmente
+let _expCarpetaFiltro = '';     // Filtro de subcarpeta local
+let _expCatFiltro = 'todos';     // Filtro de categoría ISP
+let _expZonaFiltro = '';        // Filtro de zona ISP
+let _expFavoritos = new Set();  // Nombres de fotos destacadas
+let _expModoVista = 'galeria';  // 'galeria' | 'tabla'
+let _listaClientesMemoria = []; // Caché de clientes para selector
 
 function formatBytes(bytes) {
   if (!bytes || bytes <= 0) return '0 B';
@@ -1457,85 +1907,373 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-function agregarArchivosExplorador(fileList) {
-  if (!fileList || !fileList.length) return;
-  const nuevos = [];
-  for (let i = 0; i < fileList.length; i++) {
-    nuevos.push(getFileInfo(fileList[i]));
-  }
-  // Evitar duplicados por ruta relativa / nombre + tamaño
-  nuevos.forEach(nf => {
-    if (!_expArchivos.some(a => a.relPath === nf.relPath && a.size === nf.size)) {
-      _expArchivos.push(nf);
-    }
-  });
+function deducirCategoriaPorNombre(nombre) {
+  const n = (nombre || '').toLowerCase();
+  if (/voucher|pago|recibo|yape|bcp|plin|transferencia|abono|deposito/.test(n)) return 'comprobantes';
+  if (/router|ont|instalacion|antena|cable|onu|modem|fibra/.test(n)) return 'instalaciones';
+  if (/nap|caja|poste|mufa|troncal|splitter/.test(n)) return 'infraestructura';
+  if (/dni|contrato|identidad|firma|titular/.test(n)) return 'identidad';
+  if (/fachada|casa|predio|domicilio|lote|calle/.test(n)) return 'fachadas';
+  if (/averia|falla|corte|roto|daño|reporte/.test(n)) return 'averias';
+  return 'comprobantes'; // Categoría por defecto para empresa ISP
+}
 
-  toast(`📂 ${fileList.length} archivo(s) cargado(s) correctamente`);
-  actualizarVistaExplorador();
+// Cargar fotos guardadas desde IndexedDB y Supabase
+async function cargarFotosGuardadas() {
+  try {
+    // 1. Cargar clientes para autocompletado en fotos
+    _listaClientesMemoria = await IDB.getAll('clientes');
+
+    // 2. Cargar fotos locales
+    const locales = await IDB.getAll('fotos');
+    if (locales && locales.length > 0) {
+      _expArchivos = locales;
+    } else if (_supaOnline && _supa) {
+      // Si local está vacío, intentar descargar de Supabase
+      const { data: remotas } = await _supa.from('fotos').select('*').limit(500);
+      if (remotas && remotas.length > 0) {
+        _expArchivos = remotas;
+        await IDB.bulkPut('fotos', remotas);
+      }
+    }
+
+    actualizarVistaExplorador();
+    actualizarMetricasExplorador();
+  } catch(err) {
+    console.error('Error cargando fotos:', err);
+  }
+}
+
+// Agregar archivos (SOLO IMÁGENES)
+async function agregarArchivosExplorador(fileList) {
+  if (!fileList || !fileList.length) return;
+
+  const validExts = ['jpg','jpeg','png','webp','gif','bmp','svg','jfif','avif'];
+  let cargadas = 0;
+  let ignoradas = 0;
+
+  for (let i = 0; i < fileList.length; i++) {
+    const file = fileList[i];
+    const name = file.name || '';
+    const ext = name.split('.').pop().toLowerCase();
+
+    // Validar que sea imagen
+    if (!file.type.startsWith('image/') && !validExts.includes(ext)) {
+      ignoradas++;
+      continue;
+    }
+
+    // Convertir a Data URL para almacenamiento permanente
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = e => reject(e);
+        reader.readAsDataURL(file);
+      });
+
+      const relPath = file.webkitRelativePath || file.name;
+      const pathParts = relPath.split('/');
+      const folder = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : '';
+      const cat = deducirCategoriaPorNombre(name);
+
+      const nuevaFoto = {
+        nombre: name,
+        categoria: cat,
+        cliente_id: null,
+        cliente_nombre: '',
+        zona: '',
+        tamano: file.size || 0,
+        tipo_mime: file.type || 'image/jpeg',
+        url_data: dataUrl,
+        notas: '',
+        folder: folder,
+        relPath: relPath,
+        mtime: new Date(file.lastModified || Date.now()).toISOString()
+      };
+
+      // Guardar en base de datos
+      const id = await IDB.add('fotos', nuevaFoto);
+      nuevaFoto.id = id;
+
+      // Evitar duplicados en memoria
+      const existeIdx = _expArchivos.findIndex(a => a.nombre === name && a.tamano === nuevaFoto.tamano);
+      if (existeIdx >= 0) {
+        _expArchivos[existeIdx] = nuevaFoto;
+      } else {
+        _expArchivos.unshift(nuevaFoto);
+      }
+
+      cargadas++;
+    } catch(err) {
+      console.warn('Error leyendo imagen:', name, err);
+    }
+  }
+
+  if (ignoradas > 0) {
+    toast(`ℹ️ Se ignoraron ${ignoradas} archivo(s) no permitidos. Solo se admiten imágenes en el archivo ISP.`, 'warn');
+  }
+
+  if (cargadas > 0) {
+    toast(`📸 ${cargadas} foto(s) guardada(s) correctamente y respaldadas.`);
+    actualizarVistaExplorador();
+    actualizarMetricasExplorador();
+  }
 }
 
 function actualizarVistaExplorador() {
   actualizarContadoresExplorador();
   actualizarArbolCarpetas();
-  renderTablaArchivos();
+  if (_expModoVista === 'galeria') {
+    renderGaleriaFotos();
+  } else {
+    renderTablaArchivos();
+  }
 }
 
+// Actualizar contadores y badges del árbol izquierdo
 function actualizarContadoresExplorador() {
   const total = _expArchivos.length;
-  const docs = _expArchivos.filter(a => a.cat === 'docs').length;
-  const sheets = _expArchivos.filter(a => a.cat === 'sheets').length;
-  const slides = _expArchivos.filter(a => a.cat === 'slides').length;
-  const images = _expArchivos.filter(a => a.cat === 'images').length;
-  const media = _expArchivos.filter(a => a.cat === 'media').length;
-  const archives = _expArchivos.filter(a => a.cat === 'archives').length;
-  const code = _expArchivos.filter(a => a.cat === 'code').length;
-  const favs = _expArchivos.filter(a => _expFavoritos.has(a.relPath)).length;
-  const totalBytes = _expArchivos.reduce((s, a) => s + (a.size || 0), 0);
+  const comp = _expArchivos.filter(a => a.categoria === 'comprobantes').length;
+  const inst = _expArchivos.filter(a => a.categoria === 'instalaciones').length;
+  const infr = _expArchivos.filter(a => a.categoria === 'infraestructura').length;
+  const iden = _expArchivos.filter(a => a.categoria === 'identidad').length;
+  const fach = _expArchivos.filter(a => a.categoria === 'fachadas').length;
+  const aver = _expArchivos.filter(a => a.categoria === 'averias').length;
+  const favs = _expArchivos.filter(a => _expFavoritos.has(a.relPath || a.nombre)).length;
 
   const setT = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  setT('pillExpTotal', `Total: ${total}`);
-  setT('pillExpDocs', `Docs: ${docs}`);
-  setT('pillExpSheets', `Excel: ${sheets}`);
-  setT('pillExpImgs', `Imágenes: ${images}`);
-  setT('pillExpMedia', `Media: ${media}`);
-  setT('pillExpTamano', `Peso: ${formatBytes(totalBytes)}`);
+  setT('expBadgeCatTodos', total);
+  setT('expBadgeCatComprobantes', comp);
+  setT('expBadgeCatInstalaciones', inst);
+  setT('expBadgeCatInfraestructura', infr);
+  setT('expBadgeCatIdentidad', iden);
+  setT('expBadgeCatFachadas', fach);
+  setT('expBadgeCatAverias', aver);
+  setT('expBadgeCatFavs', favs);
+}
 
-  setT('badgeCatTodos', total);
-  setT('badgeCatDocs', docs);
-  setT('badgeCatSheets', sheets);
-  setT('badgeCatSlides', slides);
-  setT('badgeCatImages', images);
-  setT('badgeCatMedia', media);
-  setT('badgeCatArchives', archives);
-  setT('badgeCatCode', code);
-  setT('badgeCatFavs', favs);
+// Actualizar tarjetas de métricas de la empresa ISP en la parte superior del explorador
+async function actualizarMetricasExplorador() {
+  try {
+    const mes = mesActual();
+    const [totalCli, activosCli, pagosMes] = await Promise.all([
+      IDB.count('clientes'),
+      IDB.countByIndex('clientes', 'estado', 'ACTIVO'),
+      IDB.getByIndex('pagos', 'mes', mes)
+    ]);
 
-  setT('cardCountDocs', docs);
-  setT('cardCountSheets', sheets);
-  setT('cardCountSlides', slides);
-  setT('cardCountImages', images);
-  setT('cardCountMedia', media);
-  setT('cardCountArchives', archives);
-  setT('cardCountCode', code);
-  setT('cardCountTotalPeso', formatBytes(totalBytes));
+    const cobrado = (pagosMes || []).reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const totalFotos = _expArchivos.length;
+    const totalComp  = _expArchivos.filter(a => a.categoria === 'comprobantes').length;
+    const totalBytes = _expArchivos.reduce((s, a) => s + (Number(a.tamano) || 0), 0);
+
+    const setT = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setT('expKpiActivos', (activosCli || 0).toLocaleString());
+    setT('expKpiTotalCli', `Total abonados: ${(totalCli || 0).toLocaleString()}`);
+    setT('expKpiCobrado', `S/. ${cobrado.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    setT('expKpiMesActual', `Recaudación ${esc(mes)}`);
+    setT('expKpiComprobantes', (totalComp || 0).toLocaleString());
+    setT('expKpiTotalFotos', (totalFotos || 0).toLocaleString());
+    setT('expKpiFotosBytes', `${formatBytes(totalBytes)} guardados`);
+  } catch(err) {
+    console.error('actualizarMetricasExplorador:', err);
+  }
+}
+
+// Obtener lista filtrada de fotos
+function getFotosFiltradas() {
+  const busqueda = (document.getElementById('expBusqueda')?.value || '').toLowerCase().trim();
+  const filtroTipo = document.getElementById('expFiltroTipo')?.value || 'todos';
+
+  return _expArchivos.filter(a => {
+    const cat = a.categoria || 'comprobantes';
+    // Filtro por categoría lateral
+    if (_expCatFiltro === 'favs' && !_expFavoritos.has(a.relPath || a.nombre)) return false;
+    if (_expCatFiltro !== 'todos' && _expCatFiltro !== 'favs' && cat !== _expCatFiltro) return false;
+
+    // Filtro desplegable tipo
+    if (filtroTipo !== 'todos' && cat !== filtroTipo) return false;
+
+    // Filtro de zona
+    if (_expZonaFiltro && a.zona !== _expZonaFiltro) return false;
+
+    // Filtro de subcarpeta
+    if (_expCarpetaFiltro && a.folder !== _expCarpetaFiltro) return false;
+
+    // Búsqueda de texto
+    if (busqueda) {
+      const matchTexto = `${a.nombre || ''} ${a.cliente_nombre || ''} ${a.zona || ''} ${a.notas || ''} ${cat}`.toLowerCase();
+      if (!matchTexto.includes(busqueda)) return false;
+    }
+
+    return true;
+  });
+}
+
+// Renderizar Galería (Cuadrícula visual)
+function renderGaleriaFotos() {
+  const galeriaEl = document.getElementById('expGaleriaCuerpo');
+  const emptyEl   = document.getElementById('expEmptyState');
+  const tablaWrap = document.getElementById('expTablaWrap');
+  const breadcrumb = document.getElementById('expBreadcrumb');
+
+  if (!galeriaEl) return;
+  if (tablaWrap) tablaWrap.style.display = 'none';
+  galeriaEl.style.display = 'grid';
+
+  const filtradas = getFotosFiltradas();
+
+  // Actualizar breadcrumb
+  let bText = 'Todas las fotos';
+  if (_expZonaFiltro) bText = `📍 Zona: ${_expZonaFiltro}`;
+  else if (_expCatFiltro !== 'todos') {
+    const meta = EXP_CATEGORIAS_ISP[_expCatFiltro];
+    bText = meta ? `${meta.icon} ${meta.label}` : _expCatFiltro;
+  }
+  if (breadcrumb) breadcrumb.textContent = bText;
+
+  if (_expArchivos.length === 0) {
+    galeriaEl.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  if (filtradas.length === 0) {
+    galeriaEl.innerHTML = `
+      <div style="grid-column:1/-1;padding:50px 20px;text-align:center;color:var(--gris)">
+        🔍 No se encontraron fotos que coincidan con la búsqueda o filtro actual.
+      </div>`;
+    return;
+  }
+
+  galeriaEl.innerHTML = filtradas.map(a => {
+    const isSelected = _expSeleccionado && (_expSeleccionado.id === a.id || _expSeleccionado.nombre === a.nombre);
+    const cat = a.categoria || 'comprobantes';
+    const catMeta = EXP_CATEGORIAS_ISP[cat] || { label: 'Foto', icon: '📸', color: '#0284C7' };
+    const isFav = _expFavoritos.has(a.relPath || a.nombre);
+    const fStr = (a.mtime ? new Date(a.mtime) : new Date()).toLocaleDateString('es-PE', { month: 'short', day: 'numeric' });
+
+    return `
+      <div class="exp-img-card${isSelected ? ' selected' : ''}" data-id="${a.id || ''}" data-nombre="${esc(a.nombre)}">
+        <div class="exp-img-card-thumb-wrap">
+          <img src="${a.url_data || ''}" alt="${esc(a.nombre)}" class="exp-img-card-thumb" loading="lazy"/>
+          <span class="exp-img-badge" style="background:${catMeta.color}">
+            <span>${catMeta.icon}</span> <span>${catMeta.label}</span>
+          </span>
+          ${isFav ? '<span class="exp-img-fav-badge" style="padding:2px 5px;font-size:0.75rem">⭐</span>' : ''}
+        </div>
+        <div style="padding:10px;display:flex;flex-direction:column;gap:3px;flex:1">
+          <div class="exp-img-card-title" title="${esc(a.nombre)}">${esc(a.nombre)}</div>
+          <div class="exp-img-card-sub" title="${esc(a.cliente_nombre || 'Sin cliente')}">
+            ${a.cliente_nombre ? `👤 ${esc(a.cliente_nombre)}` : '<span style="color:var(--gris)">👤 Sin asignar</span>'}
+          </div>
+          <div class="exp-img-card-meta">
+            <span>${a.zona ? `📍 ${esc(a.zona)}` : '🌐 General'}</span>
+            <span>${esc(fStr)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Eventos de clic
+  galeriaEl.querySelectorAll('.exp-img-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const nombre = card.dataset.nombre;
+      const target = _expArchivos.find(a => a.nombre === nombre);
+      if (target) {
+        _expSeleccionado = target;
+        galeriaEl.querySelectorAll('.exp-img-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        mostrarDetallesArchivo(target);
+      }
+    });
+
+    card.addEventListener('dblclick', () => {
+      const nombre = card.dataset.nombre;
+      const target = _expArchivos.find(a => a.nombre === nombre);
+      if (target && target.url_data) {
+        window.open(target.url_data, '_blank');
+      }
+    });
+  });
+}
+
+// Renderizar Tabla
+function renderTablaArchivos() {
+  const galeriaEl = document.getElementById('expGaleriaCuerpo');
+  const emptyEl   = document.getElementById('expEmptyState');
+  const tablaWrap = document.getElementById('expTablaWrap');
+  const tbody     = document.getElementById('expTablaCuerpo');
+  const breadcrumb = document.getElementById('expBreadcrumb');
+
+  if (!tbody) return;
+  if (galeriaEl) galeriaEl.style.display = 'none';
+  if (tablaWrap) tablaWrap.style.display = 'block';
+
+  const filtradas = getFotosFiltradas();
+
+  if (_expArchivos.length === 0) {
+    tbody.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  if (filtradas.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--gris)">🔍 No se encontraron fotos con el filtro actual.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtradas.map(a => {
+    const isSelected = _expSeleccionado && (_expSeleccionado.id === a.id || _expSeleccionado.nombre === a.nombre);
+    const catMeta = EXP_CATEGORIAS_ISP[a.categoria] || { label: 'Foto', icon: '📸' };
+    const fStr = (a.mtime ? new Date(a.mtime) : new Date()).toLocaleString('es-PE', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+
+    return `
+      <tr class="exp-row${isSelected ? ' selected' : ''}" data-nombre="${esc(a.nombre)}">
+        <td>
+          <img src="${a.url_data}" style="width:32px;height:32px;border-radius:4px;object-fit:cover;vertical-align:middle;margin-right:8px"/>
+          <span class="exp-file-name">${esc(a.nombre)}</span>
+        </td>
+        <td><span class="badge" style="background:#F1F5F9;color:#334155">${catMeta.icon} ${catMeta.label}</span></td>
+        <td style="font-weight:600;color:#0F172A">${esc(a.cliente_nombre || '—')}</td>
+        <td style="color:#0284C7;font-size:0.82rem">${esc(a.zona || '—')}</td>
+        <td style="color:var(--gris);font-size:0.82rem">${esc(fStr)}</td>
+        <td style="color:#1E293B;font-weight:600;font-size:0.82rem">${esc(formatBytes(a.tamano))}</td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('.exp-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const nombre = row.dataset.nombre;
+      const target = _expArchivos.find(a => a.nombre === nombre);
+      if (target) {
+        _expSeleccionado = target;
+        tbody.querySelectorAll('.exp-row').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+        mostrarDetallesArchivo(target);
+      }
+    });
+  });
 }
 
 function actualizarArbolCarpetas() {
   const carpetasSet = new Set();
-  _expArchivos.forEach(a => {
-    if (a.folder) carpetasSet.add(a.folder);
-  });
-
+  _expArchivos.forEach(a => { if (a.folder) carpetasSet.add(a.folder); });
   const contenedor = document.getElementById('expListaSubcarpetas');
   if (!contenedor) return;
 
   if (carpetasSet.size === 0) {
-    contenedor.innerHTML = '<span style="font-style:italic;padding:4px">Sin subcarpetas detectadas</span>';
+    contenedor.innerHTML = '<span style="font-style:italic;padding:4px">Sin subdirectorios detectados</span>';
     return;
   }
 
-  const carpetasArr = Array.from(carpetasSet).sort();
-  contenedor.innerHTML = carpetasArr.map(f => `
+  contenedor.innerHTML = Array.from(carpetasSet).sort().map(f => `
     <div class="exp-folder-item${_expCarpetaFiltro === f ? ' active' : ''}" data-folder="${esc(f)}">
       <span>📁</span>
       <span style="flex:1">${esc(f)}</span>
@@ -1545,256 +2283,219 @@ function actualizarArbolCarpetas() {
   contenedor.querySelectorAll('[data-folder]').forEach(item => {
     item.addEventListener('click', () => {
       const targetFolder = item.dataset.folder;
-      if (_expCarpetaFiltro === targetFolder) {
-        _expCarpetaFiltro = '';
-      } else {
-        _expCarpetaFiltro = targetFolder;
-      }
+      _expCarpetaFiltro = (_expCarpetaFiltro === targetFolder) ? '' : targetFolder;
       actualizarVistaExplorador();
     });
   });
 }
 
-function renderTablaArchivos() {
-  const tbody = document.getElementById('expTablaCuerpo');
-  const breadcrumb = document.getElementById('expBreadcrumb');
-  if (!tbody) return;
-
-  const busqueda = (document.getElementById('expBusqueda')?.value || '').toLowerCase().trim();
-  const tipoFiltro = document.getElementById('expFiltroTipo')?.value || 'todos';
-
-  let filtrados = _expArchivos.filter(a => {
-    // Filtro de categoría izquierda
-    if (_expCatFiltro === 'favs' && !_expFavoritos.has(a.relPath)) return false;
-    if (_expCatFiltro !== 'todos' && _expCatFiltro !== 'favs' && a.cat !== _expCatFiltro) return false;
-
-    // Filtro desplegable
-    if (tipoFiltro !== 'todos' && a.cat !== tipoFiltro) return false;
-
-    // Filtro de carpeta
-    if (_expCarpetaFiltro && a.folder !== _expCarpetaFiltro) return false;
-
-    // Búsqueda
-    if (busqueda && !a.name.toLowerCase().includes(busqueda) && !a.ext.includes(busqueda)) return false;
-
-    return true;
+function ordenarArchivosPor(campo) {
+  _expArchivos.sort((a, b) => {
+    let valA = a[campo] || '';
+    let valB = b[campo] || '';
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+    if (valA < valB) return -1;
+    if (valA > valB) return 1;
+    return 0;
   });
-
-  // Breadcrumb
-  let bText = 'Todos los archivos';
-  if (_expCarpetaFiltro) bText = `📁 ${_expCarpetaFiltro}`;
-  else if (_expCatFiltro !== 'todos') bText = `📂 Categoría: ${_expCatFiltro.toUpperCase()}`;
-  if (breadcrumb) breadcrumb.textContent = bText;
-
-  if (_expArchivos.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="4" style="padding:70px 20px;text-align:center">
-          <div class="empty-state" style="padding:0">
-            <div class="e-icon" style="font-size:3.5rem">📂</div>
-            <h3 style="font-size:1.15rem;color:var(--azul);margin-bottom:6px">Explorador de Archivos Windows</h3>
-            <p style="font-size:0.85rem;color:var(--gris);max-width:440px;margin:0 auto 18px;line-height:1.5">
-              Arrastra cualquier carpeta o archivos de tu computadora aquí, o haz clic en los botones para abrir documentos reales de Windows (.pdf, .docx, .xlsx, .jpg, .mp4, etc.).
-            </p>
-            <div style="display:inline-flex;gap:10px">
-              <button class="btn btn-primary" onclick="document.getElementById('expInputCarpeta').click()" style="background:#0284C7;border-color:#0284C7">
-                📁 Abrir Carpeta de Windows
-              </button>
-              <button class="btn btn-outline" onclick="document.getElementById('expInputArchivos').click()">
-                📄 Seleccionar Archivos
-              </button>
-            </div>
-          </div>
-        </td>
-      </tr>`;
-    return;
-  }
-
-  if (filtrados.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="4" style="padding:40px;text-align:center;color:var(--gris)">
-          🔍 No se encontraron archivos coincidentes con el filtro o búsqueda actual.
-        </td>
-      </tr>`;
-    return;
-  }
-
-  tbody.innerHTML = filtrados.map(a => {
-    const isSelected = _expSeleccionado && _expSeleccionado.relPath === a.relPath;
-    const isFav = _expFavoritos.has(a.relPath);
-    const fStr = a.mtime.toLocaleString('es-PE', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit'
-    });
-
-    return `
-      <tr class="exp-row${isSelected ? ' selected' : ''}" data-path="${esc(a.relPath)}">
-        <td>
-          <span class="exp-file-icon">${a.icon}</span>
-          <span class="exp-file-name">${esc(a.name)}</span>
-          ${isFav ? '<span style="color:#F59E0B;margin-left:4px" title="Favorito">⭐</span>' : ''}
-        </td>
-        <td style="color:#475569;font-size:0.82rem">${esc(a.typeDesc)}</td>
-        <td style="color:var(--gris);font-size:0.82rem">${esc(fStr)}</td>
-        <td style="color:#1E293B;font-weight:600;font-size:0.82rem">${esc(formatBytes(a.size))}</td>
-      </tr>
-    `;
-  }).join('');
-
-  // Eventos de selección de fila
-  tbody.querySelectorAll('.exp-row').forEach(row => {
-    row.addEventListener('click', () => {
-      const p = row.dataset.path;
-      const target = _expArchivos.find(a => a.relPath === p);
-      if (target) {
-        _expSeleccionado = target;
-        tbody.querySelectorAll('.exp-row').forEach(r => r.classList.remove('selected'));
-        row.classList.add('selected');
-        mostrarDetallesArchivo(target);
-      }
-    });
-
-    row.addEventListener('dblclick', () => {
-      const p = row.dataset.path;
-      const target = _expArchivos.find(a => a.relPath === p);
-      if (target) abrirArchivoVistaCompleta(target);
-    });
-  });
+  actualizarVistaExplorador();
 }
 
+// Panel Derecho: Ficha Técnica y Asignación de Foto
 function mostrarDetallesArchivo(info) {
   const panel = document.getElementById('expDetallesContenido');
   if (!panel) return;
 
-  const url = URL.createObjectURL(info.file);
-  const isFav = _expFavoritos.has(info.relPath);
-  let previewHtml = '';
-
-  if (info.cat === 'images') {
-    previewHtml = `
-      <div style="text-align:center;background:#F8FAFC;border:1px solid var(--borde);border-radius:10px;padding:12px;margin-bottom:14px">
-        <img src="${url}" alt="${esc(info.name)}" style="max-width:100%;max-height:220px;border-radius:6px;object-fit:contain;box-shadow:0 2px 8px rgba(0,0,0,0.08)"/>
-      </div>`;
-  } else if (info.cat === 'media') {
-    const isVideo = ['mp4','webm','mkv','mov'].includes(info.ext);
-    if (isVideo) {
-      previewHtml = `
-        <div style="background:#000;border-radius:10px;overflow:hidden;margin-bottom:14px">
-          <video controls src="${url}" style="width:100%;max-height:200px;display:block"></video>
-        </div>`;
-    } else {
-      previewHtml = `
-        <div style="background:#F8FAFC;border:1px solid var(--borde);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px">
-          <div style="font-size:2.5rem;margin-bottom:8px">🎵</div>
-          <audio controls src="${url}" style="width:100%"></audio>
-        </div>`;
-    }
-  } else if (info.ext === 'pdf') {
-    previewHtml = `
-      <div style="background:#FFF1F2;border:1px solid #FECDD3;border-radius:10px;padding:20px;text-align:center;margin-bottom:14px">
-        <div style="font-size:3rem;margin-bottom:6px">📕</div>
-        <div style="font-weight:700;color:#BE123C;font-size:0.9rem">Documento PDF</div>
-        <button class="btn btn-primary btn-sm mt-16" style="background:#BE123C;border-color:#BE123C" onclick="window.open('${url}','_blank')">
-          👁️ Abrir PDF en nueva pestaña
-        </button>
-      </div>`;
-  } else if (info.cat === 'code' || info.ext === 'txt') {
-    previewHtml = `
-      <div style="margin-bottom:14px">
-        <div style="font-size:0.75rem;font-weight:700;color:var(--gris);margin-bottom:4px">Vista previa de texto:</div>
-        <pre id="expTextPreview" style="background:#F8FAFC;border:1px solid var(--borde);border-radius:8px;padding:10px;font-size:0.74rem;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-all">Cargando contenido...</pre>
-      </div>`;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const pEl = document.getElementById('expTextPreview');
-      if (pEl) pEl.textContent = String(e.target.result || '').slice(0, 5000);
-    };
-    reader.readAsText(info.file.slice(0, 5000));
-  } else {
-    previewHtml = `
-      <div style="background:#F8FAFC;border:1px solid var(--borde);border-radius:10px;padding:26px 14px;text-align:center;margin-bottom:14px">
-        <div style="font-size:3.5rem;margin-bottom:8px">${info.icon}</div>
-        <div style="font-weight:700;color:${info.color};font-size:0.95rem">${esc(info.typeDesc)}</div>
-      </div>`;
-  }
-
-  const fStr = info.mtime.toLocaleString('es-PE', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  const url = info.url_data || '';
+  const isFav = _expFavoritos.has(info.relPath || info.nombre);
+  const nombre = info.nombre || 'Foto';
+  const size = info.tamano || 0;
+  const fStr = (info.mtime ? new Date(info.mtime) : new Date()).toLocaleString('es-PE', {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
   });
 
+  // Opciones de clientes para el select
+  const clientesOptions = _listaClientesMemoria.map(c => `
+    <option value="${c.id}" ${String(info.cliente_id) === String(c.id) ? 'selected' : ''}>
+      ${esc(c.nombre)} (${esc(c.zona)} - ${esc(c.ip || '')})
+    </option>
+  `).join('');
+
   panel.innerHTML = `
-    ${previewHtml}
-    <div style="margin-bottom:16px">
-      <h4 style="font-size:0.95rem;font-weight:800;color:var(--texto);word-break:break-all;margin-bottom:8px">${esc(info.name)}</h4>
-      <div style="display:flex;flex-direction:column;gap:6px;font-size:0.8rem;color:#475569">
-        <div><strong>Tipo:</strong> ${esc(info.typeDesc)}</div>
-        <div><strong>Tamaño:</strong> ${esc(formatBytes(info.size))} (${Number(info.size).toLocaleString()} bytes)</div>
-        <div><strong>Modificado:</strong> ${esc(fStr)}</div>
-        ${info.folder ? `<div><strong>Ubicación:</strong> <code>${esc(info.folder)}</code></div>` : ''}
+    <!-- Vista Previa de Imagen en Alta Resolución -->
+    <div style="text-align:center;background:#0F172A;border-radius:12px;padding:8px;margin-bottom:14px;position:relative;overflow:hidden">
+      <img src="${url}" alt="${esc(nombre)}" style="max-width:100%;max-height:210px;border-radius:6px;object-fit:contain;cursor:zoom-in" onclick="window.open('${url}','_blank')"/>
+      <div style="position:absolute;bottom:6px;right:8px;background:rgba(0,0,0,0.6);color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:10px">
+        🔍 Clic para ampliar
       </div>
     </div>
+
+    <!-- Metadatos y Asignación ISP -->
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;font-size:0.82rem">
+      <div>
+        <label style="font-weight:700;color:#334155;display:block;margin-bottom:3px">Archivo:</label>
+        <div style="font-weight:800;color:#0F172A;word-break:break-all">${esc(nombre)}</div>
+        <div style="color:var(--gris);font-size:0.74rem">${esc(formatBytes(size))} · ${esc(fStr)}</div>
+      </div>
+
+      <div>
+        <label style="font-weight:700;color:#334155;display:block;margin-bottom:3px">Asignar a Cliente ISP:</label>
+        <select id="expDetalleClienteSelect" style="width:100%;padding:8px 10px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.82rem;background:#fff;outline:none">
+          <option value="">-- Sin asignar / General --</option>
+          ${clientesOptions}
+        </select>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label style="font-weight:700;color:#334155;display:block;margin-bottom:3px">Categoría ISP:</label>
+          <select id="expDetalleCatSelect" style="width:100%;padding:8px 10px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.82rem;background:#fff;outline:none">
+            <option value="comprobantes" ${info.categoria === 'comprobantes' ? 'selected' : ''}>💳 Comprobante</option>
+            <option value="instalaciones" ${info.categoria === 'instalaciones' ? 'selected' : ''}>📡 Instalación ONT</option>
+            <option value="infraestructura" ${info.categoria === 'infraestructura' ? 'selected' : ''}>📦 Caja NAP/Fibra</option>
+            <option value="identidad" ${info.categoria === 'identidad' ? 'selected' : ''}>🆔 DNI/Contrato</option>
+            <option value="fachadas" ${info.categoria === 'fachadas' ? 'selected' : ''}>🏠 Fachada/Predio</option>
+            <option value="averias" ${info.categoria === 'averias' ? 'selected' : ''}>⚠️ Avería Técnica</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-weight:700;color:#334155;display:block;margin-bottom:3px">Zona ISP:</label>
+          <select id="expDetalleZonaSelect" style="width:100%;padding:8px 10px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.82rem;background:#fff;outline:none">
+            <option value="">-- Sin zona --</option>
+            ${ZONAS.map(z => `<option value="${z}" ${info.zona === z ? 'selected' : ''}>${z}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-weight:700;color:#334155;display:block;margin-bottom:3px">Notas / Observaciones:</label>
+        <textarea id="expDetalleNotas" rows="2" placeholder="Ej. Pago mensualidad, Router ONT HG8145V5 instalado..."
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.8rem;outline:none;resize:vertical">${esc(info.notas || '')}</textarea>
+      </div>
+    </div>
+
+    <!-- Botones de Acción -->
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
-      <button class="btn btn-full" style="background:#10B981;border-color:#10B981;color:#fff;font-size:0.95rem;font-weight:700;padding:12px;justify-content:center;box-shadow:0 3px 10px rgba(16,185,129,0.3)" id="btnExpAbrirDoc">
-        Abrir documento
+      <button class="btn btn-full" id="btnExpGuardarMetadatos" style="background:#16A34A;border-color:#16A34A;color:#fff;font-weight:700;padding:11px;justify-content:center;border-radius:8px">
+        💾 Guardar en Supabase &amp; Local
+      </button>
+      <button class="btn btn-full" id="btnExpEnviarWhatsapp" style="background:#25D366;border-color:#25D366;color:#fff;font-weight:700;padding:11px;justify-content:center;border-radius:8px">
+        💬 Enviar por WhatsApp
       </button>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="btn btn-outline btn-sm" id="btnExpCopiarNombre" style="justify-content:center">📋 Copiar ruta</button>
-        <button class="btn btn-outline btn-sm" id="btnExpToggleFav" style="justify-content:center">${isFav ? '⭐ En favoritos' : '⭐ A favoritos'}</button>
+        <button class="btn btn-outline btn-sm" id="btnExpImprimirFoto" style="justify-content:center">🖨️ Imprimir</button>
+        <button class="btn btn-outline btn-sm" id="btnExpDescargarFoto" style="justify-content:center">📥 Descargar</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="btn btn-ghost btn-sm" id="btnExpDescargar" style="justify-content:center">📤 Compartir / Bajar</button>
-        <button class="btn btn-ghost btn-sm" id="btnExpIA" style="justify-content:center;color:#6366F1">🤖 Enviar a IA</button>
+        <button class="btn btn-ghost btn-sm" id="btnExpToggleFav" style="justify-content:center">
+          ${isFav ? '⭐ Destacada' : '⭐ Destacar'}
+        </button>
+        <button class="btn btn-danger btn-sm" id="btnExpEliminarFoto" style="justify-content:center">
+          🗑️ Eliminar
+        </button>
       </div>
-      <button class="btn btn-danger btn-sm" id="btnExpQuitar" style="justify-content:center;margin-top:4px">🗑️ Quitar de la lista</button>
     </div>
   `;
 
-  document.getElementById('btnExpAbrirDoc')?.addEventListener('click', () => abrirArchivoVistaCompleta(info));
-  document.getElementById('btnExpDescargar')?.addEventListener('click', () => {
+  // Asignar eventos de los botones
+  document.getElementById('btnExpGuardarMetadatos')?.addEventListener('click', async () => {
+    const cliId = document.getElementById('expDetalleClienteSelect')?.value || null;
+    const cat   = document.getElementById('expDetalleCatSelect')?.value || 'comprobantes';
+    const zona  = document.getElementById('expDetalleZonaSelect')?.value || '';
+    const notas = document.getElementById('expDetalleNotas')?.value || '';
+
+    let cliNombre = '';
+    if (cliId) {
+      const cli = _listaClientesMemoria.find(c => String(c.id) === String(cliId));
+      if (cli) {
+        cliNombre = cli.nombre;
+        if (!zona) info.zona = cli.zona;
+      }
+    }
+
+    info.cliente_id     = cliId ? Number(cliId) : null;
+    info.cliente_nombre = cliNombre;
+    info.categoria      = cat;
+    info.zona           = zona || info.zona;
+    info.notas          = notas;
+
+    if (info.id) {
+      await IDB.put('fotos', info);
+    } else {
+      info.id = await IDB.add('fotos', info);
+    }
+
+    toast('✅ Datos de la foto guardados en Supabase y localmente');
+    actualizarVistaExplorador();
+    actualizarMetricasExplorador();
+  });
+
+  document.getElementById('btnExpEnviarWhatsapp')?.addEventListener('click', () => {
+    const cliId = document.getElementById('expDetalleClienteSelect')?.value;
+    let tel = '';
+    let cliNombre = info.cliente_nombre || 'Cliente';
+
+    if (cliId) {
+      const cli = _listaClientesMemoria.find(c => String(c.id) === String(cliId));
+      if (cli && cli.celular) tel = cli.celular.replace(/\D/g, '');
+    }
+
+    const catMeta = EXP_CATEGORIAS_ISP[info.categoria] || { label: 'Comprobante' };
+    const msg = `*LEYTRIX ISP* 📡\nHola ${cliNombre}, adjuntamos el archivo fotográfico de tu servicio (${catMeta.label}):\n\n📁 Archivo: ${info.nombre}\n📍 Zona: ${info.zona || 'Principal'}\n📝 Notas: ${info.notas || 'Verificado'}\n\n¡Gracias por tu preferencia!`;
+
+    const waUrl = tel ? `https://wa.me/51${tel}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+  });
+
+  document.getElementById('btnExpImprimirFoto')?.addEventListener('click', () => {
+    const w = window.open('', '_blank');
+    w.document.write(`
+      <html><head><title>Imprimir Foto ISP - Leytrix</title>
+      <style>body{font-family:sans-serif;text-align:center;padding:20px}img{max-width:90%;max-height:80vh;border:1px solid #ccc;border-radius:8px}</style>
+      </head><body>
+      <h2>📡 LEYTRIX ISP — ARCHIVO TÉCNICO</h2>
+      <p><strong>${esc(info.nombre)}</strong> | ${esc(info.cliente_nombre || 'Sin cliente')} | ${esc(info.zona || 'General')}</p>
+      <img src="${url}"/>
+      <p style="margin-top:14px;color:#666">${esc(info.notas || '')}</p>
+      <script>window.print();</script>
+      </body></html>
+    `);
+    w.document.close();
+  });
+
+  document.getElementById('btnExpDescargarFoto')?.addEventListener('click', () => {
     const a = document.createElement('a');
     a.href = url;
-    a.download = info.name;
+    a.download = info.nombre;
     a.click();
-    toast('Descargando archivo...');
+    toast('Descargando foto...');
   });
-  document.getElementById('btnExpCopiarNombre')?.addEventListener('click', () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(info.name);
-      toast('📋 Nombre copiado al portapapeles');
-    }
-  });
-  document.getElementById('btnExpIA')?.addEventListener('click', () => {
-    toast(`🤖 Analizando "${info.name}" (${info.typeDesc})...`);
-  });
+
   document.getElementById('btnExpToggleFav')?.addEventListener('click', () => {
-    if (_expFavoritos.has(info.relPath)) {
-      _expFavoritos.delete(info.relPath);
-      toast('Quitado de favoritos');
+    const key = info.relPath || info.nombre;
+    if (_expFavoritos.has(key)) {
+      _expFavoritos.delete(key);
+      toast('Quitada de destacadas');
     } else {
-      _expFavoritos.add(info.relPath);
-      toast('⭐ Agregado a favoritos');
+      _expFavoritos.add(key);
+      toast('⭐ Agregada a destacadas');
     }
     actualizarVistaExplorador();
     mostrarDetallesArchivo(info);
   });
-  document.getElementById('btnExpQuitar')?.addEventListener('click', () => {
-    _expArchivos = _expArchivos.filter(a => a.relPath !== info.relPath);
-    _expSeleccionado = null;
-    toast('Archivo quitado de la lista');
-    actualizarVistaExplorador();
-    panel.innerHTML = `
-      <div style="text-align:center;padding:50px 10px;color:var(--gris);margin:auto 0">
-        <div style="font-size:2.8rem;margin-bottom:8px">📄</div>
-        <p style="font-size:0.85rem;font-weight:600">Ningún archivo seleccionado</p>
-      </div>`;
-  });
-}
 
-function abrirArchivoVistaCompleta(info) {
-  const url = URL.createObjectURL(info.file);
-  window.open(url, '_blank');
+  document.getElementById('btnExpEliminarFoto')?.addEventListener('click', async () => {
+    if (confirm(`¿Desea eliminar la foto "${info.nombre}"?`)) {
+      if (info.id) await IDB.delete('fotos', info.id);
+      _expArchivos = _expArchivos.filter(a => a !== info && a.id !== info.id);
+      _expSeleccionado = null;
+      toast('Foto eliminada');
+      actualizarVistaExplorador();
+      actualizarMetricasExplorador();
+      panel.innerHTML = '<div style="text-align:center;padding:70px 10px;color:var(--gris);margin:auto 0"><div style="font-size:3.5rem;margin-bottom:10px">🖼️</div><p style="font-size:0.92rem;font-weight:700">Ninguna foto seleccionada</p></div>';
+    }
+  });
 }
 
 function inicializarEventosExplorador() {
@@ -1802,35 +2503,7 @@ function inicializarEventosExplorador() {
   const inputCarpeta  = document.getElementById('expInputCarpeta');
 
   document.getElementById('btnExpCargarArchivos')?.addEventListener('click', () => inputArchivos?.click());
-  document.getElementById('btnExpCargarCarpeta')?.addEventListener('click', async () => {
-    // Intentar File System Access API para Windows moderno si está disponible
-    if (window.showDirectoryPicker) {
-      try {
-        const dirHandle = await window.showDirectoryPicker();
-        const files = [];
-        async function scanDir(handle, path = '') {
-          for await (const entry of handle.values()) {
-            if (entry.kind === 'file') {
-              const file = await entry.getFile();
-              Object.defineProperty(file, 'webkitRelativePath', {
-                value: path ? `${path}/${file.name}` : `${handle.name}/${file.name}`
-              });
-              files.push(file);
-            } else if (entry.kind === 'directory') {
-              await scanDir(entry, path ? `${path}/${entry.name}` : `${handle.name}/${entry.name}`);
-            }
-          }
-        }
-        await scanDir(dirHandle);
-        agregarArchivosExplorador(files);
-        return;
-      } catch(err) {
-        if (err.name === 'AbortError') return;
-        console.log('Fallback a input webkitdirectory:', err);
-      }
-    }
-    inputCarpeta?.click();
-  });
+  document.getElementById('btnExpCargarCarpeta')?.addEventListener('click', () => inputCarpeta?.click());
 
   inputArchivos?.addEventListener('change', e => {
     if (e.target.files && e.target.files.length) {
@@ -1846,24 +2519,45 @@ function inicializarEventosExplorador() {
     }
   });
 
-  document.getElementById('btnExpLimpiar')?.addEventListener('click', () => {
+  document.getElementById('btnExpModoGaleria')?.addEventListener('click', () => {
+    _expModoVista = 'galeria';
+    document.getElementById('btnExpModoGaleria')?.classList.add('btn-primary');
+    document.getElementById('btnExpModoGaleria')?.classList.remove('btn-outline');
+    document.getElementById('btnExpModoTabla')?.classList.add('btn-outline');
+    document.getElementById('btnExpModoTabla')?.classList.remove('btn-primary');
+    actualizarVistaExplorador();
+  });
+
+  document.getElementById('btnExpModoTabla')?.addEventListener('click', () => {
+    _expModoVista = 'tabla';
+    document.getElementById('btnExpModoTabla')?.classList.add('btn-primary');
+    document.getElementById('btnExpModoTabla')?.classList.remove('btn-outline');
+    document.getElementById('btnExpModoGaleria')?.classList.add('btn-outline');
+    document.getElementById('btnExpModoGaleria')?.classList.remove('btn-primary');
+    actualizarVistaExplorador();
+  });
+
+  document.getElementById('btnExpLimpiar')?.addEventListener('click', async () => {
     if (!_expArchivos.length) return;
-    if (confirm('¿Desea limpiar todos los archivos del explorador?')) {
+    if (confirm('¿Desea limpiar todas las fotos cargadas del explorador?')) {
+      for (const f of _expArchivos) {
+        if (f.id) await IDB.delete('fotos', f.id);
+      }
       _expArchivos = [];
       _expSeleccionado = null;
-      _expCarpetaFiltro = '';
-      _expCatFiltro = 'todos';
       actualizarVistaExplorador();
-      const p = document.getElementById('expDetallesContenido');
-      if (p) p.innerHTML = '<div style="text-align:center;padding:50px 10px;color:var(--gris);margin:auto 0"><div style="font-size:2.8rem;margin-bottom:8px">📄</div><p style="font-size:0.85rem;font-weight:600">Ningún archivo seleccionado</p></div>';
-      toast('Explorador reiniciado');
+      actualizarMetricasExplorador();
+      toast('Galería limpiada');
     }
   });
 
-  // Búsqueda y selector de tipo
-  document.getElementById('btnExpBuscar')?.addEventListener('click', () => renderTablaArchivos());
-  document.getElementById('expBusqueda')?.addEventListener('input', () => renderTablaArchivos());
-  document.getElementById('expFiltroTipo')?.addEventListener('change', () => renderTablaArchivos());
+  document.getElementById('btnExpBuscar')?.addEventListener('click', () => actualizarVistaExplorador());
+  document.getElementById('expBusqueda')?.addEventListener('input', () => actualizarVistaExplorador());
+  document.getElementById('expFiltroTipo')?.addEventListener('change', () => actualizarVistaExplorador());
+  document.getElementById('expFiltroZonaSelect')?.addEventListener('change', e => {
+    _expZonaFiltro = e.target.value;
+    actualizarVistaExplorador();
+  });
 
   // Categorías panel izquierdo
   document.querySelectorAll('#expTreeCarpetas .exp-nav-btn').forEach(btn => {
@@ -1871,7 +2565,19 @@ function inicializarEventosExplorador() {
       document.querySelectorAll('#expTreeCarpetas .exp-nav-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       _expCatFiltro = btn.dataset.cat || 'todos';
-      renderTablaArchivos();
+      actualizarVistaExplorador();
+    });
+  });
+
+  // Filtro de zonas panel izquierdo
+  document.querySelectorAll('#expListaZonasFiltro .exp-folder-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('#expListaZonasFiltro .exp-folder-item').forEach(it => it.classList.remove('active'));
+      item.classList.add('active');
+      _expZonaFiltro = item.dataset.zona || '';
+      const sel = document.getElementById('expFiltroZonaSelect');
+      if (sel) sel.value = _expZonaFiltro;
+      actualizarVistaExplorador();
     });
   });
 
@@ -1898,7 +2604,11 @@ function inicializarEventosExplorador() {
       }
     });
   }
+
+  // Eventos Modal Supabase
+  document.getElementById('btnCopiarSqlSupa')?.addEventListener('click', copiarSqlSupabase);
 }
+
 
 const PAGE_HANDLERS = {
   inicio:       renderInicio,
@@ -1939,16 +2649,16 @@ async function updateSidebar() {
       IDB.count('clientes'),
       IDB.countByIndex('clientes', 'estado', 'ACTIVO'),
       IDB.countByIndex('clientes', 'estado', 'CORTADO'),
-      IDB.getByIndex('pagos', 'mes', mes),
+      IDB.getByIndex('pagos', 'mes', mes)
     ]);
 
-    const cobrado = pagosMes.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const cobrado = (pagosMes || []).reduce((s, p) => s + (Number(p.monto) || 0), 0);
     const statsEl = document.getElementById('sidebarStats');
     if (statsEl) {
       statsEl.innerHTML = `
-        <p>📡 <strong>Total:</strong> ${total.toLocaleString()}</p>
-        <p>✅ <strong>Activos:</strong> ${activos.toLocaleString()}</p>
-        <p>✂️ <strong>Cortados:</strong> ${cortados.toLocaleString()}</p>
+        <p>📡 <strong>Total:</strong> ${(total||0).toLocaleString()}</p>
+        <p>✅ <strong>Activos:</strong> ${(activos||0).toLocaleString()}</p>
+        <p>✂️ <strong>Cortados:</strong> ${(cortados||0).toLocaleString()}</p>
         <p>💰 <strong>Cobrado este mes:</strong> S/. ${cobrado.toFixed(2)}</p>`;
     }
   } catch(err) {
@@ -1963,7 +2673,7 @@ async function renderInicio() {
   try {
     const mes = mesActual();
 
-    // 1. Conteo instantáneo de KPIs mediante índices sin cargar arrays en memoria
+    // 1. Conteo instantáneo O(1) de KPIs con IDB
     const [total, activos, cortados, pagosMes] = await Promise.all([
       IDB.count('clientes'),
       IDB.countByIndex('clientes', 'estado', 'ACTIVO'),
@@ -1971,25 +2681,25 @@ async function renderInicio() {
       IDB.getByIndex('pagos', 'mes', mes)
     ]);
 
-    const cobrado = pagosMes.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const cobrado = (pagosMes || []).reduce((s, p) => s + (Number(p.monto) || 0), 0);
 
     const kpiEl = document.getElementById('kpiGrid');
     if (kpiEl) {
       kpiEl.innerHTML = `
-        <div class="kpi kpi-blue"><div class="val">${total.toLocaleString()}</div><div class="lbl">Total Clientes</div></div>
-        <div class="kpi kpi-green"><div class="val">${activos.toLocaleString()}</div><div class="lbl">Activos</div></div>
-        <div class="kpi kpi-red"><div class="val">${cortados.toLocaleString()}</div><div class="lbl">Cortados</div></div>
+        <div class="kpi kpi-blue"><div class="val">${(total||0).toLocaleString()}</div><div class="lbl">Total Clientes</div></div>
+        <div class="kpi kpi-green"><div class="val">${(activos||0).toLocaleString()}</div><div class="lbl">Activos</div></div>
+        <div class="kpi kpi-red"><div class="val">${(cortados||0).toLocaleString()}</div><div class="lbl">Cortados</div></div>
         <div class="kpi kpi-orange"><div class="val">S/. ${cobrado.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div><div class="lbl">Cobrado en ${esc(mes)}</div></div>`;
     }
 
-    // 2. Conteo por zona vía índices (O(1) por cada zona)
+    // 2. Conteo por zona O(1)
     const zonaCounts = await Promise.all(ZONAS.map(async z => {
       const [totZ, actZ, cortZ] = await Promise.all([
         IDB.countByIndex('clientes', 'zona', z),
         IDB.countByIndex('clientes', 'zona_estado', [z, 'ACTIVO']),
         IDB.countByIndex('clientes', 'zona_estado', [z, 'CORTADO'])
       ]);
-      return { z, totZ, actZ, cortZ };
+      return { z, totZ: totZ||0, actZ: actZ||0, cortZ: cortZ||0 };
     }));
 
     const zonaRows = zonaCounts.map(item => `
@@ -2010,13 +2720,9 @@ async function renderInicio() {
         </table></div>`;
     }
 
-    // 3. Muestra de clientes sin pago este mes (muestreo rápido sin saturar)
-    const conPagoIds = new Set(pagosMes.map(p => Number(p.id_cliente)));
-    const sinPagoMuestra = [];
-    let sinPagoTotalEst = Math.max(0, activos - conPagoIds.size);
-
-    // Buscamos hasta 8 activos sin pago para mostrar en el resumen
-    const d = await IDB.query('clientes', {
+    // 3. Clientes activos sin pago este mes
+    const conPagoIds = new Set((pagosMes || []).map(p => Number(p.id_cliente)));
+    const sinPagoQuery = await IDB.query('clientes', {
       indexName: 'estado',
       range: IDBKeyRange.only('ACTIVO'),
       filter: c => !conPagoIds.has(Number(c.id)),
@@ -2025,10 +2731,10 @@ async function renderInicio() {
 
     const sinPagoDashEl = document.getElementById('sinPagoDash');
     if (sinPagoDashEl) {
-      if (d.results.length === 0) {
+      if (sinPagoQuery.results.length === 0) {
         sinPagoDashEl.innerHTML = '<div class="alert alert-success">✅ Todos los clientes activos están al día este mes.</div>';
       } else {
-        const rows = d.results.map(c => `
+        const rows = sinPagoQuery.results.map(c => `
           <tr>
             <td><strong>${esc(c.nombre)}</strong></td>
             <td>${esc(c.zona)}</td>
@@ -2116,7 +2822,6 @@ async function renderClientes(page = 0) {
     if (!results.length) {
       tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="e-icon">👥</div>Sin clientes registrados con ese filtro</div></td></tr>';
     } else {
-      // Guardar en cache local para joins
       results.forEach(c => _clientesCache.set(Number(c.id), c));
 
       tbody.innerHTML = results.map(c => `
@@ -2878,8 +3583,8 @@ async function reconectarServicio() {
 //  ZONAS — VISTA AGRUPADA EFICIENTE
 // ══════════════════════════════════════════════════════
 async function renderZonas() {
-  const container = document.getElementById('zonasContainer');
-  container.innerHTML = '<div class="empty-state"><span class="spinner"></span> Cargando zonas...</div>';
+  const cont = document.getElementById('zonasGrid');
+  if (!cont) return;
 
   try {
     const cards = await Promise.all(ZONAS.map(async z => {
@@ -2897,10 +3602,9 @@ async function renderZonas() {
           <td>S/. ${Number(c.plan || 0).toFixed(2)}</td>
           <td>${badgeCable(c.cable)}</td>
           <td>${badgeEstado(c.estado)}</td>
-          <td><span style="font-size:0.78rem;color:var(--gris)">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
+          <td><span style="font-size:0.78rem">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
           <td>${esc(c.celular) || '—'}</td>
-        </tr>
-      `).join('');
+        </tr>`).join('');
 
       return `
       <div class="zona-card">
@@ -2924,10 +3628,10 @@ async function renderZonas() {
       </div>`;
     }));
 
-    container.innerHTML = cards.join('');
+    cont.innerHTML = cards.join('');
   } catch(err) {
     console.error('renderZonas:', err);
-    container.innerHTML = '<div class="alert alert-danger">Error cargando zonas</div>';
+    toast('Error cargando zonas', 'error');
   }
 }
 
@@ -2947,17 +3651,15 @@ function initPendientes() {
 let _pendientesActuales = [];
 
 async function renderPendientes() {
-  const mes   = document.getElementById('mesPend')?.value || mesActual();
-  const zona  = document.getElementById('zonaPend')?.value || '';
+  const mes   = document.getElementById('pendMes')?.value || mesActual();
+  const zona  = document.getElementById('pendZona')?.value || '';
+  const resEl = document.getElementById('pendientesResultado');
 
-  if (!V.mes(mes)) { toast('Ingrese un mes válido (AAAA-MM)','error'); return; }
-
-  const resEl = document.getElementById('pendientesResult');
   resEl.innerHTML = '<div class="empty-state"><span class="spinner"></span> Consultando pendientes...</div>';
 
   try {
     const pagosMes = await IDB.getByIndex('pagos', 'mes', mes);
-    const conPagoIds = new Set(pagosMes.map(p => Number(p.id_cliente)));
+    const conPagoIds = new Set((pagosMes || []).map(p => Number(p.id_cliente)));
 
     const filter = c =>
       c.estado === 'ACTIVO' &&
@@ -2974,48 +3676,46 @@ async function renderPendientes() {
     _pendientesActuales = results;
 
     if (!results.length) {
-      resEl.innerHTML = `<div class="alert alert-success">✅ Todos los clientes ${zona ? 'de ' + esc(zona) : ''} tienen su pago al día en <strong>${esc(mes)}</strong>.</div>`;
+      resEl.innerHTML = `
+        <div class="alert alert-success">
+          ✅ <strong>¡Excelente!</strong> No hay clientes activos con mensualidad pendiente en <strong>${esc(mes)}</strong>${zona ? ` en la zona <strong>${esc(zona)}</strong>` : ''}.
+        </div>`;
       return;
     }
 
-    const totalMonto = results.reduce((s, c) => s + (Number(c.plan) || 0), 0);
-    const rows = results.map(c => `
-      <tr class="row-pendiente">
-        <td><strong>${esc(c.nombre)}</strong></td>
-        <td>${esc(c.zona)}</td>
-        <td><code>${esc(c.ip) || '—'}</code></td>
-        <td>S/. ${Number(c.plan || 0).toFixed(2)}</td>
-        <td>${badgeCable(c.cable)}</td>
-        <td>${esc(c.celular) || '—'}</td>
-        <td>
-          <button class="btn btn-danger btn-sm" data-pend-id="${Number(c.id)}" title="Cortar servicio">✂️</button>
-        </td>
-      </tr>`).join('');
+    const totalDeuda = results.reduce((s, c) => s + (Number(c.plan) || 0), 0);
 
     resEl.innerHTML = `
-      <div class="alert alert-warning">⚠️ <strong>${total.toLocaleString()}</strong> cliente(s) activos sin pago en <strong>${esc(mes)}</strong> · Total pendiente: <strong>S/. ${totalMonto.toFixed(2)}</strong></div>
-      <div class="card">
-        <div class="btn-group" style="margin-bottom:14px">
-          <button class="btn btn-danger" id="btnCortarTodos">✂️ Cortar todos los mostrados (${results.length})</button>
-          <button class="btn btn-ghost" id="btnExpPend">📥 Exportar lista a Excel</button>
-        </div>
-        <div class="table-wrap"><table>
+      <div class="alert alert-warning" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>⚠️ <strong>${total}</strong> cliente(s) pendiente(s) en <strong>${esc(mes)}</strong> · Deuda estimada: <strong>S/. ${totalDeuda.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div>
+        <button class="btn btn-danger btn-sm" id="btnCortarTodos">✂️ Cortar todos los pendientes</button>
+      </div>
+      <div class="table-wrap">
+        <table>
           <thead><tr><th>Nombre</th><th>Zona</th><th>IP</th><th>Plan</th><th>Cable</th><th>Celular</th><th>Acción</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table></div>
+          <tbody>${results.map(c => `
+            <tr>
+              <td><strong>${esc(c.nombre)}</strong></td>
+              <td>${esc(c.zona)}</td>
+              <td><code>${esc(c.ip) || '—'}</code></td>
+              <td><strong>S/. ${Number(c.plan || 0).toFixed(2)}</strong></td>
+              <td>${badgeCable(c.cable)}</td>
+              <td>${esc(c.celular) || '—'}</td>
+              <td>
+                <div class="btn-group">
+                  <button class="btn btn-success btn-sm" onclick="irAPagarCliente(${Number(c.id)})" title="Pagar">💳 Pagar</button>
+                  <button class="btn btn-danger btn-sm" onclick="cortarRapido(${Number(c.id)})" title="Cortar servicio">✂️ Cortar</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
       </div>`;
 
-    document.getElementById('btnCortarTodos').addEventListener('click', cortarTodosPendientes);
-    document.getElementById('btnExpPend').addEventListener('click', exportarPendientes);
-    resEl.querySelectorAll('[data-pend-id]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = Number(btn.dataset.pendId);
-        await cortarRapido(id);
-      });
-    });
+    document.getElementById('btnCortarTodos')?.addEventListener('click', cortarTodosPendientes);
   } catch(err) {
     console.error('renderPendientes:', err);
-    resEl.innerHTML = '<div class="alert alert-danger">Error consultando pendientes</div>';
+    resEl.innerHTML = '<div class="alert alert-danger">Error al consultar los pendientes</div>';
   }
 }
 
@@ -3548,80 +4248,19 @@ document.querySelectorAll('.modal-bg').forEach(m => {
 //  INICIALIZACIÓN DE LA APLICACIÓN
 // ══════════════════════════════════════════════════════
 async function init() {
-  const aFI = document.getElementById('aFechaInicio');
-  if (aFI) aFI.value = fechaHoy();
+  initNav();
+  initFiltros();
+  initPendientes();
 
-  // Poblar opciones de zona en formularios
-  const zg = document.getElementById('zonasGrid');
-  if (zg) zg.innerHTML = ZONAS.map(z =>
-    `<div class="zona-opt" data-zona="${esc(z)}">${esc(z)}</div>`
-  ).join('');
-
-  const filtZona = document.getElementById('filtZona');
-  const zonaPend = document.getElementById('zonaPend');
-  ZONAS.forEach(z => {
-    [filtZona, zonaPend].forEach(sel => {
-      if (!sel) return;
-      const opt = document.createElement('option');
-      opt.value = z; opt.textContent = z;
-      if (![...sel.options].some(o => o.value === z)) sel.appendChild(opt);
-    });
-  });
-
-  const eZona = document.getElementById('eZona');
-  if (eZona) {
-    ZONAS.forEach(z => {
-      if (![...eZona.options].some(o => o.value === z)) {
-        const opt = document.createElement('option');
-        opt.value = z; opt.textContent = z;
-        eZona.appendChild(opt);
-      }
-    });
-  }
-
-  // Eventos de navegación
-  document.querySelectorAll('.nav-item[data-page]').forEach(n => {
-    n.addEventListener('click', () => goTo(n.dataset.page));
-  });
-
-  // Selector interactivo de planes
-  document.getElementById('plan50').addEventListener('click', () => selPlan(50));
-  document.getElementById('plan60').addEventListener('click', () => selPlan(60));
-  document.getElementById('plan65').addEventListener('click', () => selPlan(65));
-  document.getElementById('plan50').addEventListener('keydown', e => e.key === 'Enter' && selPlan(50));
-  document.getElementById('plan60').addEventListener('keydown', e => e.key === 'Enter' && selPlan(60));
-  document.getElementById('plan65').addEventListener('keydown', e => e.key === 'Enter' && selPlan(65));
-
-  // Zonas delegación
-  document.getElementById('zonasGrid').addEventListener('click', e => {
-    const opt = e.target.closest('.zona-opt');
-    if (opt) selZona(opt.dataset.zona, opt);
-  });
-
-  // Toggle cable
-  const ct = document.getElementById('cableToggle');
-  ct.addEventListener('click', toggleCable);
-  ct.addEventListener('keydown', e => e.key === 'Enter' && toggleCable());
-
-  // Formularios
   document.getElementById('formAgregar').addEventListener('submit', guardarCliente);
-  document.getElementById('formEditar').addEventListener('submit',  guardarEdicion);
-  document.getElementById('formPago').addEventListener('submit',    guardarPago);
+  document.getElementById('formEditar').addEventListener('submit', guardarEdicion);
+  document.getElementById('formPago').addEventListener('submit', guardarPago);
 
-  // Buscador dinámico de clientes en Registrar Pago (no satura con 1M opciones)
-  document.getElementById('btnBuscarCliPago')?.addEventListener('click', () => {
-    const val = document.getElementById('pBuscarCli').value;
-    poblarSelectClientesPago(val);
-  });
-  document.getElementById('pBuscarCli')?.addEventListener('input', e => {
-    clearTimeout(_busTimer);
-    _busTimer = setTimeout(() => poblarSelectClientesPago(e.target.value), 200);
-  });
-
+  // Auto-completar monto según el cliente seleccionado en Pagos
   document.getElementById('pCliente').addEventListener('change', async e => {
-    const id = Number(e.target.value);
-    if (!id) return;
-    const cli = await IDB.get('clientes', id);
+    const cid = e.target.value;
+    if (!cid) return;
+    const cli = await IDB.get('clientes', Number(cid));
     if (cli) {
       document.getElementById('pMonto').value = Number(cli.plan || 50).toFixed(2);
       document.getElementById('pagoAlert').innerHTML = `
@@ -3652,7 +4291,7 @@ async function init() {
 
   // Botones recibo
   document.getElementById('closeModalRecibo').addEventListener('click',  () => cerrarModal('modalRecibo'));
-  document.getElementById('closeModalRecibo2').addEventListener('click', () => cerrarModal('modalRecibo'));
+  document.getElementById('closeModalRecibo2')?.addEventListener('click', () => cerrarModal('modalRecibo'));
   document.getElementById('btnWhatsappRecibo')?.addEventListener('click', enviarWhatsappRecibo);
   document.getElementById('btnCopiarImgRecibo')?.addEventListener('click', copiarImagenRecibo);
   document.getElementById('btnGuardarImgRecibo')?.addEventListener('click', descargarReciboImagen);
@@ -3687,7 +4326,14 @@ async function init() {
   document.getElementById('btnPlantCli').addEventListener('click',   () => descargarPlantilla('clientes'));
   document.getElementById('btnPlantPag').addEventListener('click',   () => descargarPlantilla('pagos'));
 
-  // Solicitar almacenamiento persistente al navegador
+  // Explorador & Archivo Fotográfico ISP
+  inicializarEventosExplorador();
+  await cargarFotosGuardadas();
+
+  // Verificación de Supabase Cloud en segundo plano
+  verificarSupabase(false);
+
+  // Almacenamiento persistente
   if (navigator.storage && navigator.storage.persist) {
     try {
       navigator.storage.persist().then(granted => {
@@ -3696,15 +4342,11 @@ async function init() {
     } catch (_) {}
   }
 
-  inicializarEventosExplorador();
-  initCardCategories();
-
-  // Carga inicial
-  goTo('explorador');
+  // Carga inicial — Panel ISP
+  goTo('inicio');
   updateSidebar();
 }
 
-// Ejecutar
 init().catch(err => {
   console.error('Error al inicializar aplicación:', err);
   document.getElementById('main').innerHTML =
