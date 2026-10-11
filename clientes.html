@@ -251,7 +251,7 @@
         } else {
           tbody.innerHTML = results.map(c => `
             <tr class="${c.estado === 'CORTADO' ? 'row-cortado' : ''}">
-              <td>${Number(c.id)}</td>
+              <td><strong style="color:var(--azul)">#${esc(c.id)}</strong></td>
               <td><strong>${esc(c.nombre)}</strong></td>
               <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
               <td><code>${esc(c.ip) || '—'}</code></td>
@@ -261,11 +261,11 @@
               <td><strong>${esc(c.celular) || '—'}</strong></td>
               <td>
                 <div class="btn-group">
-                  <a href="pagos.html?id=${c.id}" class="btn btn-success btn-sm" title="Registrar pago">💳 Pagar</a>
-                  <button class="btn btn-primary btn-sm" onclick="enviarMensajeIACliente(${c.id})" style="background:#7C3AED;border-color:#7C3AED" title="Enviar recordatorio con IA a WhatsApp">🤖</button>
-                  <button class="btn btn-outline btn-sm" onclick="abrirEditar(${c.id})" title="Editar">✏️</button>
-                  <button class="btn btn-ghost btn-sm" onclick="verHistorialPagos(${c.id})" title="Ver pagos">💰</button>
-                  <button class="btn btn-danger btn-sm" onclick="eliminarCliente(${c.id})" title="Eliminar">🗑️</button>
+                  <a href="pagos.html?id=${encodeURIComponent(c.id)}" class="btn btn-success btn-sm" title="Registrar pago">💳 Pagar</a>
+                  <button class="btn btn-primary btn-sm" onclick="enviarMensajeIACliente('${esc(c.id)}')" style="background:#7C3AED;border-color:#7C3AED" title="Enviar recordatorio con IA a WhatsApp">🤖</button>
+                  <button class="btn btn-outline btn-sm" onclick="abrirEditar('${esc(c.id)}')" title="Editar">✏️</button>
+                  <button class="btn btn-ghost btn-sm" onclick="verHistorialPagos('${esc(c.id)}')" title="Ver pagos">💰</button>
+                  <button class="btn btn-danger btn-sm" onclick="eliminarCliente('${esc(c.id)}')" title="Eliminar">🗑️</button>
                 </div>
               </td>
             </tr>
@@ -274,18 +274,21 @@
 
         // Paginación
         const pagTotal = Math.ceil(total / PAGE_SIZE) || 1;
-        document.getElementById('paginfoClientes').textContent = `Página ${_paginaActual + 1} de ${pagTotal} (${total} total)`;
+        document.getElementById('paginfoClientes').textContent = `Página ${_paginaActual + 1} de ${pagTotal} (${total.toLocaleString()} total)`;
         document.getElementById('btnPagPrev').disabled = (_paginaActual === 0);
         document.getElementById('btnPagNext').disabled = ((_paginaActual + 1) >= pagTotal);
       } catch(err) {
         console.error('cargarClientes error:', err);
-        tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes: ' + (err.message || '') + '</td></tr>';
       }
     }
 
     function cambiarPagina(delta) {
+      const pagTotal = Math.ceil(_totalClientes / PAGE_SIZE) || 1;
       const nueva = _paginaActual + delta;
-      if (nueva >= 0) cargarClientes(nueva);
+      if (nueva >= 0 && nueva < pagTotal) {
+        cargarClientes(nueva);
+      }
     }
 
     function resetFiltros() {
@@ -297,93 +300,121 @@
     }
 
     async function abrirEditar(id) {
-      const c = await IDB.get('clientes', Number(id));
-      if (!c) { toast('Cliente no encontrado', 'error'); return; }
+      try {
+        const c = await IDB.get('clientes', id);
+        if (!c) { toast('Cliente no encontrado', 'error'); return; }
 
-      document.getElementById('eId').value          = c.id;
-      document.getElementById('eNombre').value      = c.nombre || '';
-      document.getElementById('eCelular').value     = c.celular || '';
-      document.getElementById('eFechaInicio').value = c.fecha_inicio || '';
-      document.getElementById('eIp').value          = c.ip || '';
-      document.getElementById('eZona').value        = c.zona || 'Loboyacu';
-      document.getElementById('ePlan').value        = String(c.plan || 65);
-      document.getElementById('eEstado').value      = c.estado || 'ACTIVO';
+        document.getElementById('eId').value          = c.id;
+        document.getElementById('eNombre').value      = c.nombre || '';
+        document.getElementById('eCelular').value     = c.celular || '';
+        document.getElementById('eFechaInicio').value = c.fecha_inicio || '';
+        document.getElementById('eIp').value          = c.ip || '';
+        document.getElementById('eZona').value        = c.zona || 'Loboyacu';
+        document.getElementById('ePlan').value        = String(c.plan || 65);
+        document.getElementById('eEstado').value      = c.estado || 'ACTIVO';
 
-      document.getElementById('modalEditar').classList.add('open');
+        document.getElementById('modalEditar').classList.add('open');
+      } catch (err) {
+        toast('Error al abrir cliente: ' + err.message, 'error');
+      }
     }
 
     async function guardarEdicion(e) {
       e.preventDefault();
-      const id = Number(document.getElementById('eId').value);
-      const c = await IDB.get('clientes', id);
-      if (!c) return;
+      try {
+        const idVal = document.getElementById('eId').value;
+        const c = await IDB.get('clientes', idVal);
+        if (!c) {
+          toast('No se encontró el registro para actualizar', 'error');
+          return;
+        }
 
-      c.nombre       = safe(document.getElementById('eNombre').value, 100);
-      c.celular      = safe(document.getElementById('eCelular').value, 15);
-      c.fecha_inicio = document.getElementById('eFechaInicio').value || null;
-      c.ip           = safe(document.getElementById('eIp').value, 25);
-      c.zona         = document.getElementById('eZona').value;
-      c.plan         = Number(document.getElementById('ePlan').value);
-      c.estado       = document.getElementById('eEstado').value;
+        c.nombre       = safe(document.getElementById('eNombre').value, 100);
+        c.celular      = safe(document.getElementById('eCelular').value, 15);
+        c.fecha_inicio = document.getElementById('eFechaInicio').value || null;
+        c.ip           = safe(document.getElementById('eIp').value, 25);
+        c.zona         = document.getElementById('eZona').value;
+        c.plan         = Number(document.getElementById('ePlan').value) || 65;
+        c.estado       = document.getElementById('eEstado').value;
 
-      await IDB.put('clientes', c);
-      cerrarModal('modalEditar');
-      toast('✅ Cliente actualizado correctamente en FastNet');
-      cargarClientes(_paginaActual);
-      actualizarEstadisticasSidebar();
+        await IDB.put('clientes', c);
+        cerrarModal('modalEditar');
+        toast('✅ Cliente actualizado correctamente en FastNet');
+        cargarClientes(_paginaActual);
+        actualizarEstadisticasSidebar();
+      } catch (err) {
+        toast('Error al guardar: ' + err.message, 'error');
+      }
     }
 
     async function verHistorialPagos(id) {
-      const c = await IDB.get('clientes', Number(id));
-      if (!c) return;
+      try {
+        const c = await IDB.get('clientes', id);
+        const nombre = c ? c.nombre : `Cliente #${id}`;
+        document.getElementById('modalPagosTit').textContent = `💰 Pagos de ${nombre}`;
 
-      document.getElementById('modalPagosTit').textContent = `💰 Pagos de ${c.nombre}`;
-      const pagos = await IDB.getByIndex('pagos', 'id_cliente', Number(id));
+        const numId = Number(id);
+        const pagos = Number.isFinite(numId) ? await IDB.getByIndex('pagos', 'id_cliente', numId) : [];
 
-      const body = document.getElementById('modalPagosBody');
-      if (!pagos.length) {
-        body.innerHTML = '<p style="padding:20px;text-align:center;color:var(--gris)">Sin pagos registrados para este cliente.</p>';
-      } else {
-        body.innerHTML = `
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Fecha</th><th>Mes</th><th>Monto</th><th>Método</th></tr></thead>
-              <tbody>
-                ${pagos.map(p => `
-                  <tr>
-                    <td>${p.fecha ? p.fecha.slice(0, 10) : '—'}</td>
-                    <td><strong>${esc(p.mes)}</strong></td>
-                    <td style="color:var(--verde);font-weight:700">S/. ${Number(p.monto).toFixed(2)}</td>
-                    <td><span class="badge" style="background:#F1F5F9">${esc(p.metodo || 'EFECTIVO')}</span></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `;
+        const body = document.getElementById('modalPagosBody');
+        if (!pagos.length) {
+          body.innerHTML = '<p style="padding:20px;text-align:center;color:var(--gris)">Sin pagos registrados para este cliente.</p>';
+        } else {
+          body.innerHTML = `
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Fecha</th><th>Mes</th><th>Monto</th><th>Método</th></tr></thead>
+                <tbody>
+                  ${pagos.map(p => `
+                    <tr>
+                      <td>${p.fecha ? p.fecha.slice(0, 10) : '—'}</td>
+                      <td><strong>${esc(p.mes)}</strong></td>
+                      <td style="color:var(--verde);font-weight:700">S/. ${Number(p.monto).toFixed(2)}</td>
+                      <td><span class="badge" style="background:#F1F5F9">${esc(p.metodo || 'EFECTIVO')}</span></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        }
+        document.getElementById('modalPagos').classList.add('open');
+      } catch (err) {
+        toast('Error al consultar historial: ' + err.message, 'error');
       }
-      document.getElementById('modalPagos').classList.add('open');
     }
 
     async function eliminarCliente(id) {
-      const c = await IDB.get('clientes', Number(id));
-      if (!c) return;
+      try {
+        const c = await IDB.get('clientes', id);
+        const nombre = c && c.nombre ? c.nombre : `Cliente #${id}`;
 
-      if (confirm(`¿Está seguro de eliminar permanentemente al cliente "${c.nombre}" de FastNet Loboyacu y todo su historial de pagos y cortes?`)) {
-        await IDB.eliminarClienteCompleto(Number(id));
-        toast('🗑️ Cliente eliminado');
-        cargarClientes(_paginaActual);
+        if (!confirm(`¿Está seguro de eliminar permanentemente al cliente "${nombre}" de FastNet Loboyacu y todo su historial de pagos y cortes?`)) {
+          return;
+        }
+
+        toast('⏳ Eliminando cliente de FastNet...');
+        await IDB.eliminarClienteCompleto(id);
+        toast('🗑️ Cliente eliminado correctamente');
+        await cargarClientes(_paginaActual);
         actualizarEstadisticasSidebar();
+      } catch (err) {
+        console.error('Error al eliminar cliente:', err);
+        toast('❌ Error al eliminar cliente: ' + (err.message || 'Error desconocido'), 'error');
       }
     }
 
     async function enviarMensajeIACliente(id) {
-      const c = await IDB.get('clientes', Number(id));
-      if (!c) return;
-      const mes = mesActual();
-      toast('🤖 Generando mensaje con IA...');
-      const txt = await generarMensajeCobranzaIA({ cliente: c, mes, monto: c.plan || 65, tono: 'amable' });
-      abrirWhatsAppConMensaje(c.celular, txt);
+      try {
+        const c = await IDB.get('clientes', id);
+        if (!c) { toast('Cliente no encontrado', 'error'); return; }
+        const mes = mesActual();
+        toast('🤖 Generando mensaje con IA...');
+        const txt = await generarMensajeCobranzaIA({ cliente: c, mes, monto: c.plan || 65, tono: 'amable' });
+        abrirWhatsAppConMensaje(c.celular, txt);
+      } catch (err) {
+        toast('Error IA: ' + err.message, 'error');
+      }
     }
   </script>
 </body>

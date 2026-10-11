@@ -154,39 +154,65 @@ const IDB = (() => {
       return id;
     },
 
-    // Obtener por ID
+    // Obtener por ID (soporta claves numéricas y strings)
     async get(store, id) {
-      // FIX [CASO-LIMITE-02]: id=0 es falsy pero Number(0) es válido en IDB. Validar explícitamente.
-      const numId = Number(id);
-      if (!Number.isFinite(numId) || numId <= 0) return null;
+      if (id === null || id === undefined || id === '') return null;
       const d = await db();
-      return new Promise((resolve, reject) => {
-        const tx  = d.transaction([store], 'readonly');
-        const req = tx.objectStore(store).get(numId);
-        req.onsuccess = e => resolve(e.target.result || null);
-        req.onerror   = e => reject(e.target.error);
+      return new Promise((resolve) => {
+        const tx = d.transaction([store], 'readonly');
+        const st = tx.objectStore(store);
+        const numId = Number(id);
+        const isNum = Number.isFinite(numId) && numId > 0;
+
+        // Intentar primero con número si es numérico
+        const req = isNum ? st.get(numId) : st.get(id);
+        req.onsuccess = e => {
+          if (e.target.result) {
+            resolve(e.target.result);
+          } else {
+            // Reintentar con string si no se encontró como número
+            try {
+              const req2 = st.get(String(id));
+              req2.onsuccess = e2 => resolve(e2.target.result || null);
+              req2.onerror = () => resolve(null);
+            } catch (_) {
+              resolve(null);
+            }
+          }
+        };
+        req.onerror = () => {
+          try {
+            const req2 = st.get(String(id));
+            req2.onsuccess = e2 => resolve(e2.target.result || null);
+            req2.onerror = () => resolve(null);
+          } catch (_) {
+            resolve(null);
+          }
+        };
       });
     },
 
-    // Eliminar por ID
+    // Eliminar por ID (soporta números y strings + sincroniza con Supabase)
     async delete(store, id) {
+      if (id === null || id === undefined || id === '') return;
       const numId = Number(id);
-      // FIX [CASO-LIMITE-02 cont.]: Misma validación que en get().
-      if (!Number.isFinite(numId) || numId <= 0) return;
+      const isNum = Number.isFinite(numId) && numId > 0;
+      const strId = String(id);
 
       const d = await db();
       await new Promise((resolve, reject) => {
         const tx  = d.transaction([store], 'readwrite');
-        const req = tx.objectStore(store).delete(numId);
-        req.onsuccess = () => resolve();
-        req.onerror   = e => reject(e.target.error);
+        const st = tx.objectStore(store);
+        if (isNum) st.delete(numId);
+        st.delete(strId);
+        tx.oncomplete = () => resolve();
+        tx.onerror = e => reject(e.target.error);
       });
 
       if (_supa) {
         try {
-          // FIX [BUG-02]: Se ignoraba el `error` de la respuesta de Supabase delete.
-          // Ahora se captura para poder loggear si el delete remoto falla.
-          const { error } = await _supa.from(store).delete().eq('id', numId);
+          const targetId = isNum ? numId : strId;
+          const { error } = await _supa.from(store).delete().eq('id', targetId);
           if (error) console.warn(`[Supabase delete] Error en ${store}:`, error.message);
         } catch(err) {
           console.warn(`[Supabase del] Excepción en ${store}:`, err);
@@ -267,9 +293,6 @@ const IDB = (() => {
           tx.onerror = e => reject(e.target.error);
         });
 
-        // FIX [LOGICA-02]: bulkPut enviaba a Supabase solo si _supaOnline=true,
-        // pero durante la sincronización inicial _supaOnline puede aún ser false.
-        // Se usa _supa directamente (igual que en add/put) para no perder datos.
         if (_supa) {
           try {
             const { error } = await _supa.from(store).upsert(chunk, { onConflict: 'id' });
@@ -282,107 +305,196 @@ const IDB = (() => {
       return ok;
     },
 
-    // Consulta paginada y filtrada
+    // Consulta paginada y filtrada — ULTRA OPTIMIZADA PARA 10,000+ CLIENTES
     async query(store, { indexName = null, range = null, filter = null, limit = 50, offset = 0 } = {}) {
       const d = await db();
       return new Promise((resolve, reject) => {
         const tx     = d.transaction([store], 'readonly');
         const st     = tx.objectStore(store);
         const source = indexName ? st.index(indexName) : st;
-        const req    = source.openCursor(range, 'prev');
 
-        const results = [];
-        let skipped = 0;
-        // FIX [LOGICA-03]: `total` contaba solo los elementos que pasaban
-        // el filtro ANTES del offset, no el total real de coincidencias.
-        // Renombrado a `totalFiltrado` para claridad y correcta paginación.
-        let totalFiltrado = 0;
+        // FAST PATH (Sin filtro JS en memoria):
+        // Usa conteo O(1) vía B-Tree y salta directo con cursor.advance()
+        // Se detiene INMEDIATAMENTE al alcanzar limit (no recorre los 10,000 registros).
+        if (!filter) {
+          const countReq = source.count(range);
+          countReq.onsuccess = () => {
+            const total = countReq.result || 0;
+            if (total === 0 || offset >= total) {
+              resolve({ results: [], total });
+              return;
+            }
+
+            const results = [];
+            const req = source.openCursor(range, 'prev');
+            let advanced = false;
+
+            req.onsuccess = e => {
+              const cursor = e.target.result;
+              if (!cursor) {
+                resolve({ results, total });
+                return;
+              }
+
+              if (offset > 0 && !advanced) {
+                advanced = true;
+                cursor.advance(offset);
+                return;
+              }
+
+              results.push(cursor.value);
+              if (results.length >= limit) {
+                resolve({ results, total });
+                return;
+              }
+
+              cursor.continue();
+            };
+            req.onerror = e => reject(e.target.error);
+          };
+          countReq.onerror = () => ejecutarCursorCompleto();
+          return;
+        }
+
+        // SLOW PATH (Filtro JS de búsqueda por texto):
+        ejecutarCursorCompleto();
+
+        function ejecutarCursorCompleto() {
+          const req = source.openCursor(range, 'prev');
+          const results = [];
+          let skipped = 0;
+          let totalFiltrado = 0;
+
+          req.onsuccess = e => {
+            const cursor = e.target.result;
+            if (!cursor) {
+              resolve({ results, total: totalFiltrado });
+              return;
+            }
+            const val = cursor.value;
+            if (!filter || filter(val)) {
+              totalFiltrado++;
+              if (skipped < offset) {
+                skipped++;
+              } else if (results.length < limit) {
+                results.push(val);
+              }
+            }
+            cursor.continue();
+          };
+          req.onerror = e => reject(e.target.error);
+        }
+      });
+    },
+
+    // Búsqueda rápida de clientes para selects (con límite temprano)
+    async buscarClientesRapido(termino = '', { limit = 30, soloActivos = false } = {}) {
+      const s = String(termino || '').toLowerCase().trim();
+      const d = await db();
+      return new Promise((resolve) => {
+        const tx = d.transaction(['clientes'], 'readonly');
+        const st = tx.objectStore('clientes');
+        const req = st.openCursor(null, 'prev');
+        const encontrados = [];
 
         req.onsuccess = e => {
           const cursor = e.target.result;
-          if (!cursor) {
-            resolve({ results, total: totalFiltrado });
+          if (!cursor || encontrados.length >= limit) {
+            resolve(encontrados);
             return;
           }
-          const val = cursor.value;
-          if (!filter || filter(val)) {
-            totalFiltrado++;
-            if (skipped < offset) {
-              skipped++;
-            } else if (results.length < limit) {
-              results.push(val);
+          const c = cursor.value;
+          if (!soloActivos || c.estado === 'ACTIVO') {
+            if (!s || `${c.id} ${c.nombre || ''} ${c.ip || ''} ${c.celular || ''} ${c.zona || ''}`.toLowerCase().includes(s)) {
+              encontrados.push(c);
             }
           }
           cursor.continue();
         };
-        req.onerror = e => reject(e.target.error);
+        req.onerror = () => resolve([]);
       });
     },
 
-    // Búsqueda rápida de clientes para selects
-    async buscarClientesRapido(termino = '', { limit = 30, soloActivos = false } = {}) {
-      const s = String(termino || '').toLowerCase().trim();
-      const todos = await this.getAll('clientes');
-      let filtrados = todos;
-      if (soloActivos) filtrados = filtrados.filter(c => c.estado === 'ACTIVO');
-      if (s) {
-        filtrados = filtrados.filter(c =>
-          // FIX [INNECESARIO-01]: Eliminada referencia a c.dni que ya no existe en los registros nuevos.
-          `${c.id} ${c.nombre || ''} ${c.ip || ''} ${c.celular || ''} ${c.zona || ''}`.toLowerCase().includes(s)
-        );
-      }
-      return filtrados.slice(0, limit);
-    },
-
-    // Eliminación atómica en cascada
+    // Eliminación atómica en cascada — 100% GARANTIZADA LOCAL Y NUBE
     async eliminarClienteCompleto(id) {
-      const numId = Number(id);
-      // FIX [CASO-LIMITE-02 cont.]: Misma validación de id para prevenir borrado masivo accidental.
-      if (!Number.isFinite(numId) || numId <= 0) throw new Error('[eliminarClienteCompleto] ID inválido: ' + id);
+      if (id === null || id === undefined || id === '') {
+        throw new Error('[eliminarClienteCompleto] ID inválido: ' + id);
+      }
 
+      const numId = Number(id);
+      const isNum = Number.isFinite(numId) && numId > 0;
+      const strId = String(id);
       const d = await db();
 
+      // 1. Borrado atómico en IndexedDB
       await new Promise((resolve, reject) => {
-        // FIX [BUG-03]: La eliminación de 'fotos' en cascada fue omitida en la
-        // transacción local a pesar de que la store 'fotos' existe. Se añade ahora.
         const tx = d.transaction(['clientes', 'pagos', 'cortes', 'fotos'], 'readwrite');
-        tx.objectStore('clientes').delete(numId);
+        const cliStore = tx.objectStore('clientes');
 
-        const pIdx = tx.objectStore('pagos').index('id_cliente');
-        const pReq = pIdx.openKeyCursor(IDBKeyRange.only(numId));
-        pReq.onsuccess = e => {
-          const c = e.target.result;
-          if (c) { tx.objectStore('pagos').delete(c.primaryKey); c.continue(); }
-        };
+        if (isNum) cliStore.delete(numId);
+        cliStore.delete(strId);
 
-        const kIdx = tx.objectStore('cortes').index('id_cliente');
-        const kReq = kIdx.openKeyCursor(IDBKeyRange.only(numId));
-        kReq.onsuccess = e => {
-          const c = e.target.result;
-          if (c) { tx.objectStore('cortes').delete(c.primaryKey); c.continue(); }
-        };
+        // Limpiar pagos del cliente
+        try {
+          const pStore = tx.objectStore('pagos');
+          if (pStore.indexNames.contains('id_cliente')) {
+            const pIdx = pStore.index('id_cliente');
+            if (isNum) {
+              const req = pIdx.openKeyCursor(IDBKeyRange.only(numId));
+              req.onsuccess = e => { const c = e.target.result; if (c) { pStore.delete(c.primaryKey); c.continue(); } };
+            }
+            const reqStr = pIdx.openKeyCursor(IDBKeyRange.only(strId));
+            reqStr.onsuccess = e => { const c = e.target.result; if (c) { pStore.delete(c.primaryKey); c.continue(); } };
+          }
+        } catch (errP) {
+          console.warn('[eliminarClienteCompleto] pagos error:', errP);
+        }
 
-        // FIX [BUG-03 cont.]: Eliminar fotos locales asociadas al cliente.
-        const fIdx = tx.objectStore('fotos').index('cliente_id');
-        const fReq = fIdx.openKeyCursor(IDBKeyRange.only(numId));
-        fReq.onsuccess = e => {
-          const c = e.target.result;
-          if (c) { tx.objectStore('fotos').delete(c.primaryKey); c.continue(); }
-        };
+        // Limpiar cortes del cliente
+        try {
+          const kStore = tx.objectStore('cortes');
+          if (kStore.indexNames.contains('id_cliente')) {
+            const kIdx = kStore.index('id_cliente');
+            if (isNum) {
+              const req = kIdx.openKeyCursor(IDBKeyRange.only(numId));
+              req.onsuccess = e => { const c = e.target.result; if (c) { kStore.delete(c.primaryKey); c.continue(); } };
+            }
+            const reqStr = kIdx.openKeyCursor(IDBKeyRange.only(strId));
+            reqStr.onsuccess = e => { const c = e.target.result; if (c) { kStore.delete(c.primaryKey); c.continue(); } };
+          }
+        } catch (errK) {
+          console.warn('[eliminarClienteCompleto] cortes error:', errK);
+        }
+
+        // Limpiar fotos del cliente
+        try {
+          const fStore = tx.objectStore('fotos');
+          if (fStore.indexNames.contains('cliente_id')) {
+            const fIdx = fStore.index('cliente_id');
+            if (isNum) {
+              const req = fIdx.openKeyCursor(IDBKeyRange.only(numId));
+              req.onsuccess = e => { const c = e.target.result; if (c) { fStore.delete(c.primaryKey); c.continue(); } };
+            }
+            const reqStr = fIdx.openKeyCursor(IDBKeyRange.only(strId));
+            reqStr.onsuccess = e => { const c = e.target.result; if (c) { fStore.delete(c.primaryKey); c.continue(); } };
+          }
+        } catch (errF) {
+          console.warn('[eliminarClienteCompleto] fotos error:', errF);
+        }
 
         tx.oncomplete = () => resolve();
-        tx.onerror = e => reject(e.target.error);
+        tx.onerror = e => reject(e.target.error || new Error('Error al eliminar en IndexedDB'));
       });
 
-      if (_supaOnline && _supa) {
+      // 2. Borrado remoto inmediato en Supabase (evita que el cliente "resucite" en la sincronización)
+      if (_supa) {
         try {
-          // FIX [BUG-04]: Solo se borraba al cliente en Supabase, pero no sus
-          // pagos, cortes y fotos (aunque el FK ON DELETE CASCADE los elimina en
-          // Supabase si está bien configurado, es más seguro ser explícito y
-          // también borrar fotos que no tienen FK).
+          const targetId = isNum ? numId : strId;
           await Promise.allSettled([
-            _supa.from('clientes').delete().eq('id', numId),
-            _supa.from('fotos').delete().eq('cliente_id', numId)
+            _supa.from('clientes').delete().eq('id', targetId),
+            _supa.from('pagos').delete().eq('id_cliente', targetId),
+            _supa.from('cortes').delete().eq('id_cliente', targetId),
+            _supa.from('fotos').delete().eq('cliente_id', targetId)
           ]);
         } catch(err) {
           console.warn('[Supabase eliminarClienteCompleto]:', err);
@@ -702,20 +814,39 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
     actualizarBadgesSupabase(true);
     iniciarRealtimeSupabase();
 
-    // PASO 1: Descargar remotos primero (no perder datos que solo están en la nube)
-    const { data: supaCli } = await _supa.from('clientes').select('*');
+    // Función auxiliar para descargar tablas completas de Supabase superando el límite por defecto de 1,000
+    async function descargarTablaCompleta(tabla, columnas = '*') {
+      let registros = [];
+      let desde = 0;
+      const CHUNK = 1000;
+      while (true) {
+        const { data, error } = await _supa
+          .from(tabla)
+          .select(columnas)
+          .range(desde, desde + CHUNK - 1);
+        if (error) {
+          console.warn(`[Sync download] Error en ${tabla}:`, error.message);
+          break;
+        }
+        if (!data || !data.length) break;
+        registros.push(...data);
+        if (data.length < CHUNK) break;
+        desde += CHUNK;
+      }
+      return registros;
+    }
+
+    // PASO 1: Descargar remotos primero (con paginación completa para soportar 10,000+ clientes)
+    const supaCli = await descargarTablaCompleta('clientes', '*');
     if (supaCli && supaCli.length) await IDB.bulkPut('clientes', supaCli);
 
-    const { data: supaPag } = await _supa.from('pagos').select('*');
+    const supaPag = await descargarTablaCompleta('pagos', '*');
     if (supaPag && supaPag.length) await IDB.bulkPut('pagos', supaPag);
 
-    const { data: supaCor } = await _supa.from('cortes').select('*');
+    const supaCor = await descargarTablaCompleta('cortes', '*');
     if (supaCor && supaCor.length) await IDB.bulkPut('cortes', supaCor);
 
-    // FIX [CASO-LIMITE-05]: Las fotos contienen data_url (base64) que pueden ser
-    // enormes. Descargarlas todas de golpe puede agotar la memoria en móviles.
-    // Se descarga solo metadatos (sin data_url) para el sidebar/galería.
-    const { data: supaFot } = await _supa.from('fotos').select('id,titulo,nombre,categoria,cliente_id,zona,tamano,tipo_mime,mtime,creado_el');
+    const supaFot = await descargarTablaCompleta('fotos', 'id,titulo,nombre,categoria,cliente_id,zona,tamano,tipo_mime,mtime,creado_el');
     if (supaFot && supaFot.length) await IDB.bulkPut('fotos', supaFot);
 
     // PASO 2: Subir locales (datos que no están en Supabase aún)

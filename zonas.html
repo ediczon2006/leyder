@@ -126,6 +126,15 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Paginación Zonas -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
+        <span style="font-size:0.82rem;color:var(--gris)" id="paginfoZona">Mostrando clientes</span>
+        <div class="btn-group" id="paginacionZona">
+          <button class="btn btn-outline btn-sm" id="btnPagZonaPrev" onclick="cambiarPaginaZona(-1)">◀ Anterior</button>
+          <button class="btn btn-outline btn-sm" id="btnPagZonaNext" onclick="cambiarPaginaZona(1)">Siguiente ▶</button>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -210,8 +219,12 @@
         sub.textContent = `Listado exclusivo de usuarios registrados en el sector de ${z}`;
       }
 
+      _pagZona = 0;
       renderTablaZona();
     }
+
+    let _pagZona = 0;
+    const ZONA_PAGE_SIZE = 50;
 
     function renderTablaZona() {
       const tbody = document.getElementById('tbodyClientesZona');
@@ -230,14 +243,25 @@
         );
       }
 
-      if (!lista.length) {
+      const total = lista.length;
+      if (!total) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gris)">No hay clientes en esta selección.</td></tr>';
+        document.getElementById('paginfoZona').textContent = '0 clientes encontrados';
+        document.getElementById('btnPagZonaPrev').disabled = true;
+        document.getElementById('btnPagZonaNext').disabled = true;
         return;
       }
 
-      tbody.innerHTML = lista.map(c => `
+      const pagTotal = Math.ceil(total / ZONA_PAGE_SIZE) || 1;
+      if (_pagZona >= pagTotal) _pagZona = pagTotal - 1;
+      if (_pagZona < 0) _pagZona = 0;
+
+      const inicio = _pagZona * ZONA_PAGE_SIZE;
+      const paginaItems = lista.slice(inicio, inicio + ZONA_PAGE_SIZE);
+
+      tbody.innerHTML = paginaItems.map(c => `
         <tr>
-          <td><strong style="color:var(--azul)">#${c.id}</strong></td>
+          <td><strong style="color:var(--azul)">#${esc(c.id)}</strong></td>
           <td><strong>${esc(c.nombre)}</strong></td>
           <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
           <td><code>${esc(c.ip || '—')}</code></td>
@@ -250,15 +274,25 @@
           <td><strong>${esc(c.celular || '—')}</strong></td>
           <td>
             <div class="btn-group">
-              <a href="pagos.html?id=${c.id}" class="btn btn-outline btn-sm" title="Registrar Pago">💳</a>
+              <a href="pagos.html?id=${encodeURIComponent(c.id)}" class="btn btn-outline btn-sm" title="Registrar Pago">💳</a>
               <a href="clientes.html" class="btn btn-outline btn-sm" title="Editar en Clientes">✏️</a>
             </div>
           </td>
         </tr>
       `).join('');
+
+      document.getElementById('paginfoZona').textContent = `Página ${_pagZona + 1} de ${pagTotal} (${total.toLocaleString()} clientes)`;
+      document.getElementById('btnPagZonaPrev').disabled = (_pagZona === 0);
+      document.getElementById('btnPagZonaNext').disabled = ((_pagZona + 1) >= pagTotal);
+    }
+
+    function cambiarPaginaZona(delta) {
+      _pagZona += delta;
+      renderTablaZona();
     }
 
     function filtrarTablaZona() {
+      _pagZona = 0;
       renderTablaZona();
     }
 

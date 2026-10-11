@@ -169,6 +169,15 @@
       </table>
     </div>
 
+    <!-- Paginación Pendientes -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
+      <span style="font-size:0.82rem;color:var(--gris)" id="paginfoPendientes">Mostrando clientes pendientes</span>
+      <div class="btn-group" id="paginacionPendientes">
+        <button class="btn btn-outline btn-sm" id="btnPagPendPrev" onclick="cambiarPaginaPend(-1)">◀ Anterior</button>
+        <button class="btn btn-outline btn-sm" id="btnPagPendNext" onclick="cambiarPaginaPend(1)">Siguiente ▶</button>
+      </div>
+    </div>
+
   </main>
 
   <!-- MODAL ASISTENTE IA DE COBRANZA WHATSAPP -->
@@ -354,24 +363,41 @@
         filtrados = filtrados.filter(c => 
           (c.nombre && c.nombre.toLowerCase().includes(q)) ||
           (c.ip && c.ip.includes(q)) ||
-          (c.dni && c.dni.includes(q)) ||
           (c.celular && c.celular.includes(q))
         );
       }
 
+      _pagPendientes = 0;
       renderTablaPendientes(filtrados);
     }
 
+    let _pagPendientes = 0;
+    const PENDIENTES_PAGE_SIZE = 50;
+    let _ultimosPendientesFiltrados = [];
+
     function renderTablaPendientes(lista) {
+      _ultimosPendientesFiltrados = lista;
       const tbody = document.getElementById('tbodyPendientes');
-      if (!lista.length) {
+      const total = lista.length;
+
+      if (!total) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:#16A34A;font-weight:700">🎉 ¡Excelente! No hay clientes pendientes con los filtros actuales.</td></tr>';
+        document.getElementById('paginfoPendientes').textContent = '0 pendientes';
+        document.getElementById('btnPagPendPrev').disabled = true;
+        document.getElementById('btnPagPendNext').disabled = true;
         return;
       }
 
-      tbody.innerHTML = lista.map(c => `
+      const pagTotal = Math.ceil(total / PENDIENTES_PAGE_SIZE) || 1;
+      if (_pagPendientes >= pagTotal) _pagPendientes = pagTotal - 1;
+      if (_pagPendientes < 0) _pagPendientes = 0;
+
+      const inicio = _pagPendientes * PENDIENTES_PAGE_SIZE;
+      const paginaItems = lista.slice(inicio, inicio + PENDIENTES_PAGE_SIZE);
+
+      tbody.innerHTML = paginaItems.map(c => `
         <tr>
-          <td><strong style="color:var(--azul)">#${c.id}</strong></td>
+          <td><strong style="color:var(--azul)">#${esc(c.id)}</strong></td>
           <td><strong>${esc(c.nombre)}</strong></td>
           <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
           <td><code>${esc(c.ip || '—')}</code></td>
@@ -384,14 +410,14 @@
           <td><strong>${esc(c.celular || '—')}</strong></td>
           <td>
             <div class="btn-group">
-              <button class="btn btn-primary btn-sm" onclick="abrirModalCobranzaIA(${c.id})" style="background:#7C3AED;border-color:#7C3AED" title="Generar mensaje con IA y enviar a WhatsApp">
+              <button class="btn btn-primary btn-sm" onclick="abrirModalCobranzaIA('${esc(c.id)}')" style="background:#7C3AED;border-color:#7C3AED" title="Generar mensaje con IA y enviar a WhatsApp">
                 🤖 IA WA
               </button>
-              <a href="pagos.html?id=${c.id}" class="btn btn-success btn-sm" title="Registrar Pago">
+              <a href="pagos.html?id=${encodeURIComponent(c.id)}" class="btn btn-success btn-sm" title="Registrar Pago">
                 💳 Cobrar
               </a>
               ${c.estado === 'ACTIVO' ? `
-                <button class="btn btn-danger btn-sm" onclick="cortarPorMora(${c.id})" title="Cortar Servicio">
+                <button class="btn btn-danger btn-sm" onclick="cortarPorMora('${esc(c.id)}')" title="Cortar Servicio">
                   ✂️
                 </button>
               ` : ''}
@@ -399,12 +425,21 @@
           </td>
         </tr>
       `).join('');
+
+      document.getElementById('paginfoPendientes').textContent = `Página ${_pagPendientes + 1} de ${pagTotal} (${total.toLocaleString()} pendientes)`;
+      document.getElementById('btnPagPendPrev').disabled = (_pagPendientes === 0);
+      document.getElementById('btnPagPendNext').disabled = ((_pagPendientes + 1) >= pagTotal);
+    }
+
+    function cambiarPaginaPend(delta) {
+      _pagPendientes += delta;
+      renderTablaPendientes(_ultimosPendientesFiltrados);
     }
 
     // ══ FUNCIONES DEL ASISTENTE IA DE COBRANZA ══════════════
     async function abrirModalCobranzaIA(id = null) {
-      if (id) {
-        clienteActualIA = clientesLista.find(c => c.id === id);
+      if (id !== null && id !== undefined) {
+        clienteActualIA = clientesLista.find(c => String(c.id) === String(id));
       } else if (listaPendientes.length) {
         clienteActualIA = listaPendientes[0];
       }
@@ -533,8 +568,11 @@
     }
 
     async function cortarPorMora(id) {
-      const cli = clientesLista.find(c => c.id === id);
-      if (!cli) return;
+      const cli = clientesLista.find(c => String(c.id) === String(id));
+      if (!cli) {
+        toast('Cliente no encontrado en la lista', 'error');
+        return;
+      }
 
       if (!confirm(`¿Estás seguro de suspender el servicio al cliente "${cli.nombre}" por falta de pago?`)) return;
 
