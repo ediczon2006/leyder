@@ -344,6 +344,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       renderSidebar('explorador');
       configurarDragAndDrop();
+      window.onDatosActualizados = () => cargarDatos();
       await cargarDatos();
     });
 

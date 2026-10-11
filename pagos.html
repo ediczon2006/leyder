@@ -353,6 +353,11 @@
       }
 
       await cargarHistorialPagos();
+
+      window.onDatosActualizados = async () => {
+        todosClientes = await IDB.getAll('clientes');
+        await cargarHistorialPagos();
+      };
     });
 
     function setMontoRapido(monto) {

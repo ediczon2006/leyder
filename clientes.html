@@ -196,6 +196,10 @@
       renderSidebar('clientes');
       cargarClientes(0);
 
+      window.onDatosActualizados = () => {
+        cargarClientes(_paginaActual);
+      };
+
       // Eventos de filtros
       ['filtZona', 'filtEstado', 'filtPlan'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => cargarClientes(0));

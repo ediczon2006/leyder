@@ -123,9 +123,7 @@
   <script src="js/db.js"></script>
   <script src="js/sidebar.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      renderSidebar('index');
-
+    async function cargarDashboard() {
       const mes = mesActual();
       document.getElementById('txtMesActual').textContent = mes;
       document.getElementById('kpiCobradoLbl').textContent = `Cobrado en ${mes}`;
@@ -193,6 +191,12 @@
       } catch(err) {
         console.error('Error cargando Dashboard:', err);
       }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderSidebar('index');
+      window.onDatosActualizados = cargarDashboard;
+      await cargarDashboard();
     });
   </script>
 </body>

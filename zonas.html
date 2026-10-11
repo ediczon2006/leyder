@@ -139,6 +139,11 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
       renderSidebar('zonas');
+      window.onDatosActualizados = async () => {
+        todosClientes = await IDB.getAll('clientes');
+        renderTarjetasZonas();
+        renderTablaZona();
+      };
       todosClientes = await IDB.getAll('clientes');
       renderTarjetasZonas();
       renderTablaZona();

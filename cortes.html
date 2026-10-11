@@ -181,6 +181,7 @@
       renderSidebar('cortes');
       const hoy = new Date().toISOString().split('T')[0];
       document.getElementById('corteFecha').value = hoy;
+      window.onDatosActualizados = () => recargarDatos();
       await recargarDatos();
     });
 

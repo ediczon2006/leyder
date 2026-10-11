@@ -86,11 +86,19 @@ const IDB = (() => {
         req.onerror   = e => reject(e.target.error);
       });
 
-      if (_supaOnline && _supa) {
+      if (_supa) {
         try {
           const payload = { ...data, id };
-          _supa.from(store).upsert(payload).then().catch(err => console.warn(`[Supabase add] ${store}:`, err));
-        } catch(_) {}
+          const { error } = await _supa.from(store).upsert(payload, { onConflict: 'id' });
+          if (!error) {
+            _supaOnline = true;
+            actualizarBadgesSupabase(true);
+          } else {
+            console.warn(`[Supabase add] Error en ${store}:`, error.message);
+          }
+        } catch(err) {
+          console.warn(`[Supabase add] Excepción en ${store}:`, err);
+        }
       }
 
       return id;
@@ -106,10 +114,18 @@ const IDB = (() => {
         req.onerror   = e => reject(e.target.error);
       });
 
-      if (_supaOnline && _supa) {
+      if (_supa) {
         try {
-          _supa.from(store).upsert(data).then().catch(err => console.warn(`[Supabase put] ${store}:`, err));
-        } catch(_) {}
+          const { error } = await _supa.from(store).upsert(data, { onConflict: 'id' });
+          if (!error) {
+            _supaOnline = true;
+            actualizarBadgesSupabase(true);
+          } else {
+            console.warn(`[Supabase put] Error en ${store}:`, error.message);
+          }
+        } catch(err) {
+          console.warn(`[Supabase put] Excepción en ${store}:`, err);
+        }
       }
 
       return id;
@@ -136,10 +152,12 @@ const IDB = (() => {
         req.onerror   = e => reject(e.target.error);
       });
 
-      if (_supaOnline && _supa) {
+      if (_supa) {
         try {
-          _supa.from(store).delete().eq('id', Number(id)).then().catch(err => console.warn(`[Supabase del] ${store}:`, err));
-        } catch(_) {}
+          await _supa.from(store).delete().eq('id', Number(id));
+        } catch(err) {
+          console.warn(`[Supabase del] Excepción en ${store}:`, err);
+        }
       }
     },
 
@@ -460,7 +478,55 @@ DROP POLICY IF EXISTS "Acceso total cortes" ON public.cortes;
 CREATE POLICY "Acceso total cortes" ON public.cortes FOR ALL USING (true) WITH CHECK (true);
 DROP POLICY IF EXISTS "Acceso total fotos" ON public.fotos;
 CREATE POLICY "Acceso total fotos" ON public.fotos FOR ALL USING (true) WITH CHECK (true);
+
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.clientes, public.pagos, public.cortes, public.fotos;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+END $$;
 `;
+
+let _realtimeIniciado = false;
+function iniciarRealtimeSupabase() {
+  if (_realtimeIniciado || !_supa) return;
+  _realtimeIniciado = true;
+  try {
+    _supa.channel('leytrix-realtime-all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, async (p) => {
+        if (p.eventType === 'INSERT' || p.eventType === 'UPDATE') {
+          await IDB.put('clientes', p.new);
+        } else if (p.eventType === 'DELETE' && p.old && p.old.id) {
+          await IDB.delete('clientes', p.old.id);
+        }
+        if (typeof window.onDatosActualizados === 'function') window.onDatosActualizados();
+        actualizarEstadisticasSidebar();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pagos' }, async (p) => {
+        if (p.eventType === 'INSERT' || p.eventType === 'UPDATE') {
+          await IDB.put('pagos', p.new);
+        } else if (p.eventType === 'DELETE' && p.old && p.old.id) {
+          await IDB.delete('pagos', p.old.id);
+        }
+        if (typeof window.onDatosActualizados === 'function') window.onDatosActualizados();
+        actualizarEstadisticasSidebar();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cortes' }, async (p) => {
+        if (p.eventType === 'INSERT' || p.eventType === 'UPDATE') {
+          await IDB.put('cortes', p.new);
+        } else if (p.eventType === 'DELETE' && p.old && p.old.id) {
+          await IDB.delete('cortes', p.old.id);
+        }
+        if (typeof window.onDatosActualizados === 'function') window.onDatosActualizados();
+        actualizarEstadisticasSidebar();
+      })
+      .subscribe();
+  } catch(e) {
+    console.warn('Realtime notice:', e);
+  }
+}
 
 async function verificarSupabase(mostrarToast = false) {
   if (!_supa) {
@@ -482,6 +548,7 @@ async function verificarSupabase(mostrarToast = false) {
 
     _supaOnline = true;
     actualizarBadgesSupabase(true);
+    iniciarRealtimeSupabase();
     if (mostrarToast) toast('🟢 ¡Conectado a Supabase Cloud con éxito!');
     sincronizarConSupabase(false);
     return true;
@@ -559,6 +626,7 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
     }
     _supaOnline = true;
     actualizarBadgesSupabase(true);
+    iniciarRealtimeSupabase();
 
     // 1. Subir locales
     const cliLocales = await IDB.getAll('clientes');
@@ -596,6 +664,8 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
 
     if (mostrarFeedback) toast('✅ ¡Sincronización con Supabase Cloud completada exitosamente!');
     if (typeof onSyncComplete === 'function') onSyncComplete();
+    if (typeof window.onDatosActualizados === 'function') window.onDatosActualizados();
+    actualizarEstadisticasSidebar();
   } catch(err) {
     console.error('Error sincronizando Supabase:', err);
     if (mostrarFeedback) toast('⚠️ Error al sincronizar: ' + (err.message || ''), 'error');

@@ -112,6 +112,7 @@
       const mes = mesActual();
       document.getElementById('selMesPendiente').value = mes;
 
+      window.onDatosActualizados = () => cargarDatos();
       await cargarDatos();
     });
 

@@ -112,3 +112,13 @@ CREATE INDEX IF NOT EXISTS idx_pagos_cliente ON public.pagos(id_cliente);
 CREATE INDEX IF NOT EXISTS idx_cortes_cliente ON public.cortes(id_cliente);
 CREATE INDEX IF NOT EXISTS idx_fotos_categoria ON public.fotos(categoria);
 CREATE INDEX IF NOT EXISTS idx_fotos_cliente ON public.fotos(cliente_id);
+
+-- Habilitar Sincronización en Tiempo Real (Realtime) para ver cambios en vivo entre laptop y celular
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.clientes, public.pagos, public.cortes, public.fotos;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+END $$;
