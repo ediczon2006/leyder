@@ -408,6 +408,22 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
 <!-- INICIO -->
 <section class="page active" id="page-inicio">
   <div class="page-header"><h2>📡 Panel de Control — Leytrix ISP</h2><p>Resumen general del servicio (Optimizado para 1,000,000+ registros)</p></div>
+  <!-- Aviso de Estado Supabase Cloud -->
+  <div id="bannerSupaAlerta" style="display:none;background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:12px;padding:14px 18px;margin-bottom:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:2rem">☁️</span>
+      <div>
+        <strong style="color:#92400E;font-size:0.92rem;display:block">Base de datos en la nube: Tablas pendientes de activar en Supabase</strong>
+        <p style="color:#B45309;font-size:0.8rem;margin:2px 0 0">Tus datos están guardados localmente. Para activarlos en la nube y verlos desde cualquier dispositivo, solo ejecuta el script SQL en tu panel de Supabase (toma 1 minuto).</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary btn-sm" onclick="abrirModalSupabase()" style="background:#D97706;border-color:#D97706;padding:8px 14px">
+        ⚡ Activar Supabase Cloud
+      </button>
+    </div>
+  </div>
+
     <div class="kpi-grid" id="kpiGrid"><div class="kpi kpi-blue"><div class="val">—</div><div class="lbl">Cargando</div></div></div>
 
   <!-- Acceso Directo en el Frente al Archivo Fotográfico & Comprobantes ISP -->
@@ -988,11 +1004,14 @@ code{background:var(--azul-xs);color:var(--azul);padding:2px 6px;border-radius:4
           Si aún no has creado las tablas en tu proyecto, copia este código, entra a <strong>Supabase Dashboard &gt; SQL Editor &gt; New Query</strong>, pégalo y presiona <strong>Run</strong>:
         </p>
         <pre id="codigoSqlSupa" style="background:#0F172A;color:#38BDF8;padding:12px;border-radius:8px;font-size:0.72rem;max-height:140px;overflow:auto;user-select:all"></pre>
-        <div style="display:flex;gap:10px;margin-top:10px">
-          <button class="btn btn-outline btn-sm" id="btnCopiarSqlSupa" style="flex:1;justify-content:center">
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="btnCopiarSqlSupa" onclick="copiarSqlSupabase()" style="background:#16A34A;border-color:#16A34A;flex:1;min-width:160px;justify-content:center">
             📋 Copiar Código SQL
           </button>
-          <button class="btn btn-ghost btn-sm" id="btnReverificarSupa" onclick="verificarSupabase(true)" style="flex:1;justify-content:center">
+          <a href="https://supabase.com/dashboard/project/baeobhvgfrdbwyqapqzf/sql/new" target="_blank" class="btn btn-primary btn-sm" style="background:#0284C7;border-color:#0284C7;flex:1;min-width:160px;justify-content:center;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+            🔗 Abrir SQL Editor en Supabase
+          </a>
+          <button class="btn btn-outline btn-sm" id="btnReverificarSupa" onclick="verificarSupabase(true)" style="flex:1;min-width:140px;justify-content:center">
             🔄 Probar Conexión
           </button>
         </div>
@@ -1648,7 +1667,9 @@ function actualizarBadgesSupabase(online, msg = '') {
   const dotEl  = document.getElementById('sidebarSupaDot');
   const expEl  = document.getElementById('expSupaBadge');
   const modEl  = document.getElementById('modalSupaStatusBadge');
+  const banEl  = document.getElementById('bannerSupaAlerta');
 
+  if (banEl)  banEl.style.display = online ? 'none' : 'flex';
   if (sideEl) sideEl.textContent = online ? 'Supabase En Línea' : 'Supabase (Modo Local)';
   if (dotEl)  dotEl.style.background = online ? '#10B981' : '#F59E0B';
 
@@ -2458,7 +2479,7 @@ function mostrarDetallesArchivo(info) {
       <p><strong>${esc(info.nombre)}</strong> | ${esc(info.cliente_nombre || 'Sin cliente')} | ${esc(info.zona || 'General')}</p>
       <img src="${url}"/>
       <p style="margin-top:14px;color:#666">${esc(info.notas || '')}</p>
-      <script>window.print();</script>
+      <script>window.print();<\/script>
       </body></html>
     `);
     w.document.close();
