@@ -5,9 +5,56 @@
 //  - Incluye el estado de Supabase Cloud y el modal en cada página
 // ========================================================
 
+function toggleSidebarMobile() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  if (!sb) return;
+  const isOpen = sb.classList.toggle('open');
+  if (ov) {
+    if (isOpen) ov.classList.add('active');
+    else ov.classList.remove('active');
+  }
+}
+
+function cerrarSidebarMobile() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  if (sb) sb.classList.remove('open');
+  if (ov) ov.classList.remove('active');
+}
+
 function renderSidebar(activePage) {
   const sidebar = document.getElementById('sidebar');
   if (!sidebar) return;
+
+  // 1. Inyectar Barra Superior Móvil si no existe
+  if (!document.getElementById('mobile-topbar')) {
+    const topbar = document.createElement('header');
+    topbar.id = 'mobile-topbar';
+    topbar.innerHTML = `
+      <button class="mobile-hamburger-btn" onclick="toggleSidebarMobile()" aria-label="Abrir Menú">☰</button>
+      <div class="mobile-brand">
+        <img src="img/logo.png" alt="Leytrix Logo" onerror="this.style.display='none'" />
+        <div>
+          <div class="mobile-brand-title">FASTNET LOBOYACU</div>
+          <span class="mobile-brand-sub">Leytrix • ISP</span>
+        </div>
+      </div>
+      <div class="mobile-cloud-pill" onclick="abrirModalSupabase()" title="Supabase Cloud">
+        <span id="mobileSupaDot" class="mobile-cloud-dot"></span>
+        <span>☁️</span>
+      </div>
+    `;
+    document.body.prepend(topbar);
+  }
+
+  // 2. Inyectar Overlay para cerrar menú en móvil
+  if (!document.getElementById('sidebar-overlay')) {
+    const overlay = document.createElement('div');
+    overlay.id = 'sidebar-overlay';
+    overlay.onclick = cerrarSidebarMobile;
+    document.body.appendChild(overlay);
+  }
 
   const links = [
     { href: 'index.html',        icon: '🏠', text: 'Panel ISP',            key: 'index' },
@@ -22,7 +69,8 @@ function renderSidebar(activePage) {
   ];
 
   sidebar.innerHTML = `
-    <div class="sidebar-logo" style="text-align:center;padding:18px 14px 12px">
+    <div class="sidebar-logo" style="text-align:center;padding:18px 14px 12px;position:relative">
+      <button onclick="cerrarSidebarMobile()" class="btn-sidebar-close" style="position:absolute;top:10px;right:10px;background:none;border:none;color:#94A3B8;font-size:1.4rem;cursor:pointer;display:none" title="Cerrar Menú">✕</button>
       <img src="img/logo.png" alt="Leytrix" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2.5px solid #38BDF8;box-shadow:0 0 18px rgba(56,189,248,0.45);display:block;margin:0 auto 8px;background:#030712" onerror="this.style.display='none'" />
       <h1 style="font-size:0.98rem;margin:0;letter-spacing:0.5px">FASTNET LOBOYACU</h1>
       <p style="font-size:0.75rem;margin:2px 0 0;color:#94A3B8">Leytrix • Velocidad y Confianza</p>
@@ -39,7 +87,7 @@ function renderSidebar(activePage) {
     </div>
     <div style="flex:1;padding:8px 0;overflow-y:auto">
       ${links.map(l => `
-        <a href="${l.href}" class="nav-link${activePage === l.key ? ' active' : ''}">
+        <a href="${l.href}" class="nav-link${activePage === l.key ? ' active' : ''}" onclick="cerrarSidebarMobile()">
           <span class="nav-icon">${l.icon}</span>
           <span>${l.text}</span>
         </a>

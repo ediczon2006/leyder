@@ -762,9 +762,13 @@ function actualizarBadgesSupabase(online) {
   const modEl  = document.getElementById('modalSupaStatusBadge');
   const banEl  = document.getElementById('bannerSupaAlerta');
 
+  // Sincronizar indicador móvil con el indicador desktop
+  const mobDot = document.getElementById('mobileSupaDot');
+
   if (banEl)  banEl.style.display = online ? 'none' : 'flex';
   if (sideEl) sideEl.textContent = online ? 'Supabase En Línea' : 'Supabase (Modo Local)';
   if (dotEl)  dotEl.style.background = online ? '#10B981' : '#F59E0B';
+  if (mobDot) mobDot.style.background = online ? '#10B981' : '#F59E0B';
 
   if (expEl) {
     expEl.style.background  = online ? '#ECFDF5' : '#FFFBEB';

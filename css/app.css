@@ -574,24 +574,292 @@ tr.row-cortado td {
   }
 }
 
-/* ══ RESPONSIVE ═══════════════════════════════════════ */
-@media (max-width: 900px) {
+/* ══ BARRA SUPERIOR MÓVIL & OVERLAY (DRAWER) ═════════ */
+#mobile-topbar {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 58px;
+  background: var(--azul);
+  color: #fff;
+  z-index: 990;
+  padding: 0 16px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.22);
+}
+
+.mobile-hamburger-btn {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  font-size: 1.4rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.mobile-hamburger-btn:active {
+  background: rgba(255,255,255,0.25);
+  transform: scale(0.95);
+}
+
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mobile-brand img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid #38BDF8;
+  object-fit: cover;
+  box-shadow: 0 0 8px rgba(56,189,248,0.4);
+}
+.mobile-brand-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #fff;
+  line-height: 1.1;
+}
+.mobile-brand-sub {
+  font-size: 0.68rem;
+  color: #94A3B8;
+  display: block;
+}
+
+.mobile-cloud-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(2, 132, 199, 0.25);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 16px;
+  color: #38BDF8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.mobile-cloud-pill:active {
+  background: rgba(2, 132, 199, 0.4);
+}
+.mobile-cloud-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #F59E0B;
+}
+
+#sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(2px);
+  z-index: 1040;
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+#sidebar-overlay.active {
+  display: block;
+  opacity: 1;
+}
+
+/* ══ RESPONSIVE: LAPTOP & DESKTOP (>= 901px) ══════════ */
+@media (min-width: 901px) {
+  #mobile-topbar {
+    display: none !important;
+  }
+  #sidebar-overlay {
+    display: none !important;
+  }
   #sidebar {
-    width: 60px;
-  }
-  .sidebar-logo h1, .sidebar-logo p, .sidebar-supa-pill, .nav-link span:not(.nav-icon), .sidebar-stats {
-    display: none;
-  }
-  .sidebar-logo {
-    padding: 12px 6px;
-    text-align: center;
-  }
-  .nav-link {
-    justify-content: center;
-    padding: 12px 0;
+    transform: none !important;
   }
   #main {
-    margin-left: 60px;
-    padding: 16px;
+    margin-left: var(--sidebar-w);
   }
 }
+
+/* ══ RESPONSIVE: CELULAR & TABLET (<= 900px) ══════════ */
+@media (max-width: 900px) {
+  #mobile-topbar {
+    display: flex;
+  }
+
+  #sidebar {
+    width: 275px !important;
+    max-width: 85vw;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1050;
+    box-shadow: 4px 0 28px rgba(0,0,0,0.4);
+  }
+
+  #sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Asegurar que el contenido del sidebar se vea completo al abrir */
+  .sidebar-logo h1,
+  .sidebar-logo p,
+  .sidebar-supa-pill,
+  .nav-link span:not(.nav-icon),
+  .sidebar-stats {
+    display: block !important;
+  }
+  .btn-sidebar-close {
+    display: block !important;
+  }
+
+  #main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 74px 14px 28px !important;
+    overflow-x: hidden;
+  }
+
+  /* Grids de contenido */
+  #pagosGridContainer,
+  #gridResumen {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* KPIs en celular: 2 columnas compactas */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    margin-bottom: 18px !important;
+  }
+  .kpi {
+    padding: 14px 12px !important;
+  }
+  .kpi .val {
+    font-size: 1.45rem !important;
+  }
+  .kpi .lbl {
+    font-size: 0.68rem !important;
+  }
+
+  /* Encabezados de página */
+  .page-header h2 {
+    font-size: 1.25rem !important;
+    line-height: 1.25 !important;
+  }
+  .page-header p {
+    font-size: 0.78rem !important;
+  }
+
+  /* Tablas responsivas con scroll horizontal suave */
+  .table-wrap {
+    -webkit-overflow-scrolling: touch;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    border: 1px solid var(--borde);
+  }
+  .table-wrap table {
+    min-width: 680px;
+  }
+  th, td {
+    padding: 9px 10px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Formularios sin auto-zoom en iOS Safari */
+  .form-group input,
+  .form-group select,
+  .form-group textarea,
+  .form-input {
+    font-size: 16px !important;
+    padding: 10px 12px !important;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Botones táctiles */
+  .btn {
+    min-height: 40px;
+    padding: 8px 14px;
+  }
+  .btn-sm {
+    min-height: 34px;
+    padding: 4px 10px;
+  }
+
+  /* Modales */
+  .modal-bg {
+    padding: 10px !important;
+  }
+  .modal {
+    padding: 16px !important;
+    max-width: 96vw !important;
+    max-height: 94vh !important;
+    border-radius: 12px !important;
+    margin: 0 auto !important;
+  }
+
+  /* Voucher bancario BCP en celular */
+  .bcp-voucher-card {
+    max-width: 100% !important;
+    border-radius: 12px !important;
+  }
+  .bcp-voucher-body {
+    padding: 14px 16px !important;
+  }
+  .bcp-voucher-total {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  /* Widget de IA flotante en celular */
+  #fastnet-ia-chat {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+  #ia-chat-toggle {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 1.3rem !important;
+  }
+  #ia-chat-window {
+    width: calc(100vw - 32px) !important;
+    max-width: 360px !important;
+    max-height: 75vh !important;
+    right: 0 !important;
+    bottom: 60px !important;
+  }
+}
+
+/* ══ RESPONSIVE: CELULAR MUY PEQUEÑO (<= 480px) ═══════ */
+@media (max-width: 480px) {
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .btn-group {
+    width: 100% !important;
+    justify-content: stretch !important;
+  }
+  .btn-group .btn {
+    flex: 1 1 auto !important;
+    text-align: center !important;
+  }
+  .card {
+    padding: 14px !important;
+  }
+}
+
