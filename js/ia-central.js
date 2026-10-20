@@ -1,5 +1,5 @@
 // ========================================================
-//  FASTNET LOBOYACU — IA CENTRAL (Gemini 2.0 Flash)
+//  LEYTRIX ISP — IA CENTRAL (Gemini 2.0 Flash)
 //  Módulos:
 //    1. Asistente conversacional ISP (chat flotante)
 //    2. Predicción de clientes con riesgo de mora
@@ -49,7 +49,7 @@ const FASTNET_IA = (() => {
   let _historialChat = [];
 
   async function chatISP(preguntaUsuario, contextoNegocio = '') {
-    const sistemaPrompt = `Eres el asistente virtual de inteligencia artificial de *FastNet Loboyacu*, una empresa de internet rural en Perú.
+    const sistemaPrompt = `Eres el asistente virtual de inteligencia artificial de *Leytrix ISP* (FastNet Loboyacu), una empresa de internet rural en Perú.
 Tu rol: ayudar al administrador del sistema ISP con análisis, decisiones de negocio, cobranza, y soporte técnico básico.
 Datos de la empresa:
 - Zonas de cobertura: Loboyacu, Huayranga, Pacotillo, Ramal de Cachiyacu, Palmeras, Shishiyacu
@@ -283,7 +283,7 @@ Máximo 20 palabras, usa un emoji relevante al inicio.`;
           <span style="font-size:1.4rem">🤖</span>
           <div>
             <div style="color:#fff;font-weight:700;font-size:0.95rem">Asistente IA</div>
-            <div style="color:#C4B5FD;font-size:0.72rem">FastNet Loboyacu</div>
+            <div style="color:#C4B5FD;font-size:0.72rem">Leytrix ISP</div>
           </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
@@ -304,7 +304,7 @@ Máximo 20 palabras, usa un emoji relevante al inicio.`;
         background:#F8FAFC;
       ">
         <div class="ia-msg-bot">
-          Hola 👋 Soy el asistente IA de <b>FastNet Loboyacu</b>. Puedo ayudarte con análisis de clientes, cobranza, reportes y decisiones del negocio. ¿En qué te ayudo?
+          Hola 👋 Soy el asistente IA de <b>Leytrix ISP</b>. Puedo ayudarte con análisis de clientes, cobranza, reportes y decisiones del negocio. ¿En qué te ayudo?
         </div>
       </div>
 

@@ -4,7 +4,7 @@
   <link rel="icon" type="image/png" href="img/logo.png"/>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FASTNET LOBOYACU — Pagos y Vouchers Bancarios</title>
+  <title>Leytrix ISP — Pagos y Vouchers Bancarios</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -210,7 +210,7 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>💰 Pagos &amp; Vouchers Bancarios — FastNet Loboyacu</h2>
+        <h2>💰 Pagos &amp; Vouchers Bancarios — Leytrix ISP</h2>
         <p>Genera comprobantes oficiales estilo BCP, guárdalos en la nube y compártelos por WhatsApp • Soporte: +51 993 053 643</p>
       </div>
       <div class="btn-group">
@@ -366,7 +366,7 @@
               </div>
               <span class="bcp-agente-tag">AGENTE AUTORIZADO</span>
             </div>
-            <p class="bcp-voucher-title">CONSTANCIA DE ABONO ELECTRÓNICO — LEYTRIX / FASTNET LOBOYACU</p>
+            <p class="bcp-voucher-title">CONSTANCIA DE ABONO ELECTRÓNICO — LEYTRIX ISP</p>
           </div>
 
           <div class="bcp-voucher-body">
@@ -392,7 +392,7 @@
 
             <div class="bcp-voucher-row">
               <span class="bcp-voucher-label">EMPRESA RECAUDADORA:</span>
-              <span class="bcp-voucher-val" style="color:#002A8F">FASTNET LOBOYACU (INTERNET BANDA ANCHA)</span>
+              <span class="bcp-voucher-val" style="color:#002A8F">LEYTRIX ISP (INTERNET BANDA ANCHA)</span>
             </div>
             <div class="bcp-voucher-row">
               <span class="bcp-voucher-label">SERVICIO:</span>
@@ -446,7 +446,7 @@
 
           <div class="bcp-voucher-footer">
             CONSERVE SU COMPROBANTE DE PAGO BANCARIO.<br/>
-            SERVICIO DE INTERNET 100% ACTIVO Y GARANTIZADO POR FASTNET LOBOYACU.<br/>
+            SERVICIO DE INTERNET 100% ACTIVO Y GARANTIZADO POR LEYTRIX ISP.<br/>
             <span style="font-size:0.7rem;color:#0F2A4A;font-weight:600">Soporte: +51 993 053 643 • fastnetloboyacu@gmail.com</span>
           </div>
         </div>
@@ -743,7 +743,7 @@
 
       // Generar Código QR de Seguridad
       const qrCanvas = document.getElementById('canvasQrVoucher');
-      const qrPayload = `FASTNET LOBOYACU BCP | OP:${numOp} | CLI:${cli.nombre} | MES:${pago.mes} | MONTO:S/.${Number(pago.monto).toFixed(2)} | ESTADO:CONFORME`;
+      const qrPayload = `LEYTRIX ISP BCP | OP:${numOp} | CLI:${cli.nombre} | MES:${pago.mes} | MONTO:S/.${Number(pago.monto).toFixed(2)} | ESTADO:CONFORME`;
       try {
         if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
           QRCode.toCanvas(qrCanvas, qrPayload, { width: 80, margin: 1 });
@@ -771,7 +771,7 @@
               cliente_nombre: cli.nombre,
               zona: cli.zona,
               data_url: imgData,
-              notas: `Voucher bancario emitido automáticamente para el mes ${pago.mes} (S/. ${pago.monto}) - FastNet Loboyacu`,
+              notas: `Voucher bancario emitido automáticamente para el mes ${pago.mes} (S/. ${pago.monto}) - Leytrix ISP`,
               creado_el: new Date().toISOString()
             });
 
@@ -794,7 +794,7 @@
       const cel = (cli.celular || '').replace(/\D/g, '');
       const numOp = pago.numero_operacion || `OP-${pago.id}`;
       const mensaje = 
-`*🏦 CONSTANCIA OFICIAL DE PAGO — AGENTE BCP / FASTNET LOBOYACU*
+`*🏦 CONSTANCIA OFICIAL DE PAGO — LEYTRIX ISP*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ *ESTADO:* PAGO CONFORME Y VALIDADO
 🔢 *N° OPERACIÓN:* ${numOp}
@@ -807,7 +807,7 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🌐 *¡Su servicio de internet se encuentra 100% ACTIVO y garantizado!*
 ¡Muchas gracias por su puntual preferencia!
-_FastNet Loboyacu — Soporte: +51 993 053 643 | fastnetloboyacu@gmail.com_`;
+_Leytrix ISP (FastNet Loboyacu) — Soporte: +51 993 053 643 | fastnetloboyacu@gmail.com_`;
 
       const numDestino = cel.length >= 9 ? (cel.startsWith('51') ? cel : '51' + cel) : '';
       const url = `https://api.whatsapp.com/send?phone=${numDestino}&text=${encodeURIComponent(mensaje)}`;
@@ -830,8 +830,8 @@ _FastNet Loboyacu — Soporte: +51 993 053 643 | fastnetloboyacu@gmail.com_`;
 
           const file = new File([blob], `Voucher_BCP_${voucherActual?.pago?.numero_operacion || 'pago'}.png`, { type: 'image/png' });
           const shareData = {
-            title: 'Voucher de Pago BCP - FastNet Loboyacu',
-            text: `Voucher oficial de pago del servicio de internet FastNet Loboyacu para ${voucherActual?.cli?.nombre}. Operación: ${voucherActual?.pago?.numero_operacion}`,
+            title: 'Voucher de Pago BCP - Leytrix ISP',
+            text: `Voucher oficial de pago del servicio de internet Leytrix ISP para ${voucherActual?.cli?.nombre}. Operación: ${voucherActual?.pago?.numero_operacion}`,
             files: [file]
           };
 

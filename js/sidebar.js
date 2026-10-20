@@ -36,8 +36,8 @@ function renderSidebar(activePage) {
       <div class="mobile-brand">
         <img src="img/logo.png" alt="Leytrix Logo" onerror="this.style.display='none'" />
         <div>
-          <div class="mobile-brand-title">FASTNET LOBOYACU</div>
-          <span class="mobile-brand-sub">Leytrix • ISP</span>
+          <div class="mobile-brand-title">LEYTRIX</div>
+          <span class="mobile-brand-sub">FastNet Loboyacu • ISP</span>
         </div>
       </div>
       <div class="mobile-cloud-pill" onclick="abrirModalSupabase()" title="Supabase Cloud">
@@ -72,8 +72,8 @@ function renderSidebar(activePage) {
     <div class="sidebar-logo" style="text-align:center;padding:18px 14px 12px;position:relative">
       <button onclick="cerrarSidebarMobile()" class="btn-sidebar-close" style="position:absolute;top:10px;right:10px;background:none;border:none;color:#94A3B8;font-size:1.4rem;cursor:pointer;display:none" title="Cerrar Menú">✕</button>
       <img src="img/logo.png" alt="Leytrix" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2.5px solid #38BDF8;box-shadow:0 0 18px rgba(56,189,248,0.45);display:block;margin:0 auto 8px;background:#030712" onerror="this.style.display='none'" />
-      <h1 style="font-size:0.98rem;margin:0;letter-spacing:0.5px">FASTNET LOBOYACU</h1>
-      <p style="font-size:0.75rem;margin:2px 0 0;color:#94A3B8">Leytrix • Velocidad y Confianza</p>
+      <h1 style="font-size:0.98rem;margin:0;letter-spacing:0.5px">LEYTRIX ISP</h1>
+      <p style="font-size:0.75rem;margin:2px 0 0;color:#94A3B8">FastNet Loboyacu • Velocidad y Confianza</p>
       <div style="margin-top:6px;font-size:0.7rem;color:#38BDF8;font-weight:600">
         📞 +51 993 053 643
       </div>
@@ -176,6 +176,6 @@ async function actualizarEstadisticasSidebar() {
       <p>💰 <strong>Cobrado:</strong> S/. ${cobrado.toFixed(2)}</p>
     `;
   } catch(err) {
-    statsEl.innerHTML = '<p>FASTNET LOBOYACU v2.0</p>';
+    statsEl.innerHTML = '<p>Leytrix ISP v2.0</p>';
   }
 }

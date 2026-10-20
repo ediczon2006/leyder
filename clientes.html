@@ -4,7 +4,7 @@
   <link rel="icon" type="image/png" href="img/logo.png"/>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FASTNET LOBOYACU — Clientes</title>
+  <title>Leytrix ISP — Clientes</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/ai-cobranza.js"></script>
@@ -18,7 +18,7 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>👥 Clientes Registrados — FastNet Loboyacu</h2>
+        <h2>👥 Clientes Registrados — Leytrix ISP</h2>
         <p id="txtContadorClientes">Cargando clientes...</p>
       </div>
       <div class="btn-group">
@@ -96,7 +96,7 @@
   <div class="modal-bg" id="modalEditar">
     <div class="modal" style="max-width:580px">
       <div class="modal-header">
-        <h3>✏️ Editar Cliente — FastNet Loboyacu</h3>
+        <h3>✏️ Editar Cliente — Leytrix ISP</h3>
         <button class="modal-close" onclick="cerrarModal('modalEditar')">✕</button>
       </div>
       <form id="formEditar">
@@ -244,7 +244,7 @@
 
         _totalClientes = total;
         document.getElementById('txtContadorClientes').textContent =
-          `👥 ${total.toLocaleString()} cliente(s) registrado(s) en FastNet`;
+          `👥 ${total.toLocaleString()} cliente(s) registrado(s) en Leytrix`;
 
         if (!results.length) {
           tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="e-icon">👥</div>No hay clientes con los filtros seleccionados</div></td></tr>';
@@ -339,7 +339,7 @@
 
         await IDB.put('clientes', c);
         cerrarModal('modalEditar');
-        toast('✅ Cliente actualizado correctamente en FastNet');
+        toast('✅ Cliente actualizado correctamente en Leytrix');
         cargarClientes(_paginaActual);
         actualizarEstadisticasSidebar();
       } catch (err) {
@@ -389,11 +389,11 @@
         const c = await IDB.get('clientes', id);
         const nombre = c && c.nombre ? c.nombre : `Cliente #${id}`;
 
-        if (!confirm(`¿Está seguro de eliminar permanentemente al cliente "${nombre}" de FastNet Loboyacu y todo su historial de pagos y cortes?`)) {
+        if (!confirm(`¿Está seguro de eliminar permanentemente al cliente "${nombre}" de Leytrix y todo su historial de pagos y cortes?`)) {
           return;
         }
 
-        toast('⏳ Eliminando cliente de FastNet...');
+        toast('⏳ Eliminando cliente de Leytrix...');
         await IDB.eliminarClienteCompleto(id);
         toast('🗑️ Cliente eliminado correctamente');
         await cargarClientes(_paginaActual);

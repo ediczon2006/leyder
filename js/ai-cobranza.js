@@ -1,5 +1,5 @@
-// ========================================================
-//  FASTNET LOBOYACU — ASISTENTE DE INTELIGENCIA ARTIFICIAL (IA)
+﻿// ========================================================
+//  LEYTRIX ISP — ASISTENTE DE INTELIGENCIA ARTIFICIAL (IA)
 //  - Cobranza inteligente y persuasiva por WhatsApp
 //  - Adaptación automática de tono (Amable, Formal, Urgente/Pre-corte, Convenio)
 //  - Motor neural local ISP + Compatibilidad opcional con Gemini API

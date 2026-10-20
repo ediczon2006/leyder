@@ -1,5 +1,5 @@
 // ========================================================
-//  FASTNET LOBOYACU — CAPA DE DATOS HÍBRIDA (IndexedDB + Supabase)
+//  LEYTRIX ISP — CAPA DE DATOS HÍBRIDA (IndexedDB + Supabase)
 //  - Almacenamiento local ultrarrápido (funciona 100% offline)
 //  - Sincronización en la nube con Supabase (baeobhvgfrdbwyqapqzf)
 //  - Compartido entre todas las páginas del sistema
@@ -9,11 +9,11 @@ const ZONAS   = ['Loboyacu', 'Huayranga', 'Pacotillo', 'Ramal de Cachiyacu', 'Pa
 const PLANES  = [50, 60, 65];
 const ESTADOS = ['ACTIVO', 'CORTADO', 'PENDIENTE', 'RETIRADO'];
 
-// FIX [SEGURIDAD-01]: Credenciales movidas a constantes nombradas pero mantenidas
-// como anon key (son públicas por diseño en Supabase). El riesgo real está en las
-// políticas RLS de Supabase (líneas ~474-480 del SQL), que deben restringirse en producción.
+// [SEGURIDAD]: Solo se usa la clave PUBLISHABLE (anon/pública) en el cliente.
+// La SECRET KEY nunca debe ir en código frontend — úsala únicamente en servidores seguros.
+// Clave pública (anon): acceso controlado por Row Level Security (RLS) en Supabase.
 const SUPA_URL = 'https://baeobhvgfrdbwyqapqzf.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhZW9iaHZnZnJkYnd5cWFwcXpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2NjUyMzgsImV4cCI6MjEwNzI0MTIzOH0.gve1FoTF8kDnUrZfedGdWnZKV1e6uxgydXJBm_v5ILc';
+const SUPA_KEY = 'sb_publishable_53Hn15N3Gl9KMmtKUiE7Yw_Usey5od-';
 
 let _supa = null;
 let _supaOnline = false;
@@ -201,10 +201,20 @@ const IDB = (() => {
 
       const d = await db();
       await new Promise((resolve, reject) => {
-        const tx  = d.transaction([store], 'readwrite');
+        const tx = d.transaction([store], 'readwrite');
         const st = tx.objectStore(store);
-        if (isNum) st.delete(numId);
-        st.delete(strId);
+
+        // FIX [BUG-DELETE-01]: Only delete with the correct key type.
+        // Previously both numId and strId were always deleted, causing IDB
+        // transaction errors when the alternate key type didn't exist in the store.
+        const primaryKey = isNum ? numId : strId;
+        const fallbackKey = isNum ? strId : numId;
+        const req = st.delete(primaryKey);
+        req.onerror = () => {
+          // Silent fallback: try alternate key type if primary fails
+          try { st.delete(fallbackKey); } catch (_) {}
+        };
+
         tx.oncomplete = () => resolve();
         tx.onerror = e => reject(e.target.error);
       });
@@ -580,7 +590,7 @@ function toast(msg, tipo = 'success') {
 }
 
 // ══ VERIFICACIÓN Y SINCRONIZACIÓN SUPABASE (HARDENED ENTERPRISE) ════════
-const SUPABASE_SETUP_SQL = `-- SISTEMA FASTNET LOBOYACU / LEYTRIX - ESQUEMA HARDENED
+const SUPABASE_SETUP_SQL = `-- SISTEMA LEYTRIX ISP - ESQUEMA HARDENED
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS public.clientes (

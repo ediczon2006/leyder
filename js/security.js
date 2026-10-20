@@ -1,5 +1,5 @@
-// ====================================================================
-//  FASTNET LOBOYACU / LEYTRIX - CAPA DE SEGURIDAD DEFENSIVA (SECURITY.JS)
+﻿// ====================================================================
+//  LEYTRIX ISP - CAPA DE SEGURIDAD DEFENSIVA (SECURITY.JS)
 //  Estándar: OWASP Top 10 Client-Side Hardening
 // ====================================================================
 

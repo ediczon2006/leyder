@@ -4,7 +4,7 @@
   <link rel="icon" type="image/png" href="img/logo.png"/>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FASTNET LOBOYACU — Vista por Zonas</title>
+  <title>Leytrix ISP — Vista por Zona</title>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
@@ -76,7 +76,7 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>🗺️ Distribución por Zonas — FastNet Loboyacu</h2>
+        <h2>🗺️ Distribución por Zonas — Leytrix ISP</h2>
         <p>Control de clientes e ingresos por sector geográfico • +51 993 053 643 • fastnetloboyacu@gmail.com</p>
       </div>
       <div class="btn-group">
@@ -212,7 +212,7 @@
 
       if (!z) {
         tit.textContent = '📍 Todos los Clientes (Todas las Zonas)';
-        sub.textContent = 'Mostrando todos los clientes de la red FastNet Loboyacu';
+        sub.textContent = 'Mostrando todos los clientes de la red Leytrix ISP';
       } else {
         const cant = todosClientes.filter(c => c.zona === z).length;
         tit.textContent = `📍 Zona: ${z} (${cant} clientes)`;
