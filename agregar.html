@@ -134,7 +134,7 @@
               🔄 Limpiar Formulario
             </button>
             <button type="submit" class="btn btn-primary" id="btnGuardarCli" style="padding:12px 28px;font-size:1rem;font-weight:700">
-              💾 Guardar Cliente en FastNet
+              💾 Guardar Cliente en Leytrix
             </button>
           </div>
         </form>
@@ -196,7 +196,7 @@
         if (!nombre) {
           toast('Por favor ingrese el nombre del cliente', 'warn');
           btn.disabled = false;
-          btn.textContent = '💾 Guardar Cliente en FastNet';
+          btn.textContent = '💾 Guardar Cliente en Leytrix';
           return;
         }
 
@@ -221,7 +221,7 @@
           } else {
             limpiarFormulario();
             btn.disabled = false;
-            btn.textContent = '💾 Guardar Cliente en FastNet';
+            btn.textContent = '💾 Guardar Cliente en Leytrix';
           }
         }, 250);
 
@@ -229,7 +229,7 @@
         console.error('Error al guardar cliente:', err);
         toast('❌ Error al guardar el cliente: ' + (err.message || ''), 'error');
         btn.disabled = false;
-        btn.textContent = '💾 Guardar Cliente en FastNet';
+        btn.textContent = '💾 Guardar Cliente en Leytrix';
       }
     }
   </script>

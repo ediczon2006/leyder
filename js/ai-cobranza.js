@@ -1,46 +1,51 @@
-﻿// ========================================================
+// ========================================================
 //  LEYTRIX ISP — ASISTENTE DE INTELIGENCIA ARTIFICIAL (IA)
 //  - Cobranza inteligente y persuasiva por WhatsApp
 //  - Adaptación automática de tono (Amable, Formal, Urgente/Pre-corte, Convenio)
 //  - Motor neural local ISP + Compatibilidad opcional con Gemini API
 // ========================================================
 
-const AI_CONFIG_KEY = 'fastnet_ai_config';
+// Clave de config unificada — usa 'leytrix_ai_config' como primary,
+// mantiene 'fastnet_ai_config' solo para leer datos viejos migrados.
+const AI_CONFIG_KEY = 'leytrix_ai_config';
 
 function obtenerConfiguracionIA() {
   try {
-    const raw = localStorage.getItem(AI_CONFIG_KEY) || localStorage.getItem('leytrix_ai_config');
+    // Intentar leer config nueva primero; migrar la vieja si existe
+    const raw = localStorage.getItem('leytrix_ai_config')
+              || localStorage.getItem('fastnet_ai_config');
     if (raw) {
       const cfg = JSON.parse(raw);
       return {
-        geminiApiKey: cfg.geminiApiKey || '',
-        nombreEmpresa: cfg.nombreEmpresa || 'FastNet Loboyacu',
-        numeroYape: cfg.numeroYape || '993053643',
-        titularYape: cfg.titularYape || 'FastNet Loboyacu',
-        telefono: cfg.telefono || '+51 993 053 643',
-        correo: cfg.correo || 'fastnetloboyacu@gmail.com',
-        cuentaBcp: cfg.cuentaBcp || '191-98234812-0-45',
-        cciBcp: cfg.cciBcp || '002191009823481204592',
-        titularBcp: cfg.titularBcp || 'FastNet Loboyacu'
+        geminiApiKey:  cfg.geminiApiKey  || '',
+        nombreEmpresa: cfg.nombreEmpresa || 'Leytrix',
+        numeroYape:    cfg.numeroYape    || '993053643',
+        titularYape:   cfg.titularYape   || 'Leytrix ISP',
+        telefono:      cfg.telefono      || '+51 993 053 643',
+        correo:        cfg.correo        || 'fastnetloboyacu@gmail.com',
+        cuentaBcp:     cfg.cuentaBcp     || '191-98234812-0-45',
+        cciBcp:        cfg.cciBcp        || '002191009823481204592',
+        titularBcp:    cfg.titularBcp    || 'Leytrix ISP'
       };
     }
   } catch(_) {}
   return {
-    geminiApiKey: '',
-    nombreEmpresa: 'FastNet Loboyacu',
-    numeroYape: '993053643',
-    titularYape: 'FastNet Loboyacu',
-    telefono: '+51 993 053 643',
-    correo: 'fastnetloboyacu@gmail.com',
-    cuentaBcp: '191-98234812-0-45',
-    cciBcp: '002191009823481204592',
-    titularBcp: 'FastNet Loboyacu'
+    geminiApiKey:  '',
+    nombreEmpresa: 'Leytrix',
+    numeroYape:    '993053643',
+    titularYape:   'Leytrix ISP',
+    telefono:      '+51 993 053 643',
+    correo:        'fastnetloboyacu@gmail.com',
+    cuentaBcp:     '191-98234812-0-45',
+    cciBcp:        '002191009823481204592',
+    titularBcp:    'Leytrix ISP'
   };
 }
 
 function guardarConfiguracionIA(config) {
-  localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(config));
-  localStorage.setItem('leytrix_ai_config', JSON.stringify(config)); // retrocompatibilidad
+  // Guardar en la clave nueva; limpiar la vieja para no generar confusión
+  localStorage.setItem('leytrix_ai_config', JSON.stringify(config));
+  localStorage.removeItem('fastnet_ai_config');
 }
 
 // ══ MOTOR DE GENERACIÓN IA ══════════════════════════════
@@ -68,7 +73,7 @@ Instrucciones:
 - Pide amablemente que al pagar envíe la captura del comprobante por este chat para emitir su voucher oficial.
 - Devuelve SOLAMENTE el texto del mensaje listo para enviar, sin explicaciones ni comillas adicionales.`;
 
-      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(cfg.geminiApiKey.trim())}`, {
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(cfg.geminiApiKey.trim())}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

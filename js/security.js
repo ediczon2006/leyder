@@ -1,9 +1,9 @@
-﻿// ====================================================================
+// ====================================================================
 //  LEYTRIX ISP - CAPA DE SEGURIDAD DEFENSIVA (SECURITY.JS)
 //  Estándar: OWASP Top 10 Client-Side Hardening
 // ====================================================================
 
-const FastNetSecurity = (() => {
+const LeytrixSecurity = (() => {
 
   // 1. Sanitización estricta contra Cross-Site Scripting (XSS)
   function sanitizeHTML(str) {
@@ -110,3 +110,6 @@ const FastNetSecurity = (() => {
   };
 
 })();
+
+// Retrocompatibilidad con scripts existentes
+const FastNetSecurity = LeytrixSecurity;

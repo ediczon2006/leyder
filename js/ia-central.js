@@ -10,7 +10,7 @@
 //  Requiere: geminiApiKey configurada en ajustes IA
 // ========================================================
 
-const FASTNET_IA = (() => {
+const LEYTRIX_IA = (() => {
 
   // ── Modelo Gemini ─────────────────────────────────────
   const GEMINI_MODEL = 'gemini-2.0-flash';
@@ -18,7 +18,7 @@ const FASTNET_IA = (() => {
 
   function getApiKey() {
     try {
-      const raw = localStorage.getItem('fastnet_ai_config') || localStorage.getItem('leytrix_ai_config');
+      const raw = localStorage.getItem('leytrix_ai_config') || localStorage.getItem('fastnet_ai_config');
       if (raw) return JSON.parse(raw).geminiApiKey || '';
     } catch (_) {}
     return '';
@@ -49,7 +49,7 @@ const FASTNET_IA = (() => {
   let _historialChat = [];
 
   async function chatISP(preguntaUsuario, contextoNegocio = '') {
-    const sistemaPrompt = `Eres el asistente virtual de inteligencia artificial de *Leytrix ISP* (FastNet Loboyacu), una empresa de internet rural en Perú.
+    const sistemaPrompt = `Eres el asistente virtual de inteligencia artificial de *Leytrix ISP*, una empresa proveedora de servicios de internet en Perú.
 Tu rol: ayudar al administrador del sistema ISP con análisis, decisiones de negocio, cobranza, y soporte técnico básico.
 Datos de la empresa:
 - Zonas de cobertura: Loboyacu, Huayranga, Pacotillo, Ramal de Cachiyacu, Palmeras, Shishiyacu
@@ -129,7 +129,7 @@ Responde en español, de forma concisa y práctica. Usa listas o negritas cuando
           `${i+1}. ${r.cliente.nombre} (${r.cliente.zona}) - Plan S/.${r.cliente.plan} - Razones: ${r.razones.join(', ')}`
         ).join('\n');
 
-        const prompt = `Analiza estos ${Math.min(5, analisis.length)} clientes en riesgo de mora de FastNet Loboyacu:
+        const prompt = `Analiza estos ${Math.min(5, analisis.length)} clientes en riesgo de mora de Leytrix ISP:
 ${resumenCasos}
 
 Para cada uno, dame en 1 línea: estrategia de cobranza recomendada (sin repetir los datos ya dados).
@@ -184,7 +184,7 @@ Mejor zona: ${mejorZona ? mejorZona[0] + ' (' + mejorZona[1].activos + ' activos
     }
 
     try {
-      const prompt = `Eres analista de negocios para FastNet Loboyacu, ISP rural en Perú.
+      const prompt = `Eres analista de negocios para Leytrix ISP, empresa proveedora de internet en Perú.
 Datos del sistema (${mesStr}):
 ${contexto}
 
@@ -214,18 +214,18 @@ Usa emojis relevantes. Sé directo y práctico.`;
 
     const key = getApiKey();
     if (!key || key.trim().length < 10) {
-      return `📡 Red FastNet: ${activos} activos, ${cortados} cortados de ${total} totales.`;
+      return `📡 Red Leytrix: ${activos} activos, ${cortados} cortados de ${total} totales.`;
     }
 
     try {
-      const prompt = `Resume en 1 oración corta y amigable el estado de la red de internet FastNet Loboyacu:
+      const prompt = `Resume en 1 oración corta y amigable el estado de la red de internet Leytrix:
 - Clientes activos: ${activos} de ${total}
 - Cortados: ${cortados}
 Máximo 20 palabras, usa un emoji relevante al inicio.`;
       const resumen = await callGemini(prompt, { temperature: 0.4, maxTokens: 80 });
       return resumen || `📡 ${activos}/${total} clientes activos en red.`;
     } catch (_) {
-      return `📡 ${activos}/${total} clientes activos en red FastNet.`;
+      return `📡 ${activos}/${total} clientes activos en red Leytrix.`;
     }
   }
 
@@ -241,6 +241,8 @@ Máximo 20 palabras, usa un emoji relevante al inicio.`;
 
 })();
 
+// Retrocompatibilidad con scripts existentes
+const FASTNET_IA = LEYTRIX_IA;
 
 // ========================================================
 //  INTERFAZ: CHAT FLOTANTE IA (inyectado en todas las páginas)
@@ -248,16 +250,16 @@ Máximo 20 palabras, usa un emoji relevante al inicio.`;
 
 (function inyectarChatIA() {
   // Evitar doble inyección
-  if (document.getElementById('fastnet-ia-chat')) return;
+  if (document.getElementById('leytrix-ia-chat') || document.getElementById('fastnet-ia-chat')) return;
 
   const html = `
-  <div id="fastnet-ia-chat" style="
+  <div id="leytrix-ia-chat" style="
     position:fixed; bottom:24px; right:24px; z-index:99999;
     display:flex; flex-direction:column; align-items:flex-end; gap:10px;
     font-family:'Segoe UI',sans-serif;
   ">
     <!-- Burbuja toggle -->
-    <button id="ia-chat-toggle" onclick="toggleChatIA()" title="Asistente IA FastNet" style="
+    <button id="ia-chat-toggle" onclick="toggleChatIA()" title="Asistente IA Leytrix" style="
       width:56px; height:56px; border-radius:50%;
       background:linear-gradient(135deg,#7C3AED,#4F46E5);
       border:none; cursor:pointer; box-shadow:0 4px 20px rgba(124,58,237,0.4);

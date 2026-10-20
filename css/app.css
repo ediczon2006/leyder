@@ -827,6 +827,7 @@ tr.row-cortado td {
   }
 
   /* Widget de IA flotante en celular */
+  #leytrix-ia-chat,
   #fastnet-ia-chat {
     bottom: 16px !important;
     right: 16px !important;

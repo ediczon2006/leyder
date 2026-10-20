@@ -162,10 +162,10 @@
 
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(dataXlsx);
-        XLSX.utils.book_append_sheet(wb, ws, "Clientes_FastNet");
+        XLSX.utils.book_append_sheet(wb, ws, "Clientes_Leytrix");
         
         const fecha = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(wb, `FastNet_Clientes_${fecha}.xlsx`);
+        XLSX.writeFile(wb, `Leytrix_Clientes_${fecha}.xlsx`);
         toast('✅ Archivo Excel descargado exitosamente');
       } catch(err) {
         console.error('Error exportando clientes:', err);
@@ -369,9 +369,7 @@
 
       try {
         toast(`Guardando ${clientesParaImportar.length} clientes en el sistema...`);
-        for (const cli of clientesParaImportar) {
-          await IDB.add('clientes', cli);
-        }
+        await IDB.bulkPut('clientes', clientesParaImportar);
 
         toast(`🎉 ¡${clientesParaImportar.length} clientes importados con éxito!`);
         cancelarImportacion();
