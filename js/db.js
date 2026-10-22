@@ -536,6 +536,10 @@ const IDB = (() => {
   };
 })();
 
+if (typeof window !== 'undefined') {
+  window.IDB = IDB;
+}
+
 // ══ HELPERS Y FORMATOS ══════════════════════════════════
 function esc(str) {
   if (str === null || str === undefined) return '';
@@ -767,7 +771,7 @@ BEGIN
     NULL;
   END;
 END $$;
-\`;
+`;
 
 let _realtimeIniciado = false;
 function iniciarRealtimeSupabase() {

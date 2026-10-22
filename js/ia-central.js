@@ -241,6 +241,12 @@ Máximo 20 palabras, usa un emoji relevante al inicio.`;
 
 })();
 
+// Exportación explícita al contexto global
+if (typeof window !== 'undefined') {
+  window.LEYTRIX_IA = LEYTRIX_IA;
+  window.FASTNET_IA = LEYTRIX_IA;
+}
+
 // Retrocompatibilidad con scripts existentes
 const FASTNET_IA = LEYTRIX_IA;
 

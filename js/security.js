@@ -111,5 +111,11 @@ const LeytrixSecurity = (() => {
 
 })();
 
+// Exportación explícita al contexto global (Window / GlobalScope)
+if (typeof window !== 'undefined') {
+  window.LeytrixSecurity = LeytrixSecurity;
+  window.FastNetSecurity = LeytrixSecurity;
+}
+
 // Retrocompatibilidad con scripts existentes
 const FastNetSecurity = LeytrixSecurity;
