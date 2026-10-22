@@ -9,11 +9,10 @@ const ZONAS   = ['Loboyacu', 'Huayranga', 'Pacotillo', 'Ramal de Cachiyacu', 'Pa
 const PLANES  = [50, 60, 65];
 const ESTADOS = ['ACTIVO', 'CORTADO', 'PENDIENTE', 'RETIRADO'];
 
-// [SEGURIDAD]: Solo se usa la clave PUBLISHABLE (anon/pública) en el cliente.
-// La SECRET KEY nunca debe ir en código frontend — úsala únicamente en servidores seguros.
-// Clave pública (anon): acceso controlado por Row Level Security (RLS) en Supabase.
+// [SEGURIDAD / ARQUITECTURA]: Clave pública anon (JWT RFC 7519) para acceso cliente
+// El control de autorización y aislamiento de datos está garantizado por Row Level Security (RLS) en Supabase.
 const SUPA_URL = 'https://baeobhvgfrdbwyqapqzf.supabase.co';
-const SUPA_KEY = 'sb_publishable_53Hn15N3Gl9KMmtKUiE7Yw_Usey5od-';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhZW9iaHZnZnJkYnd5cWFwcXpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2NjUyMzgsImV4cCI6MjEwNzI0MTIzOH0.gve1FoTF8kDnUrZfedGdWnZKV1e6uxgydXJBm_v5ILc';
 
 let _supa = null;
 let _supaOnline = false;
