@@ -1,29 +1,41 @@
 // ========================================================
-//  LEYTRIX ISP — CAPA DE DATOS HÍBRIDA (IndexedDB + Supabase)
+//  LEYTRIX ISP — CAPA DE DATOS HÍBRIDA (IndexedDB + Supabase) — v3
 //  - Almacenamiento local ultrarrápido (funciona 100% offline)
-//  - Sincronización en la nube con Supabase (baeobhvgfrdbwyqapqzf)
+//  - Sincronización en la nube con Supabase
 //  - Compartido entre todas las páginas del sistema
+//
+//  CAMBIOS v3 (resumen):
+//  1. La base local se AUTO-REPARA: si falta un almacén o índice, sube la
+//     versión sola (arregla "One of the specified object stores was not found").
+//  2. La sincronización ya no sube de nuevo lo que acaba de descargar,
+//     ni pisa las fotos locales (data_url) con registros sin imagen.
+//  3. Realtime y descargas usan escritura LOCAL (sin rebote hacia Supabase).
+//  4. Capa de login opcional con Supabase Auth (REQUIRE_AUTH).
+//  5. Políticas SQL corregidas (fotos ahora tiene UPDATE, necesario para upsert).
 // ========================================================
 
 const ZONAS   = ['Loboyacu', 'Huayranga', 'Pacotillo', 'Ramal de Cachiyacu', 'Palmeras', 'Shishiyacu'];
 const PLANES  = [50, 60, 65];
 const ESTADOS = ['ACTIVO', 'CORTADO', 'PENDIENTE', 'RETIRADO'];
 
-// [SEGURIDAD / ARQUITECTURA]: Clave pública anon (JWT RFC 7519) para acceso cliente
-// El control de autorización y aislamiento de datos está garantizado por Row Level Security (RLS) en Supabase.
+// [SEGURIDAD]: La clave "anon" es pública por diseño (viaja al navegador).
+// Lo que protege los datos son las políticas RLS. Con REQUIRE_AUTH = false las
+// políticas dejan entrar a cualquiera que tenga la clave. Para proteger los
+// datos: crea tu usuario en Supabase, ejecuta supabase_seguridad.sql,
+// desactiva los registros públicos y cambia REQUIRE_AUTH a true.
+const REQUIRE_AUTH = false;
+
 const SUPA_URL = 'https://nbgysgbizjyndcqsvvea.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZ3lzZ2Jpemp5bmRjcXN2dmVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NDYxNDAsImV4cCI6MjEwODUyMjE0MH0.6rTUz8JnqJe5Xh6_tugBKE-UmqT0zthnyTGEXlVJzh0';
 
 let _supa = null;
 let _supaOnline = false;
 
-// FIX [BUG-01]: Añadido guard para evitar doble inicialización si el SDK
-// ya fue cargado previamente por un iframe o recarga parcial.
-let _supaIniciado = false;
 try {
-  if (!_supaIniciado && typeof supabase !== 'undefined' && supabase.createClient) {
-    _supa = supabase.createClient(SUPA_URL, SUPA_KEY);
-    _supaIniciado = true;
+  if (typeof supabase !== 'undefined' && supabase.createClient) {
+    _supa = supabase.createClient(SUPA_URL, SUPA_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
   }
 } catch (err) {
   console.warn('Supabase JS SDK no disponible:', err);
@@ -49,213 +61,228 @@ function sanitizarPayloadSupabase(item) {
   return copia;
 }
 
+// ══ ESQUEMA LOCAL (única fuente de verdad) ════════════════
 const DB_NAME = 'leytrix_isp_v1';
-const DB_VER  = 2;
+const DB_VER  = 3;
+
+const ESQUEMA = {
+  clientes: [['zona', 'zona'], ['estado', 'estado'], ['plan', 'plan'], ['zona_estado', ['zona', 'estado']]],
+  pagos:    [['id_cliente', 'id_cliente'], ['mes', 'mes'], ['cli_mes', ['id_cliente', 'mes']]],
+  cortes:   [['id_cliente', 'id_cliente'], ['estado', 'estado']],
+  fotos:    [['categoria', 'categoria'], ['cliente_id', 'cliente_id'], ['zona', 'zona']]
+};
+
+function refrescarUI() {
+  if (typeof window.onDatosActualizados === 'function') window.onDatosActualizados();
+  if (typeof actualizarEstadisticasSidebar === 'function') actualizarEstadisticasSidebar();
+}
 
 const IDB = (() => {
   let _db = null;
+  let _dbPromise = null;
 
-  function open() {
+  // Crea los almacenes e índices que falten (se usa dentro de onupgradeneeded)
+  function asegurarEsquema(database, tx) {
+    for (const [nombre, indices] of Object.entries(ESQUEMA)) {
+      const store = database.objectStoreNames.contains(nombre)
+        ? tx.objectStore(nombre)
+        : database.createObjectStore(nombre, { keyPath: 'id', autoIncrement: true });
+      for (const [idxNombre, idxClave] of indices) {
+        if (!store.indexNames.contains(idxNombre)) {
+          store.createIndex(idxNombre, idxClave, { unique: false });
+        }
+      }
+    }
+  }
+
+  // ¿Falta algún almacén o índice en la base actual?
+  function esquemaIncompleto(database) {
+    for (const [nombre, indices] of Object.entries(ESQUEMA)) {
+      if (!database.objectStoreNames.contains(nombre)) return true;
+      const store = database.transaction([nombre], 'readonly').objectStore(nombre);
+      for (const [idxNombre] of indices) {
+        if (!store.indexNames.contains(idxNombre)) return true;
+      }
+    }
+    return false;
+  }
+
+  function abrir(version) {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, DB_VER);
-      req.onupgradeneeded = e => {
-        const db = e.target.result;
-        // 1. Clientes
-        if (!db.objectStoreNames.contains('clientes')) {
-          const cs = db.createObjectStore('clientes', { keyPath: 'id', autoIncrement: true });
-          cs.createIndex('zona',       'zona',             { unique: false });
-          cs.createIndex('estado',     'estado',           { unique: false });
-          cs.createIndex('plan',       'plan',             { unique: false });
-          cs.createIndex('zona_estado', ['zona', 'estado'], { unique: false });
-        } else {
-          const cs = e.target.transaction.objectStore('clientes');
-          if (!cs.indexNames.contains('zona_estado')) {
-            cs.createIndex('zona_estado', ['zona', 'estado'], { unique: false });
-          }
-        }
-        // 2. Pagos
-        if (!db.objectStoreNames.contains('pagos')) {
-          const ps = db.createObjectStore('pagos', { keyPath: 'id', autoIncrement: true });
-          ps.createIndex('id_cliente', 'id_cliente', { unique: false });
-          ps.createIndex('mes',        'mes',        { unique: false });
-          ps.createIndex('cli_mes',    ['id_cliente', 'mes'], { unique: false });
-        }
-        // 3. Cortes
-        if (!db.objectStoreNames.contains('cortes')) {
-          const ks = db.createObjectStore('cortes', { keyPath: 'id', autoIncrement: true });
-          ks.createIndex('id_cliente', 'id_cliente', { unique: false });
-          ks.createIndex('estado',     'estado',     { unique: false });
-        }
-        // 4. Fotos y Comprobantes ISP
-        if (!db.objectStoreNames.contains('fotos')) {
-          const fs = db.createObjectStore('fotos', { keyPath: 'id', autoIncrement: true });
-          fs.createIndex('categoria',  'categoria',  { unique: false });
-          fs.createIndex('cliente_id', 'cliente_id', { unique: false });
-          fs.createIndex('zona',       'zona',       { unique: false });
-        }
+      const req = version ? indexedDB.open(DB_NAME, version) : indexedDB.open(DB_NAME);
+      req.onupgradeneeded = e => asegurarEsquema(e.target.result, e.target.transaction);
+      req.onsuccess = e => {
+        const conn = e.target.result;
+        // Si otra pestaña necesita actualizar la base, ésta se cierra y se reabre sola
+        conn.onversionchange = () => { conn.close(); _db = null; _dbPromise = null; };
+        resolve(conn);
       };
-      req.onsuccess = e => { _db = e.target.result; resolve(_db); };
-      req.onerror   = e => reject(e.target.error);
-      // FIX [CASO-LIMITE-01]: Manejar el caso donde el usuario rechaza el
-      // permiso de IndexedDB (modo privado en Safari / Firefox restrictivo)
+      req.onerror = e => reject(e.target.error);
       req.onblocked = () => {
-        console.warn('[IDB] La base de datos está bloqueada por otra pestaña. Recarga la página.');
-        reject(new Error('IndexedDB bloqueada por otra pestaña abierta del sistema.'));
+        console.warn('[IDB] Actualización en espera: cierra otras pestañas abiertas del sistema.');
       };
     });
   }
 
-  async function db() { return _db || (_db = await open()); }
+  async function conectar() {
+    let conn;
+    try {
+      conn = await abrir(DB_VER);
+    } catch (err) {
+      // La base local ya tiene una versión mayor: abrirla tal cual está
+      if (err && err.name === 'VersionError') conn = await abrir();
+      else throw err;
+    }
+    if (esquemaIncompleto(conn)) {
+      const nuevaVersion = conn.version + 1;
+      conn.close();
+      conn = await abrir(nuevaVersion);
+    }
+    return conn;
+  }
+
+  function db() {
+    if (_db) return Promise.resolve(_db);
+    if (!_dbPromise) {
+      _dbPromise = conectar()
+        .then(conn => { _db = conn; return conn; })
+        .catch(err => { _dbPromise = null; throw err; });
+    }
+    return _dbPromise;
+  }
+
+  // Claves candidatas para un id (número y/o texto)
+  function clavesDe(id) {
+    const n = Number(id);
+    return (Number.isFinite(n) && n > 0) ? [n, String(id)] : [String(id)];
+  }
+
+  // Sube un registro a Supabase (si hay conexión). Nunca lanza error.
+  async function subir(store, data) {
+    if (!_supa) return;
+    try {
+      const { error } = await _supa.from(store).upsert(sanitizarPayloadSupabase(data), { onConflict: 'id' });
+      if (error) {
+        console.warn(`[Supabase upsert] Error en ${store}:`, error.message);
+      } else {
+        _supaOnline = true;
+        actualizarBadgesSupabase(true);
+      }
+    } catch (err) {
+      console.warn(`[Supabase upsert] Excepción en ${store}:`, err);
+    }
+  }
+
+  function borrarPorIndice(tx, nombreStore, nombreIndice, valores) {
+    const st = tx.objectStore(nombreStore);
+    if (!st.indexNames.contains(nombreIndice)) return;
+    const idx = st.index(nombreIndice);
+    valores.forEach(v => {
+      const req = idx.openKeyCursor(IDBKeyRange.only(v));
+      req.onsuccess = e => {
+        const c = e.target.result;
+        if (c) { st.delete(c.primaryKey); c.continue(); }
+      };
+    });
+  }
 
   return {
-    // Agregar registro (IndexedDB + Supabase)
-    async add(store, data) {
-      // FIX [LOGICA-01]: Validar que `data` no sea null/undefined antes de insertar.
-      if (!data || typeof data !== 'object') throw new Error(`[IDB.add] dato inválido en store "${store}"`);
-
+    // ── Escritura SOLO local (sin tocar Supabase) ──────────
+    async addLocal(store, data) {
       const d = await db();
-      const id = await new Promise((resolve, reject) => {
+      return new Promise((resolve, reject) => {
         const tx  = d.transaction([store], 'readwrite');
         const req = tx.objectStore(store).add(data);
         req.onsuccess = e => resolve(e.target.result);
         req.onerror   = e => reject(e.target.error);
       });
-
-      if (_supa) {
-        try {
-          const payload = sanitizarPayloadSupabase({ ...data, id });
-          const { error } = await _supa.from(store).upsert(payload, { onConflict: 'id' });
-          if (!error) {
-            _supaOnline = true;
-            actualizarBadgesSupabase(true);
-          } else {
-            console.warn(`[Supabase add] Error en ${store}:`, error.message);
-          }
-        } catch(err) {
-          console.warn(`[Supabase add] Excepción en ${store}:`, err);
-        }
-      }
-
-      return id;
     },
 
-    // Actualizar registro (IndexedDB + Supabase)
-    async put(store, data) {
-      // FIX [LOGICA-01]: Validar que `data` tenga 'id' definido (sin id el put puede crear duplicados).
-      if (!data || typeof data !== 'object') throw new Error(`[IDB.put] dato inválido en store "${store}"`);
-      if (data.id === undefined || data.id === null) {
-        console.warn(`[IDB.put] Llamado sin 'id' en store "${store}". Se usará add() en su lugar.`);
-        return this.add(store, data);
-      }
-
+    async putLocal(store, data) {
       const d = await db();
-      const id = await new Promise((resolve, reject) => {
+      return new Promise((resolve, reject) => {
         const tx  = d.transaction([store], 'readwrite');
         const req = tx.objectStore(store).put(data);
         req.onsuccess = e => resolve(e.target.result);
         req.onerror   = e => reject(e.target.error);
       });
+    },
 
-      if (_supa) {
-        try {
-          const payload = sanitizarPayloadSupabase(data);
-          const { error } = await _supa.from(store).upsert(payload, { onConflict: 'id' });
-          if (!error) {
-            _supaOnline = true;
-            actualizarBadgesSupabase(true);
-          } else {
-            console.warn(`[Supabase put] Error en ${store}:`, error.message);
-          }
-        } catch(err) {
-          console.warn(`[Supabase put] Excepción en ${store}:`, err);
-        }
-      }
+    async deleteLocal(store, id) {
+      if (id === null || id === undefined || id === '') return;
+      const d = await db();
+      return new Promise((resolve, reject) => {
+        const tx = d.transaction([store], 'readwrite');
+        const st = tx.objectStore(store);
+        clavesDe(id).forEach(k => st.delete(k));
+        tx.oncomplete = () => resolve();
+        tx.onerror = e => reject(e.target.error);
+        tx.onabort = e => reject(e.target.error);
+      });
+    },
 
+    // ── Escritura local + nube ─────────────────────────────
+    async add(store, data) {
+      if (!data || typeof data !== 'object') throw new Error(`[IDB.add] dato inválido en store "${store}"`);
+      const id = await this.addLocal(store, data);
+      await subir(store, { ...data, id });
       return id;
     },
 
+    async put(store, data) {
+      if (!data || typeof data !== 'object') throw new Error(`[IDB.put] dato inválido en store "${store}"`);
+      if (data.id === undefined || data.id === null) {
+        console.warn(`[IDB.put] Llamado sin 'id' en store "${store}". Se usará add() en su lugar.`);
+        return this.add(store, data);
+      }
+      const id = await this.putLocal(store, data);
+      await subir(store, data);
+      return id;
+    },
+
+    async delete(store, id) {
+      if (id === null || id === undefined || id === '') return;
+      await this.deleteLocal(store, id);
+      if (_supa) {
+        try {
+          const n = Number(id);
+          const targetId = (Number.isFinite(n) && n > 0) ? n : String(id);
+          const { error } = await _supa.from(store).delete().eq('id', targetId);
+          if (error) console.warn(`[Supabase delete] Error en ${store}:`, error.message);
+        } catch (err) {
+          console.warn(`[Supabase delete] Excepción en ${store}:`, err);
+        }
+      }
+    },
+
+    // ── Lectura ────────────────────────────────────────────
     // Obtener por ID (soporta claves numéricas y strings)
     async get(store, id) {
       if (id === null || id === undefined || id === '') return null;
       const d = await db();
       return new Promise((resolve) => {
-        const tx = d.transaction([store], 'readonly');
-        const st = tx.objectStore(store);
-        const numId = Number(id);
-        const isNum = Number.isFinite(numId) && numId > 0;
+        const st = d.transaction([store], 'readonly').objectStore(store);
+        const claves = clavesDe(id);
 
-        // Intentar primero con número si es numérico
-        const req = isNum ? st.get(numId) : st.get(id);
-        req.onsuccess = e => {
-          if (e.target.result) {
-            resolve(e.target.result);
-          } else {
-            // Reintentar con string si no se encontró como número
-            try {
-              const req2 = st.get(String(id));
-              req2.onsuccess = e2 => resolve(e2.target.result || null);
-              req2.onerror = () => resolve(null);
-            } catch (_) {
-              resolve(null);
-            }
-          }
+        const intentar = (i) => {
+          if (i >= claves.length) { resolve(null); return; }
+          let req;
+          try { req = st.get(claves[i]); } catch (_) { intentar(i + 1); return; }
+          req.onsuccess = e => {
+            if (e.target.result) resolve(e.target.result);
+            else intentar(i + 1);
+          };
+          req.onerror = () => intentar(i + 1);
         };
-        req.onerror = () => {
-          try {
-            const req2 = st.get(String(id));
-            req2.onsuccess = e2 => resolve(e2.target.result || null);
-            req2.onerror = () => resolve(null);
-          } catch (_) {
-            resolve(null);
-          }
-        };
+        intentar(0);
       });
-    },
-
-    // Eliminar por ID (soporta números y strings + sincroniza con Supabase)
-    async delete(store, id) {
-      if (id === null || id === undefined || id === '') return;
-      const numId = Number(id);
-      const isNum = Number.isFinite(numId) && numId > 0;
-      const strId = String(id);
-
-      const d = await db();
-      await new Promise((resolve, reject) => {
-        const tx = d.transaction([store], 'readwrite');
-        const st = tx.objectStore(store);
-
-        // FIX [BUG-DELETE-01]: Only delete with the correct key type.
-        // Previously both numId and strId were always deleted, causing IDB
-        // transaction errors when the alternate key type didn't exist in the store.
-        const primaryKey = isNum ? numId : strId;
-        const fallbackKey = isNum ? strId : numId;
-        const req = st.delete(primaryKey);
-        req.onerror = () => {
-          // Silent fallback: try alternate key type if primary fails
-          try { st.delete(fallbackKey); } catch (_) {}
-        };
-
-        tx.oncomplete = () => resolve();
-        tx.onerror = e => reject(e.target.error);
-      });
-
-      if (_supa) {
-        try {
-          const targetId = isNum ? numId : strId;
-          const { error } = await _supa.from(store).delete().eq('id', targetId);
-          if (error) console.warn(`[Supabase delete] Error en ${store}:`, error.message);
-        } catch(err) {
-          console.warn(`[Supabase del] Excepción en ${store}:`, err);
-        }
-      }
     },
 
     // Conteo total O(1)
     async count(store) {
       const d = await db();
       return new Promise((resolve) => {
-        const tx  = d.transaction([store], 'readonly');
-        const req = tx.objectStore(store).count();
+        const req = d.transaction([store], 'readonly').objectStore(store).count();
         req.onsuccess = e => resolve(e.target.result || 0);
         req.onerror   = () => resolve(0);
       });
@@ -266,10 +293,8 @@ const IDB = (() => {
       const d = await db();
       return new Promise((resolve) => {
         try {
-          const tx    = d.transaction([store], 'readonly');
-          const index = tx.objectStore(store).index(idx);
-          const range = IDBKeyRange.only(key);
-          const req   = index.count(range);
+          const index = d.transaction([store], 'readonly').objectStore(store).index(idx);
+          const req   = index.count(IDBKeyRange.only(key));
           req.onsuccess = e => resolve(e.target.result || 0);
           req.onerror   = () => resolve(0);
         } catch (_) {
@@ -282,8 +307,8 @@ const IDB = (() => {
     async getAll(store, count = null) {
       const d = await db();
       return new Promise((resolve, reject) => {
-        const tx  = d.transaction([store], 'readonly');
-        const req = count ? tx.objectStore(store).getAll(null, count) : tx.objectStore(store).getAll();
+        const st  = d.transaction([store], 'readonly').objectStore(store);
+        const req = count ? st.getAll(null, count) : st.getAll();
         req.onsuccess = e => resolve(e.target.result || []);
         req.onerror   = e => reject(e.target.error);
       });
@@ -294,8 +319,7 @@ const IDB = (() => {
       const d = await db();
       return new Promise((resolve, reject) => {
         try {
-          const tx    = d.transaction([store], 'readonly');
-          const index = tx.objectStore(store).index(idx);
+          const index = d.transaction([store], 'readonly').objectStore(store).index(idx);
           const range = IDBKeyRange.only(key);
           const req   = count ? index.getAll(range, count) : index.getAll(range);
           req.onsuccess = e => resolve(e.target.result || []);
@@ -306,8 +330,8 @@ const IDB = (() => {
       });
     },
 
-    // Guardado masivo por lotes
-    async bulkPut(store, items) {
+    // Guardado masivo por lotes. { remoto: false } = solo local (para descargas)
+    async bulkPut(store, items, { remoto = true } = {}) {
       if (!items || !items.length) return 0;
       const d = await db();
       const BATCH = 500;
@@ -321,14 +345,14 @@ const IDB = (() => {
           chunk.forEach(item => st.put(item));
           tx.oncomplete = () => { ok += chunk.length; resolve(); };
           tx.onerror = e => reject(e.target.error);
+          tx.onabort = e => reject(e.target.error);
         });
 
-        if (_supa) {
+        if (remoto && _supa) {
           try {
-            const chunkSanitizado = chunk.map(sanitizarPayloadSupabase);
-            const { error } = await _supa.from(store).upsert(chunkSanitizado, { onConflict: 'id' });
+            const { error } = await _supa.from(store).upsert(chunk.map(sanitizarPayloadSupabase), { onConflict: 'id' });
             if (error) console.warn(`[Supabase bulkPut] ${store}:`, error.message);
-          } catch(err) {
+          } catch (err) {
             console.warn(`[Supabase bulkPut] ${store}:`, err);
           }
         }
@@ -336,60 +360,14 @@ const IDB = (() => {
       return ok;
     },
 
-    // Consulta paginada y filtrada — ULTRA OPTIMIZADA PARA 10,000+ CLIENTES
+    // Consulta paginada y filtrada — optimizada para 10,000+ clientes
     async query(store, { indexName = null, range = null, filter = null, limit = 50, offset = 0 } = {}) {
       const d = await db();
       return new Promise((resolve, reject) => {
-        const tx     = d.transaction([store], 'readonly');
-        const st     = tx.objectStore(store);
+        const st     = d.transaction([store], 'readonly').objectStore(store);
         const source = indexName ? st.index(indexName) : st;
 
-        // FAST PATH (Sin filtro JS en memoria):
-        // Usa conteo O(1) vía B-Tree y salta directo con cursor.advance()
-        // Se detiene INMEDIATAMENTE al alcanzar limit (no recorre los 10,000 registros).
-        if (!filter) {
-          const countReq = source.count(range);
-          countReq.onsuccess = () => {
-            const total = countReq.result || 0;
-            if (total === 0 || offset >= total) {
-              resolve({ results: [], total });
-              return;
-            }
-
-            const results = [];
-            const req = source.openCursor(range, 'prev');
-            let advanced = false;
-
-            req.onsuccess = e => {
-              const cursor = e.target.result;
-              if (!cursor) {
-                resolve({ results, total });
-                return;
-              }
-
-              if (offset > 0 && !advanced) {
-                advanced = true;
-                cursor.advance(offset);
-                return;
-              }
-
-              results.push(cursor.value);
-              if (results.length >= limit) {
-                resolve({ results, total });
-                return;
-              }
-
-              cursor.continue();
-            };
-            req.onerror = e => reject(e.target.error);
-          };
-          countReq.onerror = () => ejecutarCursorCompleto();
-          return;
-        }
-
-        // SLOW PATH (Filtro JS de búsqueda por texto):
-        ejecutarCursorCompleto();
-
+        // Recorrido completo con filtro JS (búsqueda por texto)
         function ejecutarCursorCompleto() {
           const req = source.openCursor(range, 'prev');
           const results = [];
@@ -398,23 +376,48 @@ const IDB = (() => {
 
           req.onsuccess = e => {
             const cursor = e.target.result;
-            if (!cursor) {
-              resolve({ results, total: totalFiltrado });
-              return;
-            }
+            if (!cursor) { resolve({ results, total: totalFiltrado }); return; }
             const val = cursor.value;
             if (!filter || filter(val)) {
               totalFiltrado++;
-              if (skipped < offset) {
-                skipped++;
-              } else if (results.length < limit) {
-                results.push(val);
-              }
+              if (skipped < offset) skipped++;
+              else if (results.length < limit) results.push(val);
             }
             cursor.continue();
           };
           req.onerror = e => reject(e.target.error);
         }
+
+        // Ruta rápida: sin filtro, conteo O(1) y salto directo con advance()
+        if (!filter) {
+          const countReq = source.count(range);
+          countReq.onsuccess = () => {
+            const total = countReq.result || 0;
+            if (total === 0 || offset >= total) { resolve({ results: [], total }); return; }
+
+            const results = [];
+            const req = source.openCursor(range, 'prev');
+            let advanced = false;
+
+            req.onsuccess = e => {
+              const cursor = e.target.result;
+              if (!cursor) { resolve({ results, total }); return; }
+              if (offset > 0 && !advanced) {
+                advanced = true;
+                cursor.advance(offset);
+                return;
+              }
+              results.push(cursor.value);
+              if (results.length >= limit) { resolve({ results, total }); return; }
+              cursor.continue();
+            };
+            req.onerror = e => reject(e.target.error);
+          };
+          countReq.onerror = () => ejecutarCursorCompleto();
+          return;
+        }
+
+        ejecutarCursorCompleto();
       });
     },
 
@@ -423,17 +426,12 @@ const IDB = (() => {
       const s = String(termino || '').toLowerCase().trim();
       const d = await db();
       return new Promise((resolve) => {
-        const tx = d.transaction(['clientes'], 'readonly');
-        const st = tx.objectStore('clientes');
-        const req = st.openCursor(null, 'prev');
+        const req = d.transaction(['clientes'], 'readonly').objectStore('clientes').openCursor(null, 'prev');
         const encontrados = [];
 
         req.onsuccess = e => {
           const cursor = e.target.result;
-          if (!cursor || encontrados.length >= limit) {
-            resolve(encontrados);
-            return;
-          }
+          if (!cursor || encontrados.length >= limit) { resolve(encontrados); return; }
           const c = cursor.value;
           if (!soloActivos || c.estado === 'ACTIVO') {
             if (!s || `${c.id} ${c.nombre || ''} ${c.ip || ''} ${c.celular || ''} ${c.zona || ''}`.toLowerCase().includes(s)) {
@@ -446,90 +444,55 @@ const IDB = (() => {
       });
     },
 
-    // Eliminación atómica en cascada — 100% GARANTIZADA LOCAL Y NUBE
+    // Descarga bajo demanda la imagen (data_url) de una foto que solo existe en la nube
+    async cargarFotoRemota(id) {
+      const local = await this.get('fotos', id);
+      if (local && local.data_url) return local;
+      if (!_supa) return local;
+      try {
+        const { data, error } = await _supa.from('fotos').select('*').eq('id', id).single();
+        if (error || !data) return local;
+        await this.putLocal('fotos', data);
+        return data;
+      } catch (_) {
+        return local;
+      }
+    },
+
+    // Eliminación atómica en cascada — local y nube
     async eliminarClienteCompleto(id) {
       if (id === null || id === undefined || id === '') {
         throw new Error('[eliminarClienteCompleto] ID inválido: ' + id);
       }
-
-      const numId = Number(id);
-      const isNum = Number.isFinite(numId) && numId > 0;
-      const strId = String(id);
+      const claves = clavesDe(id);
       const d = await db();
 
       // 1. Borrado atómico en IndexedDB
       await new Promise((resolve, reject) => {
         const tx = d.transaction(['clientes', 'pagos', 'cortes', 'fotos'], 'readwrite');
-        const cliStore = tx.objectStore('clientes');
-
-        if (isNum) cliStore.delete(numId);
-        cliStore.delete(strId);
-
-        // Limpiar pagos del cliente
-        try {
-          const pStore = tx.objectStore('pagos');
-          if (pStore.indexNames.contains('id_cliente')) {
-            const pIdx = pStore.index('id_cliente');
-            if (isNum) {
-              const req = pIdx.openKeyCursor(IDBKeyRange.only(numId));
-              req.onsuccess = e => { const c = e.target.result; if (c) { pStore.delete(c.primaryKey); c.continue(); } };
-            }
-            const reqStr = pIdx.openKeyCursor(IDBKeyRange.only(strId));
-            reqStr.onsuccess = e => { const c = e.target.result; if (c) { pStore.delete(c.primaryKey); c.continue(); } };
-          }
-        } catch (errP) {
-          console.warn('[eliminarClienteCompleto] pagos error:', errP);
-        }
-
-        // Limpiar cortes del cliente
-        try {
-          const kStore = tx.objectStore('cortes');
-          if (kStore.indexNames.contains('id_cliente')) {
-            const kIdx = kStore.index('id_cliente');
-            if (isNum) {
-              const req = kIdx.openKeyCursor(IDBKeyRange.only(numId));
-              req.onsuccess = e => { const c = e.target.result; if (c) { kStore.delete(c.primaryKey); c.continue(); } };
-            }
-            const reqStr = kIdx.openKeyCursor(IDBKeyRange.only(strId));
-            reqStr.onsuccess = e => { const c = e.target.result; if (c) { kStore.delete(c.primaryKey); c.continue(); } };
-          }
-        } catch (errK) {
-          console.warn('[eliminarClienteCompleto] cortes error:', errK);
-        }
-
-        // Limpiar fotos del cliente
-        try {
-          const fStore = tx.objectStore('fotos');
-          if (fStore.indexNames.contains('cliente_id')) {
-            const fIdx = fStore.index('cliente_id');
-            if (isNum) {
-              const req = fIdx.openKeyCursor(IDBKeyRange.only(numId));
-              req.onsuccess = e => { const c = e.target.result; if (c) { fStore.delete(c.primaryKey); c.continue(); } };
-            }
-            const reqStr = fIdx.openKeyCursor(IDBKeyRange.only(strId));
-            reqStr.onsuccess = e => { const c = e.target.result; if (c) { fStore.delete(c.primaryKey); c.continue(); } };
-          }
-        } catch (errF) {
-          console.warn('[eliminarClienteCompleto] fotos error:', errF);
-        }
-
+        const cli = tx.objectStore('clientes');
+        claves.forEach(k => cli.delete(k));
+        borrarPorIndice(tx, 'pagos',  'id_cliente', claves);
+        borrarPorIndice(tx, 'cortes', 'id_cliente', claves);
+        borrarPorIndice(tx, 'fotos',  'cliente_id', claves);
         tx.oncomplete = () => resolve();
         tx.onerror = e => reject(e.target.error || new Error('Error al eliminar en IndexedDB'));
+        tx.onabort = e => reject(e.target.error || new Error('Eliminación cancelada'));
       });
 
-      // 2. Borrado remoto inmediato en Supabase (evita que el cliente "resucite" en la sincronización)
+      // 2. Borrado remoto (evita que el cliente "resucite" en la sincronización)
       if (_supa) {
-        try {
-          const targetId = isNum ? numId : strId;
-          await Promise.allSettled([
-            _supa.from('clientes').delete().eq('id', targetId),
-            _supa.from('pagos').delete().eq('id_cliente', targetId),
-            _supa.from('cortes').delete().eq('id_cliente', targetId),
-            _supa.from('fotos').delete().eq('cliente_id', targetId)
-          ]);
-        } catch(err) {
-          console.warn('[Supabase eliminarClienteCompleto]:', err);
-        }
+        const targetId = claves[0];
+        const res = await Promise.allSettled([
+          _supa.from('pagos').delete().eq('id_cliente', targetId),
+          _supa.from('cortes').delete().eq('id_cliente', targetId),
+          _supa.from('fotos').delete().eq('cliente_id', targetId),
+          _supa.from('clientes').delete().eq('id', targetId)
+        ]);
+        res.forEach(r => {
+          if (r.status === 'rejected') console.warn('[Supabase eliminarClienteCompleto]:', r.reason);
+          else if (r.value && r.value.error) console.warn('[Supabase eliminarClienteCompleto]:', r.value.error.message);
+        });
       }
     }
   };
@@ -591,16 +554,13 @@ function badgeEstado(e) {
   return '<span class="badge badge-retirado">⚪ RETIRADO</span>';
 }
 
-// FIX [INNECESARIO-02]: badgeCable() referenciaba el campo 'cable' eliminado del sistema.
-// Se conserva la función pero se documenta como legacy para backward compat con registros viejos.
+// Legacy: el campo 'cable' ya no existe; se conserva por compatibilidad con registros viejos.
 function badgeCable(c) {
   return c ? '<span style="color:var(--verde);font-weight:700">✅ Cable</span>' : '<span style="color:var(--gris)">❌ Sin cable</span>';
 }
 
 let _toastTimer = null;
 function toast(msg, tipo = 'success') {
-  // FIX [CASO-LIMITE-03]: Si msg es un objeto o undefined, convertirlo a string
-  // para evitar que aparezca "[object Object]" en el toast.
   const safeMsg = (msg !== null && msg !== undefined) ? String(msg) : '';
   let el = document.getElementById('toast');
   if (!el) {
@@ -614,11 +574,107 @@ function toast(msg, tipo = 'success') {
   _toastTimer = setTimeout(() => { el.className = ''; }, 3200);
 }
 
-// ══ VERIFICACIÓN Y SINCRONIZACIÓN SUPABASE (HARDENED ENTERPRISE) ════════
+// ══ LOGIN OPCIONAL (Supabase Auth) ══════════════════════
+const Auth = {
+  async sesion() {
+    if (!_supa) return null;
+    try {
+      const { data } = await _supa.auth.getSession();
+      return (data && data.session) || null;
+    } catch (_) {
+      return null;
+    }
+  },
+  async login(email, password) {
+    if (!_supa) throw new Error('Supabase no disponible');
+    const { data, error } = await _supa.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data.session;
+  },
+  async logout() {
+    if (_supa) await _supa.auth.signOut();
+    location.reload();
+  }
+};
+if (typeof window !== 'undefined') window.Auth = Auth;
+
+function mostrarLogin() {
+  return new Promise(resolve => {
+    if (document.getElementById('leytrixLogin')) return;
+    const campo = 'width:100%;box-sizing:border-box;padding:12px;margin-bottom:10px;border:1px solid #CBD5E1;border-radius:10px;font-size:15px';
+    const ov = document.createElement('div');
+    ov.id = 'leytrixLogin';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#0F172A;display:flex;align-items:center;justify-content:center;padding:16px;font-family:system-ui,sans-serif';
+    ov.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+        <h2 style="margin:0 0 4px;font-size:22px;color:#0F172A">Leytrix ISP</h2>
+        <p style="margin:0 0 18px;color:#64748B;font-size:14px">Inicia sesión para continuar</p>
+        <input id="lgEmail" type="email" placeholder="Correo" autocomplete="username" style="${campo}">
+        <input id="lgPass" type="password" placeholder="Contraseña" autocomplete="current-password" style="${campo}">
+        <div id="lgError" style="color:#DC2626;font-size:13px;min-height:18px;margin-bottom:8px"></div>
+        <button id="lgBtn" style="width:100%;padding:12px;border:0;border-radius:10px;background:#2563EB;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Entrar</button>
+      </div>`;
+    document.body.appendChild(ov);
+
+    const emailEl = ov.querySelector('#lgEmail');
+    const passEl  = ov.querySelector('#lgPass');
+    const errEl   = ov.querySelector('#lgError');
+    const btn     = ov.querySelector('#lgBtn');
+
+    const entrar = async () => {
+      errEl.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Entrando...';
+      try {
+        await Auth.login(emailEl.value.trim(), passEl.value);
+        ov.remove();
+        resolve(true);
+      } catch (err) {
+        errEl.textContent = 'Correo o contraseña incorrectos.';
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+      }
+    };
+    btn.addEventListener('click', entrar);
+    passEl.addEventListener('keydown', e => { if (e.key === 'Enter') entrar(); });
+    emailEl.focus();
+  });
+}
+
+async function exigirLogin() {
+  if (!REQUIRE_AUTH || !_supa) return true;
+  const s = await Auth.sesion();
+  if (!s) await mostrarLogin();
+  verificarSupabase(false);
+  return true;
+}
+
+if (REQUIRE_AUTH && _supa && typeof document !== 'undefined') {
+  _supa.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') location.reload(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', exigirLogin);
+  else exigirLogin();
+}
+
+// ══ SQL DE CONFIGURACIÓN (se muestra en el modal "Configurar Nube") ═════
+const _ROL_RLS = REQUIRE_AUTH ? 'authenticated' : 'anon, authenticated';
+
+function _sqlPoliticas(tabla) {
+  const drops = ['select', 'insert', 'update', 'delete'].map(op =>
+    `DROP POLICY IF EXISTS "leytrix_${tabla}_${op}" ON public.${tabla};\n` +
+    `DROP POLICY IF EXISTS "Permitir ${op} ${tabla}" ON public.${tabla};`
+  ).join('\n');
+  return `${drops}
+CREATE POLICY "leytrix_${tabla}_select" ON public.${tabla} FOR SELECT TO ${_ROL_RLS} USING (true);
+CREATE POLICY "leytrix_${tabla}_insert" ON public.${tabla} FOR INSERT TO ${_ROL_RLS} WITH CHECK (true);
+CREATE POLICY "leytrix_${tabla}_update" ON public.${tabla} FOR UPDATE TO ${_ROL_RLS} USING (true) WITH CHECK (true);
+CREATE POLICY "leytrix_${tabla}_delete" ON public.${tabla} FOR DELETE TO ${_ROL_RLS} USING (true);
+`;
+}
+
 const SUPABASE_SETUP_SQL = `-- ====================================================================
 -- LEYTRIX ISP — SCRIPT DE CONFIGURACIÓN POSTGRESQL (SUPABASE)
--- Nivel de Seguridad: Producción (RLS + Triggers + Índices Optimizados)
 -- Ejecutar en: Supabase Dashboard > SQL Editor > New Query > Run
+-- Acceso de las políticas: ${_ROL_RLS}
 -- ====================================================================
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -701,58 +757,10 @@ ALTER TABLE public.pagos    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cortes   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fotos    ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "leytrix_clientes_select" ON public.clientes;
-DROP POLICY IF EXISTS "leytrix_clientes_insert" ON public.clientes;
-DROP POLICY IF EXISTS "leytrix_clientes_update" ON public.clientes;
-DROP POLICY IF EXISTS "leytrix_clientes_delete" ON public.clientes;
-DROP POLICY IF EXISTS "Permitir select clientes" ON public.clientes;
-DROP POLICY IF EXISTS "Permitir insert clientes" ON public.clientes;
-DROP POLICY IF EXISTS "Permitir update clientes" ON public.clientes;
-DROP POLICY IF EXISTS "Permitir delete clientes" ON public.clientes;
-
-CREATE POLICY "leytrix_clientes_select" ON public.clientes FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "leytrix_clientes_insert" ON public.clientes FOR INSERT TO anon, authenticated WITH CHECK (true);
-CREATE POLICY "leytrix_clientes_update" ON public.clientes FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "leytrix_clientes_delete" ON public.clientes FOR DELETE TO anon, authenticated USING (true);
-
-DROP POLICY IF EXISTS "leytrix_pagos_select" ON public.pagos;
-DROP POLICY IF EXISTS "leytrix_pagos_insert" ON public.pagos;
-DROP POLICY IF EXISTS "leytrix_pagos_update" ON public.pagos;
-DROP POLICY IF EXISTS "leytrix_pagos_delete" ON public.pagos;
-DROP POLICY IF EXISTS "Permitir select pagos" ON public.pagos;
-DROP POLICY IF EXISTS "Permitir insert pagos" ON public.pagos;
-DROP POLICY IF EXISTS "Permitir delete pagos" ON public.pagos;
-
-CREATE POLICY "leytrix_pagos_select" ON public.pagos FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "leytrix_pagos_insert" ON public.pagos FOR INSERT TO anon, authenticated WITH CHECK (true);
-CREATE POLICY "leytrix_pagos_update" ON public.pagos FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "leytrix_pagos_delete" ON public.pagos FOR DELETE TO anon, authenticated USING (true);
-
-DROP POLICY IF EXISTS "leytrix_cortes_select" ON public.cortes;
-DROP POLICY IF EXISTS "leytrix_cortes_insert" ON public.cortes;
-DROP POLICY IF EXISTS "leytrix_cortes_update" ON public.cortes;
-DROP POLICY IF EXISTS "leytrix_cortes_delete" ON public.cortes;
-DROP POLICY IF EXISTS "Permitir select cortes" ON public.cortes;
-DROP POLICY IF EXISTS "Permitir insert cortes" ON public.cortes;
-DROP POLICY IF EXISTS "Permitir update cortes" ON public.cortes;
-DROP POLICY IF EXISTS "Permitir delete cortes" ON public.cortes;
-
-CREATE POLICY "leytrix_cortes_select" ON public.cortes FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "leytrix_cortes_insert" ON public.cortes FOR INSERT TO anon, authenticated WITH CHECK (true);
-CREATE POLICY "leytrix_cortes_update" ON public.cortes FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "leytrix_cortes_delete" ON public.cortes FOR DELETE TO anon, authenticated USING (true);
-
-DROP POLICY IF EXISTS "leytrix_fotos_select" ON public.fotos;
-DROP POLICY IF EXISTS "leytrix_fotos_insert" ON public.fotos;
-DROP POLICY IF EXISTS "leytrix_fotos_delete" ON public.fotos;
-DROP POLICY IF EXISTS "Permitir select fotos" ON public.fotos;
-DROP POLICY IF EXISTS "Permitir insert fotos" ON public.fotos;
-DROP POLICY IF EXISTS "Permitir delete fotos" ON public.fotos;
-
-CREATE POLICY "leytrix_fotos_select" ON public.fotos FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "leytrix_fotos_insert" ON public.fotos FOR INSERT TO anon, authenticated WITH CHECK (true);
-CREATE POLICY "leytrix_fotos_delete" ON public.fotos FOR DELETE TO anon, authenticated USING (true);
-
+${_sqlPoliticas('clientes')}
+${_sqlPoliticas('pagos')}
+${_sqlPoliticas('cortes')}
+${_sqlPoliticas('fotos')}
 CREATE INDEX IF NOT EXISTS idx_clientes_zona ON public.clientes(zona);
 CREATE INDEX IF NOT EXISTS idx_clientes_estado ON public.clientes(estado);
 CREATE INDEX IF NOT EXISTS idx_clientes_zona_estado ON public.clientes(zona, estado);
@@ -762,59 +770,48 @@ CREATE INDEX IF NOT EXISTS idx_cortes_id_cliente ON public.cortes(id_cliente);
 CREATE INDEX IF NOT EXISTS idx_cortes_estado ON public.cortes(estado);
 CREATE INDEX IF NOT EXISTS idx_fotos_cliente_id ON public.fotos(cliente_id);
 
+-- Realtime: cada tabla por separado (si una ya estaba, no afecta a las demás)
 DO $$
+DECLARE t TEXT;
 BEGIN
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.clientes, public.pagos, public.cortes, public.fotos;
-  EXCEPTION WHEN OTHERS THEN
-    NULL;
-  END;
+  FOREACH t IN ARRAY ARRAY['clientes','pagos','cortes','fotos'] LOOP
+    BEGIN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
+    EXCEPTION WHEN OTHERS THEN
+      NULL;
+    END;
+  END LOOP;
 END $$;
 `;
 
+// ══ REALTIME ════════════════════════════════════════════
 let _realtimeIniciado = false;
+
+async function _aplicarCambioRealtime(tabla, p) {
+  // Escritura LOCAL: evita que el cambio rebote de vuelta a Supabase
+  if ((p.eventType === 'INSERT' || p.eventType === 'UPDATE') && p.new && p.new.id !== undefined) {
+    await IDB.putLocal(tabla, p.new);
+  } else if (p.eventType === 'DELETE' && p.old && p.old.id !== undefined) {
+    await IDB.deleteLocal(tabla, p.old.id);
+  }
+  refrescarUI();
+}
+
 function iniciarRealtimeSupabase() {
   if (_realtimeIniciado || !_supa) return;
   _realtimeIniciado = true;
   try {
     _supa.channel('leytrix-realtime-all')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, async (p) => {
-        // FIX [CASO-LIMITE-04]: Eventos Realtime en INSERT a veces NO incluyen p.old.
-        // El guard `p.old && p.old.id` ya estaba correcto, pero en UPDATE puede
-        // faltar p.new.id si Supabase no lo devuelve (payload incompleto).
-        // Se añade guard adicional para UPDATE.
-        if ((p.eventType === 'INSERT' || p.eventType === 'UPDATE') && p.new && p.new.id) {
-          await IDB.put('clientes', p.new);
-        } else if (p.eventType === 'DELETE' && p.old && p.old.id) {
-          await IDB.delete('clientes', p.old.id);
-        }
-        if (typeof window.onDatosActualizados === 'function') window.onDatosActualizados();
-        actualizarEstadisticasSidebar();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pagos' }, async (p) => {
-        if ((p.eventType === 'INSERT' || p.eventType === 'UPDATE') && p.new && p.new.id) {
-          await IDB.put('pagos', p.new);
-        } else if (p.eventType === 'DELETE' && p.old && p.old.id) {
-          await IDB.delete('pagos', p.old.id);
-        }
-        if (typeof window.onDatosActualizados === 'function') window.onDatosActualizados();
-        actualizarEstadisticasSidebar();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cortes' }, async (p) => {
-        if ((p.eventType === 'INSERT' || p.eventType === 'UPDATE') && p.new && p.new.id) {
-          await IDB.put('cortes', p.new);
-        } else if (p.eventType === 'DELETE' && p.old && p.old.id) {
-          await IDB.delete('cortes', p.old.id);
-        }
-        if (typeof window.onDatosActualizados === 'function') window.onDatosActualizados();
-        actualizarEstadisticasSidebar();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, p => _aplicarCambioRealtime('clientes', p))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pagos' },    p => _aplicarCambioRealtime('pagos', p))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cortes' },   p => _aplicarCambioRealtime('cortes', p))
       .subscribe();
-  } catch(e) {
+  } catch (e) {
     console.warn('Realtime notice:', e);
   }
 }
 
+// ══ VERIFICACIÓN Y SINCRONIZACIÓN SUPABASE ══════════════
 async function verificarSupabase(mostrarToast = false) {
   if (!_supa) {
     actualizarBadgesSupabase(false);
@@ -852,8 +849,6 @@ function actualizarBadgesSupabase(online) {
   const expEl  = document.getElementById('expSupaBadge');
   const modEl  = document.getElementById('modalSupaStatusBadge');
   const banEl  = document.getElementById('bannerSupaAlerta');
-
-  // Sincronizar indicador móvil con el indicador desktop
   const mobDot = document.getElementById('mobileSupaDot');
 
   if (banEl)  banEl.style.display = online ? 'none' : 'flex';
@@ -891,23 +886,27 @@ async function copiarSqlSupabase() {
   try {
     await navigator.clipboard.writeText(SUPABASE_SETUP_SQL);
     toast('📋 Script SQL copiado al portapapeles. Pégalo en Supabase SQL Editor.');
-  } catch(_) {
+  } catch (_) {
     toast('Selecciona el código SQL y cópialo con Ctrl+C');
   }
 }
 
-// FIX [LOGICA-04]: sincronizarConSupabase() hacía primero Upload→luego Download,
-// pero si la descarga devolvía datos "viejos" de Supabase (registros que solo existían
-// allí) pisaba registros locales más recientes que se acababan de subir.
-// El orden correcto es: Download primero para no perder remotos, luego Upload para
-// que los locales no-en-remoto queden sincronizados.
+// Sincronización: 1) descarga remotos → local (sin rebote)  2) sube SOLO lo que
+// existe en local y aún no está en la nube. (Lo descargado ya es idéntico al remoto,
+// por eso volver a subirlo era trabajo inútil.)
+let _sincronizando = false;
+
 async function sincronizarConSupabase(mostrarFeedback = true) {
   if (!_supa) {
     if (mostrarFeedback) toast('Supabase no inicializado', 'error');
     return;
   }
+  if (_sincronizando) return;
+  _sincronizando = true;
 
   if (mostrarFeedback) toast('☁️ Sincronizando datos con Supabase Cloud...');
+
+  let errores = 0;
 
   try {
     const { error: chkErr } = await _supa.from('clientes').select('id', { head: true, count: 'exact' });
@@ -924,18 +923,20 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
     actualizarBadgesSupabase(true);
     iniciarRealtimeSupabase();
 
-    // Función auxiliar para descargar tablas completas de Supabase superando el límite por defecto de 1,000
+    // Descarga tablas completas superando el límite de 1,000 filas (con orden estable)
     async function descargarTablaCompleta(tabla, columnas = '*') {
-      let registros = [];
+      const registros = [];
       let desde = 0;
       const CHUNK = 1000;
       while (true) {
         const { data, error } = await _supa
           .from(tabla)
           .select(columnas)
+          .order('id', { ascending: true })
           .range(desde, desde + CHUNK - 1);
         if (error) {
           console.warn(`[Sync download] Error en ${tabla}:`, error.message);
+          errores++;
           break;
         }
         if (!data || !data.length) break;
@@ -946,57 +947,51 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
       return registros;
     }
 
-    // PASO 1: Descargar remotos primero (con paginación completa para soportar 10,000+ clientes)
-    const supaCli = await descargarTablaCompleta('clientes', '*');
-    if (supaCli && supaCli.length) await IDB.bulkPut('clientes', supaCli);
-
-    const supaPag = await descargarTablaCompleta('pagos', '*');
-    if (supaPag && supaPag.length) await IDB.bulkPut('pagos', supaPag);
-
-    const supaCor = await descargarTablaCompleta('cortes', '*');
-    if (supaCor && supaCor.length) await IDB.bulkPut('cortes', supaCor);
-
-    const supaFot = await descargarTablaCompleta('fotos', 'id,titulo,nombre,categoria,cliente_id,zona,tamano,tipo_mime,mtime,creado_el');
-    if (supaFot && supaFot.length) await IDB.bulkPut('fotos', supaFot);
-
-    // PASO 2: Subir locales (datos que no están en Supabase aún)
-    const cliLocales = await IDB.getAll('clientes');
-    for (let i = 0; i < cliLocales.length; i += 300) {
-      const lote = cliLocales.slice(i, i + 300).map(sanitizarPayloadSupabase);
-      const { error } = await _supa.from('clientes').upsert(lote, { onConflict: 'id' });
-      if (error) console.warn('[Sync] Error subiendo clientes:', error.message);
+    // Sube a Supabase los registros locales que no existen en la nube
+    async function subirFaltantes(tabla, remotos, tamLote, filtro = null) {
+      const idsRemotos = new Set(remotos.map(r => String(r.id)));
+      let locales = (await IDB.getAll(tabla)).filter(l => !idsRemotos.has(String(l.id)));
+      if (filtro) locales = locales.filter(filtro);
+      for (let i = 0; i < locales.length; i += tamLote) {
+        const lote = locales.slice(i, i + tamLote).map(sanitizarPayloadSupabase);
+        const { error } = await _supa.from(tabla).upsert(lote, { onConflict: 'id' });
+        if (error) { console.warn(`[Sync] Error subiendo ${tabla}:`, error.message); errores++; }
+      }
     }
 
-    const pagosLocales = await IDB.getAll('pagos');
-    for (let i = 0; i < pagosLocales.length; i += 300) {
-      const lote = pagosLocales.slice(i, i + 300).map(sanitizarPayloadSupabase);
-      const { error } = await _supa.from('pagos').upsert(lote, { onConflict: 'id' });
-      if (error) console.warn('[Sync] Error subiendo pagos:', error.message);
+    // PASO 1: descargar (solo escritura local)
+    const supaCli = await descargarTablaCompleta('clientes');
+    const supaPag = await descargarTablaCompleta('pagos');
+    const supaCor = await descargarTablaCompleta('cortes');
+    const supaFot = await descargarTablaCompleta('fotos', 'id,titulo,nombre,categoria,cliente_id,cliente_nombre,zona,tamano,tipo_mime,notas,mtime,creado_el');
+
+    if (supaCli.length) await IDB.bulkPut('clientes', supaCli, { remoto: false });
+    if (supaPag.length) await IDB.bulkPut('pagos',    supaPag, { remoto: false });
+    if (supaCor.length) await IDB.bulkPut('cortes',   supaCor, { remoto: false });
+
+    // Fotos: no pisar las locales (tienen data_url); solo agregar las que faltan
+    if (supaFot.length) {
+      const idsLocales = new Set((await IDB.getAll('fotos')).map(f => String(f.id)));
+      const nuevas = supaFot.filter(f => !idsLocales.has(String(f.id)));
+      if (nuevas.length) await IDB.bulkPut('fotos', nuevas, { remoto: false });
     }
 
-    const cortesLocales = await IDB.getAll('cortes');
-    for (let i = 0; i < cortesLocales.length; i += 300) {
-      const lote = cortesLocales.slice(i, i + 300).map(sanitizarPayloadSupabase);
-      const { error } = await _supa.from('cortes').upsert(lote, { onConflict: 'id' });
-      if (error) console.warn('[Sync] Error subiendo cortes:', error.message);
-    }
+    // PASO 2: subir lo que solo existe en local
+    await subirFaltantes('clientes', supaCli, 300);
+    await subirFaltantes('pagos',    supaPag, 300);
+    await subirFaltantes('cortes',   supaCor, 300);
+    await subirFaltantes('fotos',    supaFot, 5, f => !!f.data_url); // base64 pesado: lotes pequeños
 
-    // Fotos se suben en lotes pequeños por su tamaño (data_url = base64)
-    const fotosLocales = await IDB.getAll('fotos');
-    for (let i = 0; i < fotosLocales.length; i += 5) {
-      const lote = fotosLocales.slice(i, i + 5).map(sanitizarPayloadSupabase);
-      const { error } = await _supa.from('fotos').upsert(lote, { onConflict: 'id' });
-      if (error) console.warn('[Sync] Error subiendo fotos:', error.message);
+    if (mostrarFeedback) {
+      if (errores) toast(`⚠️ Sincronización terminada con ${errores} aviso(s). Revisa la consola (F12).`, 'warn');
+      else toast('✅ ¡Sincronización con Supabase Cloud completada exitosamente!');
     }
-
-    if (mostrarFeedback) toast('✅ ¡Sincronización con Supabase Cloud completada exitosamente!');
-    // FIX [BUG-05]: `onSyncComplete` se llamaba sin verificar si es window.onSyncComplete,
-    // lo que lanzaba ReferenceError en páginas que no lo definían.
     if (typeof window.onSyncComplete === 'function') window.onSyncComplete();
-    if (typeof window.onDatosActualizados === 'function') window.onDatosActualizados();
-    actualizarEstadisticasSidebar();
-  } catch(err) {
+    refrescarUI();
+  } catch (err) {
     console.error('Error sincronizando Supabase:', err);
     if (mostrarFeedback) toast('⚠️ Error al sincronizar: ' + (err.message || ''), 'error');
+  } finally {
+    _sincronizando = false;
   }
 }
