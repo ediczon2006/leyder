@@ -109,6 +109,14 @@
             <input type="hidden" id="addPlan" value="65" />
           </div>
 
+          <!-- Servicio de Cable (opcional, +S/. 10) -->
+          <div style="margin-bottom:22px">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700">
+              <input type="checkbox" id="addCable" style="width:18px;height:18px"/>
+              📺 Servicio de Cable (+ S/. 10)
+            </label>
+          </div>
+
           <!-- Bloque: Estado y Fecha -->
           <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:20px;margin-bottom:28px">
             <div>
@@ -192,6 +200,7 @@
         const plan      = Number(document.getElementById('addPlan')?.value) || 65;
         const estado    = document.getElementById('addEstado')?.value || 'ACTIVO';
         const fecha     = document.getElementById('addFecha')?.value || new Date().toISOString().split('T')[0];
+        const cable     = document.getElementById('addCable')?.checked || false;
 
         if (!nombre) {
           toast('Por favor ingrese el nombre del cliente', 'warn');
@@ -207,6 +216,7 @@
           ip,
           plan,
           estado,
+          cable,
           fecha_inicio: fecha,
           creado_el: new Date().toISOString()
         };

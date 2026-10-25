@@ -65,7 +65,7 @@
       <table>
         <thead>
           <tr>
-            <th>ID</th>
+            <th>N°</th>
             <th>Nombre Completo</th>
             <th>Zona</th>
             <th>Dirección IP</th>
@@ -146,6 +146,12 @@
               <option value="RETIRADO">RETIRADO</option>
             </select>
           </div>
+          <div class="form-group form-full">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="eCable" style="width:18px;height:18px"/>
+              📺 Servicio de Cable (+ S/. 10)
+            </label>
+          </div>
         </div>
         <div class="btn-group" style="margin-top:20px;justify-content:flex-end">
           <button type="button" class="btn btn-outline" onclick="cerrarModal('modalEditar')">Cancelar</button>
@@ -173,6 +179,28 @@
     const PAGE_SIZE = 50;
     let _totalClientes = 0;
     let _busTimer = null;
+
+    // ===== CABLE (+S/. 10) =====
+    const CABLE_EXTRA = 10;
+
+    // Precio real que debe pagar el cliente (plan + cable si está activo)
+    function precioTotal(c) {
+      return Number(c.plan || 0) + (c.cable ? CABLE_EXTRA : 0);
+    }
+
+    // Activar / desactivar cable manualmente
+    async function toggleCable(id) {
+      try {
+        const c = await IDB.get('clientes', id);
+        if (!c) { toast('Cliente no encontrado', 'error'); return; }
+        c.cable = !c.cable;
+        await IDB.put('clientes', c);
+        toast(c.cable ? '📺 Cable activado (+ S/. 10)' : '📺 Cable desactivado');
+        cargarClientes(_paginaActual);
+      } catch (err) {
+        toast('Error: ' + err.message, 'error');
+      }
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
       renderSidebar('clientes');
@@ -246,22 +274,29 @@
         document.getElementById('txtContadorClientes').textContent =
           `👥 ${total.toLocaleString()} cliente(s) registrado(s) en Leytrix`;
 
+        // Orden ascendente por ID (1, 2, 3...)
+        results.sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
+
         if (!results.length) {
           tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="e-icon">👥</div>No hay clientes con los filtros seleccionados</div></td></tr>';
         } else {
-          tbody.innerHTML = results.map(c => `
+          tbody.innerHTML = results.map((c, i) => `
             <tr class="${c.estado === 'CORTADO' ? 'row-cortado' : ''}">
-              <td><strong style="color:var(--azul)">#${esc(c.id)}</strong></td>
+              <td title="ID real: ${esc(c.id)}"><strong style="color:var(--azul)">#${pagina * PAGE_SIZE + i + 1}</strong></td>
               <td><strong>${esc(c.nombre)}</strong></td>
               <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
               <td><code>${esc(c.ip) || '—'}</code></td>
-              <td><strong style="color:var(--azul)">S/. ${Number(c.plan || 0).toFixed(2)}</strong></td>
+              <td>
+                <strong style="color:var(--azul)">S/. ${precioTotal(c).toFixed(2)}</strong>
+                ${c.cable ? '<div style="font-size:0.7rem;color:#16a34a;font-weight:700">📺 Cable +S/. 10</div>' : ''}
+              </td>
               <td>${badgeEstado(c.estado)}</td>
               <td><span style="font-size:0.8rem;color:var(--gris)">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
               <td><strong>${esc(c.celular) || '—'}</strong></td>
               <td>
                 <div class="btn-group">
                   <a href="pagos.html?id=${encodeURIComponent(c.id)}" class="btn btn-success btn-sm" title="Registrar pago">💳 Pagar</a>
+                  <button class="btn btn-sm" onclick="toggleCable('${esc(c.id)}')" style="background:${c.cable ? '#16a34a' : '#64748B'};color:#fff;border:none" title="${c.cable ? 'Quitar cable' : 'Activar cable (+S/. 10)'}">📺 ${c.cable ? 'ON' : 'OFF'}</button>
                   <button class="btn btn-primary btn-sm" onclick="enviarMensajeIACliente('${esc(c.id)}')" style="background:#7C3AED;border-color:#7C3AED" title="Enviar recordatorio con IA a WhatsApp">🤖</button>
                   <button class="btn btn-outline btn-sm" onclick="abrirEditar('${esc(c.id)}')" title="Editar">✏️</button>
                   <button class="btn btn-ghost btn-sm" onclick="verHistorialPagos('${esc(c.id)}')" title="Ver pagos">💰</button>
@@ -312,6 +347,7 @@
         document.getElementById('eZona').value        = c.zona || 'Loboyacu';
         document.getElementById('ePlan').value        = String(c.plan || 65);
         document.getElementById('eEstado').value      = c.estado || 'ACTIVO';
+        document.getElementById('eCable').checked     = !!c.cable;
 
         document.getElementById('modalEditar').classList.add('open');
       } catch (err) {
@@ -336,6 +372,7 @@
         c.zona         = document.getElementById('eZona').value;
         c.plan         = Number(document.getElementById('ePlan').value) || 65;
         c.estado       = document.getElementById('eEstado').value;
+        c.cable        = document.getElementById('eCable').checked;
 
         await IDB.put('clientes', c);
         cerrarModal('modalEditar');
@@ -410,7 +447,7 @@
         if (!c) { toast('Cliente no encontrado', 'error'); return; }
         const mes = mesActual();
         toast('🤖 Generando mensaje con IA...');
-        const txt = await generarMensajeCobranzaIA({ cliente: c, mes, monto: c.plan || 65, tono: 'amable' });
+        const txt = await generarMensajeCobranzaIA({ cliente: c, mes, monto: precioTotal(c) || 65, tono: 'amable' });
         abrirWhatsAppConMensaje(c.celular, txt);
       } catch (err) {
         toast('Error IA: ' + err.message, 'error');
