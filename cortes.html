@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leytrix ISP — Cortes &amp; Reconexión</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div class="page-header" style="margin-bottom:0">
+        <h2>✂️ Gestión de Cortes &amp; Reconexión</h2>
+        <p>Suspende temporalmente el servicio por morosidad o reconecta a usuarios al día</p>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar</button>
+      </div>
+    </div>
+
+    <!-- Mini KPIs de Cortes -->
+    <div class="kpi-grid" style="margin-bottom:20px">
+      <div class="kpi kpi-red">
+        <div class="val" id="kpiCortadosCount">0</div>
+        <div class="lbl">Clientes Cortados Actualmente</div>
+      </div>
+      <div class="kpi kpi-green">
+        <div class="val" id="kpiActivosCount">0</div>
+        <div class="lbl">Clientes Activos en Red</div>
+      </div>
+      <div class="kpi kpi-orange">
+        <div class="val" id="kpiHistoricoCortes">0</div>
+        <div class="lbl">Registros Históricos de Corte</div>
+      </div>
+    </div>
+
+    <!-- Pestañas de Navegación Rápida -->
+    <div style="display:flex;gap:10px;margin-bottom:18px;border-bottom:2px solid var(--borde);padding-bottom:10px">
+      <button class="btn btn-primary" id="tabBtnCortados" onclick="cambiarTab('cortados')" style="background:var(--rojo);border-color:var(--rojo)">
+        ✂️ Clientes Cortados (<span id="lblBadgeCortados">0</span>)
+      </button>
+      <button class="btn btn-outline" id="tabBtnCortarNuevo" onclick="cambiarTab('nuevo')">
+        ➕ Realizar Nuevo Corte
+      </button>
+      <button class="btn btn-outline" id="tabBtnHistorial" onclick="cambiarTab('historial')">
+        📋 Historial de Cortes
+      </button>
+    </div>
+
+    <!-- TAB 1: LISTA DE CLIENTES CORTADOS (PARA RECONECTAR) -->
+    <div id="tabCortados" style="display:block">
+      <div class="card" style="padding:16px 20px;margin-bottom:18px">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+          <input type="text" id="busCortados" placeholder="🔍 Buscar entre cortados (Nombre, IP, DNI, Zona)..." class="form-input" style="flex:1;min-width:240px" oninput="filtrarCortados()" />
+          <select id="filtZonaCortados" class="form-select" style="max-width:200px" onchange="filtrarCortados()">
+            <option value="">Todas las Zonas</option>
+            <option value="Loboyacu">Loboyacu</option>
+            <option value="Huayranga">Huayranga</option>
+            <option value="Pacotillo">Pacotillo</option>
+            <option value="Ramal de Cachiyacu">Ramal de Cachiyacu</option>
+            <option value="Palmeras">Palmeras</option>
+            <option value="Shishiyacu">Shishiyacu</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Cliente</th>
+              <th>Zona</th>
+              <th>Dirección IP</th>
+              <th>Plan</th>
+              <th>Celular</th>
+              <th>Estado</th>
+              <th>Acciones de Reconexión</th>
+            </tr>
+          </thead>
+          <tbody id="bodyCortados">
+            <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--gris)">Cargando clientes cortados...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: SUSPENDER / CORTAR CLIENTE ACTIVO -->
+    <div id="tabNuevo" style="display:none">
+      <div class="card" style="max-width:760px;margin:0 auto;padding:26px">
+        <h3 style="font-size:1.1rem;color:var(--rojo);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span>✂️</span> Suspender / Cortar Cliente Activo
+        </h3>
+
+        <form id="formCorte" onsubmit="ejecutarCorte(event)">
+          <div style="margin-bottom:16px">
+            <label class="form-label">Seleccionar Cliente Activo <span style="color:var(--rojo)">*</span></label>
+            <input type="text" id="busCliCorte" class="form-input" placeholder="🔍 Escribe nombre o IP del cliente activo..." autocomplete="off" oninput="buscarCliParaCorte()" />
+            <div id="listaSugCorte" style="display:none;position:relative;background:#fff;border:1.5px solid var(--rojo);border-radius:8px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 8px 18px rgba(0,0,0,0.1);margin-top:4px"></div>
+            <input type="hidden" id="corteIdCliente" required />
+          </div>
+
+          <!-- Datos del cliente seleccionado para corte -->
+          <div id="infoCorteCli" style="display:none;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:10px;padding:12px;margin-bottom:16px">
+            <strong id="corteCliNombre" style="color:#991B1B">Cliente</strong>
+            <div style="font-size:0.8rem;color:#B91C1C;margin-top:2px">
+              Zona: <b id="corteCliZona">—</b> • IP: <b id="corteCliIp">—</b> • Celular: <b id="corteCliCel">—</b>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+            <div>
+              <label class="form-label" for="corteMotivo">Motivo del Corte</label>
+              <select id="corteMotivo" class="form-select">
+                <option value="Falta de Pago (Morosidad)" selected>Falta de Pago (Morosidad)</option>
+                <option value="Avería o Problema Técnico">Avería o Problema Técnico</option>
+                <option value="Solicitud del Cliente (Temporal)">Solicitud del Cliente (Temporal)</option>
+                <option value="Retiro Definitivo">Retiro Definitivo</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label" for="corteFecha">Fecha de Corte</label>
+              <input type="date" id="corteFecha" class="form-input" />
+            </div>
+          </div>
+
+          <div style="margin-bottom:20px">
+            <label class="form-label" for="corteNotas">Detalle / Observación</label>
+            <textarea id="corteNotas" class="form-input" rows="2" placeholder="Opcional: Debe 2 meses, se le llamó y no contestó, etc."></textarea>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:12px">
+            <button type="button" class="btn btn-outline" onclick="cambiarTab('cortados')">Cancelar</button>
+            <button type="submit" class="btn btn-danger" id="btnEjecutarCorte" style="padding:10px 22px">
+              ✂️ Confirmar y Cortar Servicio
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- TAB 3: HISTORIAL DE CORTES -->
+    <div id="tabHistorial" style="display:none">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Cliente</th>
+              <th>Zona</th>
+              <th>Fecha Corte</th>
+              <th>Motivo</th>
+              <th>Estado Registro</th>
+              <th>Fecha Reconexión</th>
+              <th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody id="bodyHistCortes">
+            <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--gris)">Cargando historial de cortes...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/security.js"></script><script src="js/db.js"></script>
+  <script src="js/ia-central.js"></script><script src="js/sidebar.js"></script>
+  <script>
+    let todosClientes = [];
+    let cortesHistorial = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderSidebar('cortes');
+      const hoy = new Date().toISOString().split('T')[0];
+      document.getElementById('corteFecha').value = hoy;
+      window.onDatosActualizados = () => recargarDatos();
+      await recargarDatos();
+    });
+
+    async function recargarDatos() {
+      todosClientes = await IDB.getAll('clientes');
+      cortesHistorial = await IDB.getAll('cortes');
+
+      const cortados = todosClientes.filter(c => c.estado === 'CORTADO');
+      const activos  = todosClientes.filter(c => c.estado === 'ACTIVO');
+
+      document.getElementById('kpiCortadosCount').textContent = cortados.length;
+      document.getElementById('kpiActivosCount').textContent = activos.length;
+      document.getElementById('kpiHistoricoCortes').textContent = cortesHistorial.length;
+      document.getElementById('lblBadgeCortados').textContent = cortados.length;
+
+      renderCortados(cortados);
+      renderHistorialCortes(cortesHistorial);
+    }
+
+    function cambiarTab(tab) {
+      document.getElementById('tabCortados').style.display  = tab === 'cortados'  ? 'block' : 'none';
+      document.getElementById('tabNuevo').style.display     = tab === 'nuevo'     ? 'block' : 'none';
+      document.getElementById('tabHistorial').style.display = tab === 'historial' ? 'block' : 'none';
+
+      const btn1 = document.getElementById('tabBtnCortados');
+      const btn2 = document.getElementById('tabBtnCortarNuevo');
+      const btn3 = document.getElementById('tabBtnHistorial');
+
+      btn1.className = tab === 'cortados'  ? 'btn btn-primary' : 'btn btn-outline';
+      btn2.className = tab === 'nuevo'     ? 'btn btn-primary' : 'btn btn-outline';
+      btn3.className = tab === 'historial' ? 'btn btn-primary' : 'btn btn-outline';
+
+      if (tab === 'cortados') {
+        btn1.style.background = 'var(--rojo)';
+        btn1.style.borderColor = 'var(--rojo)';
+      } else {
+        btn1.style.background = '';
+        btn1.style.borderColor = '';
+      }
+    }
+
+    function renderCortados(lista) {
+      const tbody = document.getElementById('bodyCortados');
+      if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:#16A34A;font-weight:700">🎉 ¡Excelente! No hay clientes con corte de servicio en este momento.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = lista.map(c => `
+        <tr>
+          <td><strong style="color:var(--azul)">#${c.id}</strong></td>
+          <td><strong>${esc(c.nombre)}</strong></td>
+          <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
+          <td><code>${esc(c.ip || '—')}</code></td>
+          <td><strong>S/. ${c.plan || 65}</strong> (${labelPlan(c.plan)})</td>
+          <td>${esc(c.celular || '—')}</td>
+          <td><span class="badge badge-cort">CORTADO</span></td>
+          <td>
+            <div class="btn-group">
+              <button class="btn btn-success btn-sm" onclick="reconectarCliente(${c.id})">
+                🔌 Reconectar
+              </button>
+              <a href="pagos.html?id=${c.id}" class="btn btn-outline btn-sm">
+                💳 Pagar
+              </a>
+              <button class="btn btn-outline btn-sm" onclick="enviarAvisoCorteWA(${c.id})" title="Enviar Aviso por WhatsApp">
+                📲 WA
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filtrarCortados() {
+      const q = (document.getElementById('busCortados').value || '').toLowerCase().trim();
+      const z = document.getElementById('filtZonaCortados').value;
+
+      let filtrados = todosClientes.filter(c => c.estado === 'CORTADO');
+      if (z) filtrados = filtrados.filter(c => c.zona === z);
+      if (q) {
+        filtrados = filtrados.filter(c => 
+          (c.nombre && c.nombre.toLowerCase().includes(q)) ||
+          (c.ip && c.ip.includes(q)) ||
+          (c.dni && c.dni.includes(q)) ||
+          (c.zona && c.zona.toLowerCase().includes(q))
+        );
+      }
+      renderCortados(filtrados);
+    }
+
+    function buscarCliParaCorte() {
+      const q = (document.getElementById('busCliCorte').value || '').toLowerCase().trim();
+      const wrap = document.getElementById('listaSugCorte');
+      if (!q) { wrap.style.display = 'none'; return; }
+
+      const activos = todosClientes.filter(c => c.estado === 'ACTIVO' && (
+        (c.nombre && c.nombre.toLowerCase().includes(q)) ||
+        (c.ip && c.ip.includes(q)) ||
+        (c.zona && c.zona.toLowerCase().includes(q))
+      )).slice(0, 8);
+
+      if (!activos.length) {
+        wrap.innerHTML = `<div style="padding:10px;font-size:0.8rem;color:var(--gris);text-align:center">No hay clientes activos que coincidan con "${esc(q)}"</div>`;
+        wrap.style.display = 'block';
+        return;
+      }
+
+      wrap.innerHTML = activos.map(c => `
+        <div onclick="seleccionarParaCorte(${c.id})" style="padding:8px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:0.82rem;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#fff'">
+          <div>
+            <strong>${esc(c.nombre)}</strong>
+            <span style="font-size:0.75rem;color:var(--gris);display:block">${esc(c.zona)} • IP: ${esc(c.ip || '—')}</span>
+          </div>
+          <span class="badge badge-act">ACTIVO</span>
+        </div>
+      `).join('');
+      wrap.style.display = 'block';
+    }
+
+    function seleccionarParaCorte(id) {
+      const c = todosClientes.find(cli => cli.id === id);
+      if (!c) return;
+
+      document.getElementById('corteIdCliente').value = c.id;
+      document.getElementById('busCliCorte').value = c.nombre;
+      document.getElementById('listaSugCorte').style.display = 'none';
+
+      document.getElementById('infoCorteCli').style.display = 'block';
+      document.getElementById('corteCliNombre').textContent = c.nombre;
+      document.getElementById('corteCliZona').textContent = c.zona || '—';
+      document.getElementById('corteCliIp').textContent = c.ip || '—';
+      document.getElementById('corteCliCel').textContent = c.celular || '—';
+    }
+
+    async function ejecutarCorte(e) {
+      e.preventDefault();
+      const cliId = Number(document.getElementById('corteIdCliente').value);
+      if (!cliId) {
+        toast('Selecciona un cliente activo para cortar', 'warn');
+        return;
+      }
+
+      const cli = todosClientes.find(c => c.id === cliId);
+      if (!cli) return;
+
+      const motivo = document.getElementById('corteMotivo')?.value || 'Falta de Pago (Morosidad)';
+      const fecha  = document.getElementById('corteFecha')?.value || new Date().toISOString().split('T')[0];
+      const notas  = (document.getElementById('corteNotas')?.value || '').trim();
+
+      const btn = document.getElementById('btnEjecutarCorte');
+      btn.disabled = true;
+      btn.textContent = '⏳ Procesando corte...';
+
+      try {
+        // 1. Cambiar estado a CORTADO
+        cli.estado = 'CORTADO';
+        await IDB.put('clientes', cli);
+
+        // 2. Registrar en tabla cortes
+        const registroCorte = {
+          id_cliente: cli.id,
+          cliente_nombre: cli.nombre,
+          zona: cli.zona,
+          fecha_corte: fecha,
+          motivo,
+          estado: 'CORTADO',
+          notas,
+          creado_el: new Date().toISOString()
+        };
+        await IDB.add('cortes', registroCorte);
+
+        toast(`✂️ Servicio del cliente "${cli.nombre}" marcado como CORTADO.`);
+        actualizarEstadisticasSidebar();
+
+        // Reset
+        document.getElementById('corteIdCliente').value = '';
+        document.getElementById('busCliCorte').value = '';
+        document.getElementById('infoCorteCli').style.display = 'none';
+        document.getElementById('corteNotas').value = '';
+
+        await recargarDatos();
+        cambiarTab('cortados');
+
+      } catch(err) {
+        console.error('Error al cortar:', err);
+        toast('Error al procesar el corte: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✂️ Confirmar y Cortar Servicio';
+      }
+    }
+
+    async function reconectarCliente(id) {
+      const cli = todosClientes.find(c => c.id === id);
+      if (!cli) return;
+
+      if (!confirm(`¿Confirmas la RECONEXIÓN del cliente "${cli.nombre}"? Pasará a estado ACTIVO en la red.`)) return;
+
+      try {
+        cli.estado = 'ACTIVO';
+        await IDB.put('clientes', cli);
+
+        // Buscar registro de corte pendiente para marcar fecha_reconexion
+        const cortes = await IDB.getAll('cortes');
+        const ultimoCorte = cortes.filter(k => k.id_cliente === cli.id && k.estado === 'CORTADO').pop();
+        if (ultimoCorte) {
+          ultimoCorte.estado = 'RECONECTADO';
+          ultimoCorte.fecha_reconexion = new Date().toISOString().split('T')[0];
+          await IDB.put('cortes', ultimoCorte);
+        }
+
+        toast(`🔌 ¡Cliente "${cli.nombre}" RECONECTADO con éxito!`);
+        actualizarEstadisticasSidebar();
+        await recargarDatos();
+
+      } catch(err) {
+        toast('Error al reconectar: ' + err.message, 'error');
+      }
+    }
+
+    function renderHistorialCortes(lista) {
+      const tbody = document.getElementById('bodyHistCortes');
+      if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gris)">No hay registros históricos de cortes.</td></tr>';
+        return;
+      }
+
+      // Orden descendente
+      const ordenados = [...lista].sort((a,b) => (b.id || 0) - (a.id || 0));
+
+      tbody.innerHTML = ordenados.map(k => `
+        <tr>
+          <td><strong style="color:var(--azul)">#${k.id}</strong></td>
+          <td><strong>${esc(k.cliente_nombre || 'Cliente #' + k.id_cliente)}</strong></td>
+          <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(k.zona || '—')}</span></td>
+          <td style="font-size:0.8rem;color:var(--rojo)">${esc(k.fecha_corte || '—')}</td>
+          <td>${esc(k.motivo || 'Morosidad')}</td>
+          <td>
+            <span class="badge ${k.estado === 'RECONECTADO' ? 'badge-act' : 'badge-cort'}">
+              ${esc(k.estado || 'CORTADO')}
+            </span>
+          </td>
+          <td style="font-size:0.8rem;color:#16A34A">${esc(k.fecha_reconexion || '—')}</td>
+          <td style="font-size:0.75rem;color:var(--gris)">${esc(k.notas || '—')}</td>
+        </tr>
+      `).join('');
+    }
+
+    function enviarAvisoCorteWA(id) {
+      const cli = todosClientes.find(c => c.id === id);
+      if (!cli) return;
+
+      const cel = (cli.celular || '').replace(/\D/g, '');
+      const mensaje = 
+`*📡 AVISO IMPORTANTE — LEYTRIX INTERNET*
+━━━━━━━━━━━━━━━━━━━━━
+Estimado(a) *${cli.nombre}*:
+Le informamos que su servicio de internet en la zona *${cli.zona}* presenta una suspensión temporal por pago pendiente.
+
+💰 *Plan Mensual:* S/. ${cli.plan || 65}
+Para reactivar su servicio de manera inmediata, por favor realice su pago por Yape, Plin o BCP y envíenos la captura del comprobante por este medio.
+
+¡Muchas gracias!
+*Atención al Cliente Leytrix ISP*`;
+
+      const numDestino = cel.length >= 9 ? (cel.startsWith('51') ? cel : '51' + cel) : '';
+      const url = `https://api.whatsapp.com/send?phone=${numDestino}&text=${encodeURIComponent(mensaje)}`;
+      window.open(url, '_blank');
+    }
+  </script>
+</body>
+</html>

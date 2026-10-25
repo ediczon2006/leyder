@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leytrix ISP — Clientes</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/ai-cobranza.js"></script>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div class="page-header" style="margin-bottom:0">
+        <h2>👥 Clientes Registrados — Leytrix ISP</h2>
+        <p id="txtContadorClientes">Cargando clientes...</p>
+      </div>
+      <div class="btn-group">
+        <a href="agregar.html" class="btn btn-primary">➕ Nuevo Cliente</a>
+        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
+      </div>
+    </div>
+
+    <!-- Barra de Filtros y Búsqueda -->
+    <div class="card" style="padding:16px 20px;margin-bottom:18px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div style="flex:1;min-width:240px">
+          <input type="text" id="filtBus" placeholder="🔍 Buscar por nombre, IP, celular o zona..."
+            style="width:100%;padding:9px 14px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;outline:none"/>
+        </div>
+        <select id="filtZona" style="padding:9px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;outline:none">
+          <option value="">Todas las Zonas</option>
+          <option value="Loboyacu">Loboyacu</option>
+          <option value="Huayranga">Huayranga</option>
+          <option value="Pacotillo">Pacotillo</option>
+          <option value="Ramal de Cachiyacu">Ramal de Cachiyacu</option>
+          <option value="Palmeras">Palmeras</option>
+          <option value="Shishiyacu">Shishiyacu</option>
+        </select>
+        <select id="filtEstado" style="padding:9px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;outline:none">
+          <option value="">Todos los Estados</option>
+          <option value="ACTIVO">ACTIVO</option>
+          <option value="CORTADO">CORTADO</option>
+          <option value="PENDIENTE">PENDIENTE</option>
+          <option value="RETIRADO">RETIRADO</option>
+        </select>
+        <select id="filtPlan" style="padding:9px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;outline:none">
+          <option value="">Todos los Planes</option>
+          <option value="50">S/. 50 — Básico</option>
+          <option value="60">S/. 60 — Plus</option>
+          <option value="65">S/. 65 — Normal</option>
+        </select>
+        <button class="btn btn-outline" onclick="resetFiltros()">Limpiar</button>
+      </div>
+    </div>
+
+    <!-- Tabla de Clientes (Limpia y Profesional) -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre Completo</th>
+            <th>Zona</th>
+            <th>Dirección IP</th>
+            <th>Plan</th>
+            <th>Estado</th>
+            <th>Fecha Inicio</th>
+            <th>Celular / WhatsApp</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="bodyClientes">
+          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gris)">Cargando lista de clientes...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
+      <span style="font-size:0.82rem;color:var(--gris)" id="paginfoClientes">Página 1</span>
+      <div class="btn-group" id="paginacionClientes">
+        <button class="btn btn-outline btn-sm" id="btnPagPrev" onclick="cambiarPagina(-1)">◀ Anterior</button>
+        <button class="btn btn-outline btn-sm" id="btnPagNext" onclick="cambiarPagina(1)">Siguiente ▶</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL EDITAR CLIENTE (Sin campos eliminados) -->
+  <div class="modal-bg" id="modalEditar">
+    <div class="modal" style="max-width:580px">
+      <div class="modal-header">
+        <h3>✏️ Editar Cliente — Leytrix ISP</h3>
+        <button class="modal-close" onclick="cerrarModal('modalEditar')">✕</button>
+      </div>
+      <form id="formEditar">
+        <input type="hidden" id="eId"/>
+        <div class="form-grid">
+          <div class="form-group form-full">
+            <label>Nombre Completo *</label>
+            <input id="eNombre" required maxlength="100"/>
+          </div>
+          <div class="form-group">
+            <label>Celular / WhatsApp *</label>
+            <input id="eCelular" required maxlength="15"/>
+          </div>
+          <div class="form-group">
+            <label>Fecha de Inicio</label>
+            <input type="date" id="eFechaInicio"/>
+          </div>
+          <div class="form-group">
+            <label>Dirección IP *</label>
+            <input id="eIp" required maxlength="25" style="font-family:monospace"/>
+          </div>
+          <div class="form-group">
+            <label>Zona de Cobertura</label>
+            <select id="eZona">
+              <option value="Loboyacu">Loboyacu</option>
+              <option value="Huayranga">Huayranga</option>
+              <option value="Pacotillo">Pacotillo</option>
+              <option value="Ramal de Cachiyacu">Ramal de Cachiyacu</option>
+              <option value="Palmeras">Palmeras</option>
+              <option value="Shishiyacu">Shishiyacu</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Plan Mensual</label>
+            <select id="ePlan">
+              <option value="50">S/. 50 — Plan Básico</option>
+              <option value="60">S/. 60 — Plan Plus</option>
+              <option value="65">S/. 65 — Plan Normal</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Estado del Servicio</label>
+            <select id="eEstado">
+              <option value="ACTIVO">ACTIVO</option>
+              <option value="CORTADO">CORTADO</option>
+              <option value="PENDIENTE">PENDIENTE</option>
+              <option value="RETIRADO">RETIRADO</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-group" style="margin-top:20px;justify-content:flex-end">
+          <button type="button" class="btn btn-outline" onclick="cerrarModal('modalEditar')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL HISTORIAL DE PAGOS -->
+  <div class="modal-bg" id="modalPagos">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-header">
+        <h3 id="modalPagosTit">💰 Historial de Pagos</h3>
+        <button class="modal-close" onclick="cerrarModal('modalPagos')">✕</button>
+      </div>
+      <div id="modalPagosBody"></div>
+    </div>
+  </div>
+
+  <script src="js/security.js"></script><script src="js/db.js"></script>
+  <script src="js/ia-central.js"></script><script src="js/sidebar.js"></script>
+  <script>
+    let _paginaActual = 0;
+    const PAGE_SIZE = 50;
+    let _totalClientes = 0;
+    let _busTimer = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSidebar('clientes');
+      cargarClientes(0);
+
+      window.onDatosActualizados = () => {
+        cargarClientes(_paginaActual);
+      };
+
+      // Eventos de filtros
+      ['filtZona', 'filtEstado', 'filtPlan'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => cargarClientes(0));
+      });
+
+      document.getElementById('filtBus').addEventListener('input', () => {
+        clearTimeout(_busTimer);
+        _busTimer = setTimeout(() => cargarClientes(0), 250);
+      });
+
+      document.getElementById('formEditar').addEventListener('submit', guardarEdicion);
+    });
+
+    async function cargarClientes(pagina = 0) {
+      _paginaActual = pagina;
+      const zona   = document.getElementById('filtZona').value;
+      const estado = document.getElementById('filtEstado').value;
+      const plan   = document.getElementById('filtPlan').value;
+      const bus    = safe(document.getElementById('filtBus').value).toLowerCase();
+
+      const tbody = document.getElementById('bodyClientes');
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--gris)"><span class="spinner"></span> Cargando...</td></tr>';
+
+      try {
+        let indexName = null;
+        let range = null;
+
+        if (zona && estado) {
+          indexName = 'zona_estado';
+          range = IDBKeyRange.only([zona, estado]);
+        } else if (zona) {
+          indexName = 'zona';
+          range = IDBKeyRange.only(zona);
+        } else if (estado) {
+          indexName = 'estado';
+          range = IDBKeyRange.only(estado);
+        } else if (plan) {
+          indexName = 'plan';
+          range = IDBKeyRange.only(Number(plan));
+        }
+
+        const filter = c => {
+          if (zona && c.zona !== zona) return false;
+          if (estado && c.estado !== estado) return false;
+          if (plan && Number(c.plan) !== Number(plan)) return false;
+          if (bus) {
+            const txt = `${c.id} ${c.nombre || ''} ${c.ip || ''} ${c.celular || ''} ${c.zona || ''}`.toLowerCase();
+            if (!txt.includes(bus)) return false;
+          }
+          return true;
+        };
+
+        const { results, total } = await IDB.query('clientes', {
+          indexName,
+          range,
+          filter,
+          limit: PAGE_SIZE,
+          offset: pagina * PAGE_SIZE
+        });
+
+        _totalClientes = total;
+        document.getElementById('txtContadorClientes').textContent =
+          `👥 ${total.toLocaleString()} cliente(s) registrado(s) en Leytrix`;
+
+        if (!results.length) {
+          tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="e-icon">👥</div>No hay clientes con los filtros seleccionados</div></td></tr>';
+        } else {
+          tbody.innerHTML = results.map(c => `
+            <tr class="${c.estado === 'CORTADO' ? 'row-cortado' : ''}">
+              <td><strong style="color:var(--azul)">#${esc(c.id)}</strong></td>
+              <td><strong>${esc(c.nombre)}</strong></td>
+              <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
+              <td><code>${esc(c.ip) || '—'}</code></td>
+              <td><strong style="color:var(--azul)">S/. ${Number(c.plan || 0).toFixed(2)}</strong></td>
+              <td>${badgeEstado(c.estado)}</td>
+              <td><span style="font-size:0.8rem;color:var(--gris)">${c.fecha_inicio ? esc(c.fecha_inicio) : '—'}</span></td>
+              <td><strong>${esc(c.celular) || '—'}</strong></td>
+              <td>
+                <div class="btn-group">
+                  <a href="pagos.html?id=${encodeURIComponent(c.id)}" class="btn btn-success btn-sm" title="Registrar pago">💳 Pagar</a>
+                  <button class="btn btn-primary btn-sm" onclick="enviarMensajeIACliente('${esc(c.id)}')" style="background:#7C3AED;border-color:#7C3AED" title="Enviar recordatorio con IA a WhatsApp">🤖</button>
+                  <button class="btn btn-outline btn-sm" onclick="abrirEditar('${esc(c.id)}')" title="Editar">✏️</button>
+                  <button class="btn btn-ghost btn-sm" onclick="verHistorialPagos('${esc(c.id)}')" title="Ver pagos">💰</button>
+                  <button class="btn btn-danger btn-sm" onclick="eliminarCliente('${esc(c.id)}')" title="Eliminar">🗑️</button>
+                </div>
+              </td>
+            </tr>
+          `).join('');
+        }
+
+        // Paginación
+        const pagTotal = Math.ceil(total / PAGE_SIZE) || 1;
+        document.getElementById('paginfoClientes').textContent = `Página ${_paginaActual + 1} de ${pagTotal} (${total.toLocaleString()} total)`;
+        document.getElementById('btnPagPrev').disabled = (_paginaActual === 0);
+        document.getElementById('btnPagNext').disabled = ((_paginaActual + 1) >= pagTotal);
+      } catch(err) {
+        console.error('cargarClientes error:', err);
+        tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes: ' + (err.message || '') + '</td></tr>';
+      }
+    }
+
+    function cambiarPagina(delta) {
+      const pagTotal = Math.ceil(_totalClientes / PAGE_SIZE) || 1;
+      const nueva = _paginaActual + delta;
+      if (nueva >= 0 && nueva < pagTotal) {
+        cargarClientes(nueva);
+      }
+    }
+
+    function resetFiltros() {
+      document.getElementById('filtBus').value = '';
+      document.getElementById('filtZona').value = '';
+      document.getElementById('filtEstado').value = '';
+      document.getElementById('filtPlan').value = '';
+      cargarClientes(0);
+    }
+
+    async function abrirEditar(id) {
+      try {
+        const c = await IDB.get('clientes', id);
+        if (!c) { toast('Cliente no encontrado', 'error'); return; }
+
+        document.getElementById('eId').value          = c.id;
+        document.getElementById('eNombre').value      = c.nombre || '';
+        document.getElementById('eCelular').value     = c.celular || '';
+        document.getElementById('eFechaInicio').value = c.fecha_inicio || '';
+        document.getElementById('eIp').value          = c.ip || '';
+        document.getElementById('eZona').value        = c.zona || 'Loboyacu';
+        document.getElementById('ePlan').value        = String(c.plan || 65);
+        document.getElementById('eEstado').value      = c.estado || 'ACTIVO';
+
+        document.getElementById('modalEditar').classList.add('open');
+      } catch (err) {
+        toast('Error al abrir cliente: ' + err.message, 'error');
+      }
+    }
+
+    async function guardarEdicion(e) {
+      e.preventDefault();
+      try {
+        const idVal = document.getElementById('eId').value;
+        const c = await IDB.get('clientes', idVal);
+        if (!c) {
+          toast('No se encontró el registro para actualizar', 'error');
+          return;
+        }
+
+        c.nombre       = safe(document.getElementById('eNombre').value, 100);
+        c.celular      = safe(document.getElementById('eCelular').value, 15);
+        c.fecha_inicio = document.getElementById('eFechaInicio').value || null;
+        c.ip           = safe(document.getElementById('eIp').value, 25);
+        c.zona         = document.getElementById('eZona').value;
+        c.plan         = Number(document.getElementById('ePlan').value) || 65;
+        c.estado       = document.getElementById('eEstado').value;
+
+        await IDB.put('clientes', c);
+        cerrarModal('modalEditar');
+        toast('✅ Cliente actualizado correctamente en Leytrix');
+        cargarClientes(_paginaActual);
+        actualizarEstadisticasSidebar();
+      } catch (err) {
+        toast('Error al guardar: ' + err.message, 'error');
+      }
+    }
+
+    async function verHistorialPagos(id) {
+      try {
+        const c = await IDB.get('clientes', id);
+        const nombre = c ? c.nombre : `Cliente #${id}`;
+        document.getElementById('modalPagosTit').textContent = `💰 Pagos de ${nombre}`;
+
+        const numId = Number(id);
+        const pagos = Number.isFinite(numId) ? await IDB.getByIndex('pagos', 'id_cliente', numId) : [];
+
+        const body = document.getElementById('modalPagosBody');
+        if (!pagos.length) {
+          body.innerHTML = '<p style="padding:20px;text-align:center;color:var(--gris)">Sin pagos registrados para este cliente.</p>';
+        } else {
+          body.innerHTML = `
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Fecha</th><th>Mes</th><th>Monto</th><th>Método</th></tr></thead>
+                <tbody>
+                  ${pagos.map(p => `
+                    <tr>
+                      <td>${p.fecha ? p.fecha.slice(0, 10) : '—'}</td>
+                      <td><strong>${esc(p.mes)}</strong></td>
+                      <td style="color:var(--verde);font-weight:700">S/. ${Number(p.monto).toFixed(2)}</td>
+                      <td><span class="badge" style="background:#F1F5F9">${esc(p.metodo || 'EFECTIVO')}</span></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        }
+        document.getElementById('modalPagos').classList.add('open');
+      } catch (err) {
+        toast('Error al consultar historial: ' + err.message, 'error');
+      }
+    }
+
+    async function eliminarCliente(id) {
+      try {
+        const c = await IDB.get('clientes', id);
+        const nombre = c && c.nombre ? c.nombre : `Cliente #${id}`;
+
+        if (!confirm(`¿Está seguro de eliminar permanentemente al cliente "${nombre}" de Leytrix y todo su historial de pagos y cortes?`)) {
+          return;
+        }
+
+        toast('⏳ Eliminando cliente de Leytrix...');
+        await IDB.eliminarClienteCompleto(id);
+        toast('🗑️ Cliente eliminado correctamente');
+        await cargarClientes(_paginaActual);
+        actualizarEstadisticasSidebar();
+      } catch (err) {
+        console.error('Error al eliminar cliente:', err);
+        toast('❌ Error al eliminar cliente: ' + (err.message || 'Error desconocido'), 'error');
+      }
+    }
+
+    async function enviarMensajeIACliente(id) {
+      try {
+        const c = await IDB.get('clientes', id);
+        if (!c) { toast('Cliente no encontrado', 'error'); return; }
+        const mes = mesActual();
+        toast('🤖 Generando mensaje con IA...');
+        const txt = await generarMensajeCobranzaIA({ cliente: c, mes, monto: c.plan || 65, tono: 'amable' });
+        abrirWhatsAppConMensaje(c.celular, txt);
+      } catch (err) {
+        toast('Error IA: ' + err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

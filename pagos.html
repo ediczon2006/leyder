@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leytrix ISP — Pagos y Vouchers Bancarios</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>
+    /* Estilos del Recibo / Voucher Bancario BCP */
+    .bcp-voucher-card {
+      background: #FFFFFF;
+      border: 2px solid #002A8F;
+      border-radius: 18px;
+      overflow: hidden;
+      max-width: 440px;
+      margin: 0 auto;
+      box-shadow: 0 15px 35px -5px rgba(0, 42, 143, 0.25);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      position: relative;
+    }
+    .bcp-top-bar {
+      background: #002A8F;
+      padding: 16px 20px 14px;
+      color: #FFFFFF;
+      position: relative;
+    }
+    .bcp-brand-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .bcp-logo-text {
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .bcp-logo-text span {
+      color: #FF7800;
+    }
+    .bcp-agente-tag {
+      background: #FF7800;
+      color: #FFFFFF;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .bcp-voucher-title {
+      font-size: 0.8rem;
+      color: #E0E7FF;
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+    .bcp-voucher-body {
+      padding: 20px 22px;
+      background: #FFFFFF;
+    }
+    .bcp-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+      border-bottom: 1.5px dashed #CBD5E1;
+      font-size: 0.78rem;
+    }
+    .bcp-meta-item span {
+      color: #64748B;
+      display: block;
+      font-size: 0.7rem;
+    }
+    .bcp-meta-item strong {
+      color: #0F172A;
+      font-weight: 700;
+    }
+    .bcp-voucher-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 7px 0;
+      border-bottom: 1px dashed #E2E8F0;
+      font-size: 0.82rem;
+    }
+    .bcp-voucher-row:last-child {
+      border-bottom: none;
+    }
+    .bcp-voucher-label {
+      color: #64748B;
+      font-weight: 600;
+      flex: 1;
+    }
+    .bcp-voucher-val {
+      color: #0F172A;
+      font-weight: 700;
+      text-align: right;
+      flex: 1;
+    }
+    .bcp-voucher-total {
+      background: #F8FAFC;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bcp-voucher-total .lbl {
+      font-size: 0.75rem;
+      color: #64748B;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .bcp-voucher-total .monto {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #002A8F;
+    }
+    .bcp-qr-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      margin-top: 14px;
+    }
+    .bcp-qr-info {
+      font-size: 0.72rem;
+      color: #475569;
+      line-height: 1.35;
+    }
+    .bcp-qr-info strong {
+      color: #002A8F;
+      display: block;
+      font-size: 0.78rem;
+      margin-bottom: 2px;
+    }
+    .bcp-barcode-strip {
+      height: 32px;
+      margin: 14px 0 6px;
+      background: repeating-linear-gradient(
+        90deg,
+        #0F172A,
+        #0F172A 2px,
+        transparent 2px,
+        transparent 4px,
+        #0F172A 4px,
+        #0F172A 7px,
+        transparent 7px,
+        transparent 9px
+      );
+      opacity: 0.85;
+      border-radius: 2px;
+    }
+    .bcp-barcode-num {
+      text-align: center;
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: #64748B;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .bcp-voucher-footer {
+      background: #F1F5F9;
+      padding: 12px 18px;
+      text-align: center;
+      font-size: 0.72rem;
+      color: #64748B;
+      border-top: 1px solid #E2E8F0;
+      line-height: 1.4;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #areaImpresionRecibo, #areaImpresionRecibo * {
+        visibility: visible !important;
+      }
+      #areaImpresionRecibo {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div class="page-header" style="margin-bottom:0">
+        <h2>💰 Pagos &amp; Vouchers Bancarios — Leytrix ISP</h2>
+        <p>Genera comprobantes oficiales estilo BCP, guárdalos en la nube y compártelos por WhatsApp • Soporte: +51 993 053 643</p>
+      </div>
+      <div class="btn-group">
+        <a href="explorador.html" class="btn btn-outline">📸 Ver Vouchers Guardados</a>
+        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(320px, 420px) 1fr;gap:22px;align-items:start" id="pagosGridContainer">
+      
+      <!-- FORMULARIO DE REGISTRO DE PAGO -->
+      <div class="card" style="padding:22px 24px">
+        <h3 style="font-size:1.05rem;color:var(--azul);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span>💳</span> Registrar Nuevo Pago
+        </h3>
+
+        <form id="formPago" onsubmit="registrarPago(event)">
+          <!-- Buscador / Selector de Cliente -->
+          <div style="margin-bottom:14px">
+            <label class="form-label" for="busCliPago">Buscar Cliente <span style="color:var(--rojo)">*</span></label>
+            <input type="text" id="busCliPago" class="form-input" placeholder="🔍 Escribe nombre, IP o celular..." autocomplete="off" oninput="filtrarClientesPago()" />
+            <div id="listaSugClientes" style="display:none;position:relative;background:#fff;border:1.5px solid var(--azul);border-radius:8px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 8px 18px rgba(0,0,0,0.1);margin-top:4px"></div>
+            <input type="hidden" id="pagoIdCliente" required />
+          </div>
+
+          <!-- Tarjeta informativa del cliente seleccionado -->
+          <div id="infoCliSel" style="display:none;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;padding:12px;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong id="infoCliNombre" style="color:#166534;font-size:0.9rem">Cliente</strong>
+              <span id="infoCliEstado" class="badge badge-act">ACTIVO</span>
+            </div>
+            <div style="font-size:0.78rem;color:#15803D;margin-top:4px;display:flex;gap:12px;flex-wrap:wrap">
+              <span>Zona: <b id="infoCliZona">—</b></span>
+              <span>IP: <b id="infoCliIp">—</b></span>
+              <span>Plan: <b id="infoCliPlan">S/. 65</b></span>
+            </div>
+          </div>
+
+          <!-- Mes Correspondiente -->
+          <div style="margin-bottom:14px">
+            <label class="form-label" for="pagoMes">Mes a Cancelar <span style="color:var(--rojo)">*</span></label>
+            <input type="month" id="pagoMes" class="form-input" required />
+          </div>
+
+          <!-- Monto a Pagar -->
+          <div style="margin-bottom:14px">
+            <label class="form-label" for="pagoMonto">Monto en Soles (S/.) <span style="color:var(--rojo)">*</span></label>
+            <div style="display:flex;gap:8px">
+              <input type="number" step="0.50" id="pagoMonto" class="form-input" placeholder="65.00" required style="font-size:1.1rem;font-weight:700;color:var(--azul)" />
+              <button type="button" class="btn btn-outline btn-sm" onclick="setMontoRapido(50)">S/.50</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setMontoRapido(60)">S/.60</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setMontoRapido(65)">S/.65</button>
+            </div>
+          </div>
+
+          <!-- Método de Pago -->
+          <div style="margin-bottom:14px">
+            <label class="form-label" for="pagoMetodo">Método de Pago</label>
+            <select id="pagoMetodo" class="form-select">
+              <option value="Yape" selected>📱 Yape</option>
+              <option value="BCP">🏦 BCP / Transferencia</option>
+              <option value="Plin">📱 Plin</option>
+              <option value="Efectivo">💵 Efectivo</option>
+              <option value="Otro">💳 Otro</option>
+            </select>
+          </div>
+
+          <!-- N° de Operación Bancaria -->
+          <div style="margin-bottom:14px" id="grpNumOperacion">
+            <label class="form-label" for="pagoNumOperacion">N° de Operación Bancaria (OP)</label>
+            <input type="text" id="pagoNumOperacion" class="form-input" placeholder="Ej. OP-098234 (o dejar vacío para autogenerar)" />
+          </div>
+
+          <!-- Fecha de Pago -->
+          <div style="margin-bottom:14px">
+            <label class="form-label" for="pagoFecha">Fecha del Pago</label>
+            <input type="date" id="pagoFecha" class="form-input" />
+          </div>
+
+          <!-- Observación -->
+          <div style="margin-bottom:20px">
+            <label class="form-label" for="pagoNotas">Observación / Nota</label>
+            <input type="text" id="pagoNotas" class="form-input" placeholder="Opcional: Canceló adelantado, titular del Yape, etc." />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full" id="btnGuardarPago" style="padding:12px;font-size:0.95rem;background:#002A8F;border-color:#002A8F">
+            🧾 Generar Voucher Bancario &amp; Guardar
+          </button>
+        </form>
+      </div>
+
+      <!-- HISTORIAL Y RESUMEN DE PAGOS -->
+      <div>
+        <div class="card" style="margin-bottom:18px;padding:16px 20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1">
+              <input type="month" id="filtHistMes" class="form-input" style="max-width:180px;padding:7px 10px" onchange="cargarHistorialPagos()" />
+              <input type="text" id="filtHistBus" placeholder="🔍 Filtrar en historial..." class="form-input" style="flex:1;min-width:160px;padding:7px 10px" oninput="filtrarTablaHistorial()" />
+            </div>
+            <div style="background:#EFF6FF;border:1px solid #BFDBFE;padding:8px 14px;border-radius:10px;text-align:right">
+              <span style="font-size:0.75rem;color:var(--gris);display:block">Total Recaudado</span>
+              <strong id="lblTotalRecaudado" style="font-size:1.15rem;color:var(--azul)">S/. 0.00</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Zona</th>
+                <th>Mes</th>
+                <th>Monto</th>
+                <th>Método</th>
+                <th>N° Operación</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="bodyHistPagos">
+              <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gris)">Cargando pagos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL VOUCHER BANCARIO BCP OFICIAL -->
+  <div class="modal-bg" id="modalVoucher">
+    <div class="modal" style="max-width:480px;background:#F8FAFC">
+      <div class="modal-header">
+        <h3 style="color:#002A8F;display:flex;align-items:center;gap:6px">
+          <span>🧾</span> Voucher Bancario Oficial BCP
+        </h3>
+        <button class="modal-close" onclick="cerrarModal('modalVoucher')">✕</button>
+      </div>
+
+      <!-- Área de Recibo imprimible y descargable -->
+      <div id="areaImpresionRecibo">
+        <div class="bcp-voucher-card" id="bcpVoucherVisual">
+          
+          <div class="bcp-top-bar">
+            <div class="bcp-brand-row">
+              <div style="display:flex;align-items:center;gap:10px">
+                <img src="img/logo.png" alt="Leytrix" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid #38BDF8;background:#030712;box-shadow:0 0 10px rgba(56,189,248,0.5)" onerror="this.style.display='none'" />
+                <div class="bcp-logo-text">
+                  BANCO DE CRÉDITO <span>BCP</span>
+                </div>
+              </div>
+              <span class="bcp-agente-tag">AGENTE AUTORIZADO</span>
+            </div>
+            <p class="bcp-voucher-title">CONSTANCIA DE ABONO ELECTRÓNICO — LEYTRIX ISP</p>
+          </div>
+
+          <div class="bcp-voucher-body">
+            
+            <div class="bcp-meta-grid">
+              <div class="bcp-meta-item">
+                <span>N° OPERACIÓN:</span>
+                <strong id="vouchNumOp">OP-000000</strong>
+              </div>
+              <div class="bcp-meta-item">
+                <span>TERMINAL / AGENTE:</span>
+                <strong>AG-00492 LEYTRIX</strong>
+              </div>
+              <div class="bcp-meta-item">
+                <span>FECHA Y HORA:</span>
+                <strong id="vouchFechaHora">—</strong>
+              </div>
+              <div class="bcp-meta-item">
+                <span>ESTADO:</span>
+                <strong style="color:#16A34A">✓ CONFORME / AL DÍA</strong>
+              </div>
+            </div>
+
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">EMPRESA RECAUDADORA:</span>
+              <span class="bcp-voucher-val" style="color:#002A8F">LEYTRIX ISP (INTERNET BANDA ANCHA)</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">SERVICIO:</span>
+              <span class="bcp-voucher-val">INTERNET BANDA ANCHA</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">CLIENTE / TITULAR:</span>
+              <span class="bcp-voucher-val" id="vouchCliente" style="color:var(--azul)">—</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">CELULAR / WHATSAPP:</span>
+              <span class="bcp-voucher-val" id="vouchCelular">—</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">ZONA DE COBERTURA:</span>
+              <span class="bcp-voucher-val" id="vouchZona">—</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">MES FACTURADO:</span>
+              <span class="bcp-voucher-val" id="vouchMes" style="color:#16A34A;font-weight:800">—</span>
+            </div>
+            <div class="bcp-voucher-row">
+              <span class="bcp-voucher-label">MEDIO DE PAGO:</span>
+              <span class="bcp-voucher-val" id="vouchMetodo">Yape</span>
+            </div>
+
+            <div class="bcp-voucher-total">
+              <div>
+                <div class="lbl">IMPORTE TOTAL PAGADO</div>
+                <div style="font-size:0.72rem;color:#16A34A;font-weight:700">CARGO / COMISIÓN: S/. 0.00</div>
+              </div>
+              <div class="monto" id="vouchMonto">S/. 65.00</div>
+            </div>
+
+            <!-- Código QR dinámico de validación -->
+            <div class="bcp-qr-section">
+              <div class="bcp-qr-info">
+                <strong>VALIDACIÓN ELECTRÓNICA</strong>
+                <span>CÓDIGO AUTH: <b id="vouchAuthCode">BCP-8921-99A1</b></span><br/>
+                <span>ESCANEE EL CÓDIGO QR PARA CERTIFICAR EL ABONO DEL CLIENTE.</span>
+              </div>
+              <canvas id="canvasQrVoucher" width="80" height="80" style="width:80px;height:80px;border-radius:6px;background:#fff"></canvas>
+            </div>
+
+            <!-- Código de barras visual bancario -->
+            <div class="bcp-barcode-strip"></div>
+            <div class="bcp-barcode-num" id="vouchBarcodeNum">*09823481204592*</div>
+
+            <p id="vouchNotas" style="font-size:0.72rem;color:#64748B;font-style:italic;text-align:center;margin:6px 0 0"></p>
+          </div>
+
+          <div class="bcp-voucher-footer">
+            CONSERVE SU COMPROBANTE DE PAGO BANCARIO.<br/>
+            SERVICIO DE INTERNET 100% ACTIVO Y GARANTIZADO POR LEYTRIX ISP.<br/>
+            <span style="font-size:0.7rem;color:#0F2A4A;font-weight:600">Soporte: +51 993 053 643 • fastnetloboyacu@gmail.com</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botones de Acción y Compartir -->
+      <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+        <button class="btn btn-success" onclick="compartirWhatsappRecibo()" style="flex:1">
+          📲 WhatsApp
+        </button>
+        <button class="btn btn-primary" onclick="compartirNativoVoucher()" style="flex:1;background:#0284C7;border-color:#0284C7" title="Compartir archivo en el celular">
+          📤 Compartir Celular
+        </button>
+        <button class="btn btn-outline" onclick="descargarVoucherImagen()" style="flex:1">
+          📥 Guardar PNG
+        </button>
+        <button class="btn btn-outline" onclick="imprimirRecibo()" style="flex:1">
+          🖨️ Imprimir
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/security.js"></script><script src="js/db.js"></script>
+  <script src="js/ia-central.js"></script><script src="js/sidebar.js"></script>
+  <script>
+    let todosClientes = [];
+    let historialPagos = [];
+    let voucherActual = null;
+    let voucherCanvasCache = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderSidebar('pagos');
+      
+      const hoy = new Date().toISOString().split('T')[0];
+      const mes = mesActual();
+
+      document.getElementById('pagoFecha').value = hoy;
+      document.getElementById('pagoMes').value = mes;
+      document.getElementById('filtHistMes').value = mes;
+
+      todosClientes = await IDB.getAll('clientes');
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const preId = urlParams.get('id');
+      if (preId) {
+        seleccionarClientePorId(Number(preId));
+      }
+
+      await cargarHistorialPagos();
+
+      window.onDatosActualizados = async () => {
+        todosClientes = await IDB.getAll('clientes');
+        await cargarHistorialPagos();
+      };
+    });
+
+    function setMontoRapido(monto) {
+      document.getElementById('pagoMonto').value = Number(monto).toFixed(2);
+    }
+
+    function filtrarClientesPago() {
+      const q = (document.getElementById('busCliPago').value || '').toLowerCase().trim();
+      const wrap = document.getElementById('listaSugClientes');
+      
+      if (!q || q.length < 1) {
+        wrap.style.display = 'none';
+        return;
+      }
+
+      const match = todosClientes.filter(c => 
+        (c.nombre && c.nombre.toLowerCase().includes(q)) ||
+        (c.celular && c.celular.includes(q)) ||
+        (c.ip && c.ip.includes(q)) ||
+        (c.zona && c.zona.toLowerCase().includes(q))
+      ).slice(0, 8);
+
+      if (match.length === 0) {
+        wrap.innerHTML = `<div style="padding:10px;font-size:0.8rem;color:var(--gris);text-align:center">No se encontraron clientes con "${esc(q)}"</div>`;
+        wrap.style.display = 'block';
+        return;
+      }
+
+      wrap.innerHTML = match.map(c => `
+        <div onclick="seleccionarClientePorId(${c.id})" style="padding:8px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:0.82rem;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='#fff'">
+          <div>
+            <strong>${esc(c.nombre)}</strong>
+            <span style="font-size:0.75rem;color:var(--gris);display:block">${esc(c.zona)} • IP: ${esc(c.ip || '—')}</span>
+          </div>
+          <span class="badge ${c.estado === 'ACTIVO' ? 'badge-act' : 'badge-cort'}">${esc(c.estado)}</span>
+        </div>
+      `).join('');
+      wrap.style.display = 'block';
+    }
+
+    function seleccionarClientePorId(id) {
+      const cli = todosClientes.find(c => c.id === id);
+      if (!cli) return;
+
+      document.getElementById('pagoIdCliente').value = cli.id;
+      document.getElementById('busCliPago').value = cli.nombre;
+      document.getElementById('listaSugClientes').style.display = 'none';
+
+      document.getElementById('infoCliSel').style.display = 'block';
+      document.getElementById('infoCliNombre').textContent = cli.nombre;
+      document.getElementById('infoCliZona').textContent = cli.zona || '—';
+      document.getElementById('infoCliIp').textContent = cli.ip || '—';
+      document.getElementById('infoCliPlan').textContent = `S/. ${cli.plan || 65} (${labelPlan(cli.plan)})`;
+      
+      const badgeEstado = document.getElementById('infoCliEstado');
+      badgeEstado.textContent = cli.estado;
+      badgeEstado.className = 'badge ' + (cli.estado === 'ACTIVO' ? 'badge-act' : 'badge-cort');
+
+      document.getElementById('pagoMonto').value = Number(cli.plan || 65).toFixed(2);
+    }
+
+    async function registrarPago(e) {
+      e.preventDefault();
+      const cliId = Number(document.getElementById('pagoIdCliente').value);
+      if (!cliId) {
+        toast('Selecciona un cliente antes de guardar', 'warn');
+        document.getElementById('busCliPago').focus();
+        return;
+      }
+
+      const cli = todosClientes.find(c => c.id === cliId);
+      if (!cli) {
+        toast('Cliente no encontrado en la base de datos', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btnGuardarPago');
+      btn.disabled = true;
+      btn.textContent = '⏳ Emitiendo Voucher Bancario...';
+
+      try {
+        const mes       = document.getElementById('pagoMes')?.value || mesActual();
+        const monto     = Number(document.getElementById('pagoMonto')?.value) || 0;
+        const metodo    = document.getElementById('pagoMetodo')?.value || 'Yape';
+        const numOp     = (document.getElementById('pagoNumOperacion')?.value || '').trim() || `OP-${Date.now().toString().slice(-6)}`;
+        const fecha     = document.getElementById('pagoFecha')?.value || new Date().toISOString().split('T')[0];
+        const notas     = (document.getElementById('pagoNotas')?.value || '').trim();
+
+        const nuevoPago = {
+          id_cliente: cli.id,
+          cliente_nombre: cli.nombre,
+          cliente_zona: cli.zona,
+          mes,
+          monto,
+          metodo,
+          numero_operacion: numOp,
+          fecha,
+          notas,
+          creado_el: new Date().toISOString()
+        };
+
+        const pagoId = await IDB.add('pagos', nuevoPago);
+        nuevoPago.id = pagoId;
+
+        if (cli.estado === 'CORTADO' || cli.estado === 'PENDIENTE') {
+          cli.estado = 'ACTIVO';
+          await IDB.put('clientes', cli);
+          toast(`⚡ El cliente "${cli.nombre}" ha sido RECONECTADO automáticamente a estado ACTIVO.`, 'info');
+        }
+
+        toast(`✅ ¡Pago registrado con éxito! Operación: ${numOp}`);
+        actualizarEstadisticasSidebar();
+
+        // Mostrar Voucher Bancario y AUTO-GUARDAR LA IMAGEN EN LA NUBE
+        await mostrarVoucherModal(nuevoPago, cli, true);
+
+        await cargarHistorialPagos();
+
+        document.getElementById('pagoIdCliente').value = '';
+        document.getElementById('busCliPago').value = '';
+        document.getElementById('infoCliSel').style.display = 'none';
+        document.getElementById('pagoNumOperacion').value = '';
+        document.getElementById('pagoNotas').value = '';
+
+      } catch (err) {
+        console.error('Error registrando pago:', err);
+        toast('❌ Error al registrar pago: ' + (err.message || ''), 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🧾 Generar Voucher Bancario & Guardar';
+      }
+    }
+
+    async function cargarHistorialPagos() {
+      const mesFiltro = document.getElementById('filtHistMes').value;
+      const tbody = document.getElementById('bodyHistPagos');
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--gris)">Cargando pagos...</td></tr>';
+
+      try {
+        let pagos = await IDB.getAll('pagos');
+        pagos.sort((a, b) => (b.id || 0) - (a.id || 0));
+
+        if (mesFiltro) {
+          pagos = pagos.filter(p => p.mes === mesFiltro);
+        }
+
+        historialPagos = pagos;
+        renderTablaHistorial(pagos);
+
+        const total = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+        document.getElementById('lblTotalRecaudado').textContent = `S/. ${total.toFixed(2)}`;
+
+      } catch(err) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--rojo)">Error al cargar pagos: ${esc(err.message)}</td></tr>`;
+      }
+    }
+
+    function renderTablaHistorial(pagos) {
+      const tbody = document.getElementById('bodyHistPagos');
+      if (!pagos.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--gris)">No hay pagos registrados para este mes.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = pagos.map(p => `
+        <tr>
+          <td><strong style="color:var(--azul)">#${p.id}</strong></td>
+          <td><strong>${esc(p.cliente_nombre || 'Cliente #' + p.id_cliente)}</strong></td>
+          <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(p.cliente_zona || '—')}</span></td>
+          <td><strong style="color:#0284C7">${esc(p.mes)}</strong></td>
+          <td><strong style="color:#16A34A">S/. ${Number(p.monto).toFixed(2)}</strong></td>
+          <td>${esc(p.metodo || 'Efectivo')}</td>
+          <td><code style="font-size:0.75rem;background:#F8FAFC;padding:2px 6px;border-radius:4px">${esc(p.numero_operacion || '—')}</code></td>
+          <td style="font-size:0.8rem;color:var(--gris)">${esc(p.fecha || '—')}</td>
+          <td>
+            <div class="btn-group">
+              <button class="btn btn-outline btn-sm" onclick="verVoucherHistorial(${p.id})" title="Ver / Compartir Voucher BCP">
+                🧾 Voucher
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="eliminarPago(${p.id})" title="Eliminar Pago">
+                🗑️
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filtrarTablaHistorial() {
+      const q = (document.getElementById('filtHistBus').value || '').toLowerCase().trim();
+      if (!q) {
+        renderTablaHistorial(historialPagos);
+        return;
+      }
+      const filtrados = historialPagos.filter(p =>
+        (p.cliente_nombre && p.cliente_nombre.toLowerCase().includes(q)) ||
+        (p.cliente_zona && p.cliente_zona.toLowerCase().includes(q)) ||
+        (p.numero_operacion && p.numero_operacion.toLowerCase().includes(q)) ||
+        (p.metodo && p.metodo.toLowerCase().includes(q))
+      );
+      renderTablaHistorial(filtrados);
+    }
+
+    async function verVoucherHistorial(id) {
+      const pago = historialPagos.find(p => p.id === id);
+      if (!pago) return;
+      const cli = todosClientes.find(c => c.id === pago.id_cliente) || {
+        nombre: pago.cliente_nombre,
+        zona: pago.cliente_zona,
+        celular: '—'
+      };
+      await mostrarVoucherModal(pago, cli, false);
+    }
+
+    async function mostrarVoucherModal(pago, cli, autoGuardarFoto = false) {
+      voucherActual = { pago, cli };
+      voucherCanvasCache = null;
+
+      const numOp = pago.numero_operacion || `OP-${pago.id}`;
+      document.getElementById('vouchNumOp').textContent = numOp;
+      
+      const ahora = new Date();
+      const horaStr = ahora.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      document.getElementById('vouchFechaHora').textContent = `${pago.fecha || 'Hoy'} ${horaStr}`;
+      
+      document.getElementById('vouchCliente').textContent = (cli.nombre || pago.cliente_nombre || 'Cliente').toUpperCase();
+      document.getElementById('vouchCelular').textContent = cli.celular ? `${cli.celular}` : '—';
+      document.getElementById('vouchZona').textContent = `${cli.zona || '—'}`.toUpperCase();
+      document.getElementById('vouchMes').textContent = `${pago.mes} (PERIODO CANCELADO)`;
+      document.getElementById('vouchMetodo').textContent = (pago.metodo || 'Yape').toUpperCase();
+      document.getElementById('vouchMonto').textContent = `S/. ${Number(pago.monto).toFixed(2)}`;
+      
+      const authHex = Math.abs((numOp.split('').reduce((a,b)=>a+b.charCodeAt(0),0) * 192837)).toString(16).toUpperCase().padStart(8, '0');
+      document.getElementById('vouchAuthCode').textContent = `BCP-${authHex.slice(0,4)}-${authHex.slice(4,8)}`;
+      document.getElementById('vouchBarcodeNum').textContent = `*${numOp.replace(/\D/g, '') || '09823481204592'}*`;
+
+      const elNotas = document.getElementById('vouchNotas');
+      elNotas.textContent = pago.notas ? `Obs: "${pago.notas}"` : '';
+
+      // Generar Código QR de Seguridad
+      const qrCanvas = document.getElementById('canvasQrVoucher');
+      const qrPayload = `LEYTRIX ISP BCP | OP:${numOp} | CLI:${cli.nombre} | MES:${pago.mes} | MONTO:S/.${Number(pago.monto).toFixed(2)} | ESTADO:CONFORME`;
+      try {
+        if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+          QRCode.toCanvas(qrCanvas, qrPayload, { width: 80, margin: 1 });
+        }
+      } catch(e) {
+        console.warn('QR Code generation notice:', e);
+      }
+
+      document.getElementById('modalVoucher').classList.add('open');
+
+      // GUARDADO AUTOMÁTICO DE LA IMAGEN EN LA NUBE Y GALERÍA ISP
+      if (autoGuardarFoto) {
+        setTimeout(async () => {
+          try {
+            const el = document.getElementById('bcpVoucherVisual');
+            const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+            voucherCanvasCache = canvas;
+            const imgData = canvas.toDataURL('image/jpeg', 0.90);
+
+            // Guardar en tabla fotos (se sincroniza a Supabase y se ve en explorador.html)
+            await IDB.add('fotos', {
+              titulo: `Voucher BCP ${numOp} - ${cli.nombre}`,
+              categoria: 'comprobante',
+              cliente_id: cli.id,
+              cliente_nombre: cli.nombre,
+              zona: cli.zona,
+              data_url: imgData,
+              notas: `Voucher bancario emitido automáticamente para el mes ${pago.mes} (S/. ${pago.monto}) - Leytrix ISP`,
+              creado_el: new Date().toISOString()
+            });
+
+            toast(`☁️ ¡Voucher bancario guardado automáticamente en Supabase Cloud y Galería!`);
+          } catch(err) {
+            console.warn('Auto-save voucher error:', err);
+          }
+        }, 300);
+      }
+    }
+
+    function imprimirRecibo() {
+      window.print();
+    }
+
+    function compartirWhatsappRecibo() {
+      if (!voucherActual) return;
+      const { pago, cli } = voucherActual;
+      
+      const cel = (cli.celular || '').replace(/\D/g, '');
+      const numOp = pago.numero_operacion || `OP-${pago.id}`;
+      const mensaje = 
+`*🏦 CONSTANCIA OFICIAL DE PAGO — LEYTRIX ISP*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ *ESTADO:* PAGO CONFORME Y VALIDADO
+🔢 *N° OPERACIÓN:* ${numOp}
+👤 *CLIENTE:* ${cli.nombre}
+📍 *ZONA / SECTOR:* ${cli.zona || '—'}
+📅 *MES CANCELADO:* ${pago.mes}
+💰 *TOTAL ABONADO:* S/. ${Number(pago.monto).toFixed(2)}
+💳 *MEDIO DE PAGO:* ${pago.metodo || 'Yape'}
+📆 *FECHA DE ABONO:* ${pago.fecha}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌐 *¡Su servicio de internet se encuentra 100% ACTIVO y garantizado!*
+¡Muchas gracias por su puntual preferencia!
+_Leytrix ISP — Soporte: +51 993 053 643 | fastnetloboyacu@gmail.com_`;
+
+      const numDestino = cel.length >= 9 ? (cel.startsWith('51') ? cel : '51' + cel) : '';
+      const url = `https://api.whatsapp.com/send?phone=${numDestino}&text=${encodeURIComponent(mensaje)}`;
+      window.open(url, '_blank');
+    }
+
+    // Compartir nativo para celular (abre menú con WhatsApp, Telegram, correo, etc.)
+    async function compartirNativoVoucher() {
+      const el = document.getElementById('bcpVoucherVisual');
+      try {
+        toast('⏳ Preparando voucher para compartir...');
+        const canvas = voucherCanvasCache || await html2canvas(el, { scale: 2, useCORS: true });
+        voucherCanvasCache = canvas;
+
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            compartirWhatsappRecibo();
+            return;
+          }
+
+          const file = new File([blob], `Voucher_BCP_${voucherActual?.pago?.numero_operacion || 'pago'}.png`, { type: 'image/png' });
+          const shareData = {
+            title: 'Voucher de Pago BCP - Leytrix ISP',
+            text: `Voucher oficial de pago del servicio de internet Leytrix ISP para ${voucherActual?.cli?.nombre}. Operación: ${voucherActual?.pago?.numero_operacion}`,
+            files: [file]
+          };
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share(shareData);
+              toast('✅ Voucher compartido con éxito');
+            } catch(e) {
+              if (e.name !== 'AbortError') compartirWhatsappRecibo();
+            }
+          } else {
+            // Si el navegador no permite compartir archivos directamente, descargamos y abrimos WhatsApp
+            descargarVoucherImagen();
+            compartirWhatsappRecibo();
+          }
+        }, 'image/png');
+
+      } catch(err) {
+        console.error('Error al compartir nativo:', err);
+        compartirWhatsappRecibo();
+      }
+    }
+
+    async function descargarVoucherImagen() {
+      const el = document.getElementById('bcpVoucherVisual');
+      try {
+        toast('📸 Descargando voucher en alta resolución...');
+        const canvas = voucherCanvasCache || await html2canvas(el, { scale: 2, useCORS: true });
+        voucherCanvasCache = canvas;
+        const imgData = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `Voucher_BCP_${voucherActual ? voucherActual.pago.numero_operacion : 'pago'}.png`;
+        link.href = imgData;
+        link.click();
+        toast('✅ Comprobante PNG descargado en tu dispositivo');
+      } catch(err) {
+        console.error('Error html2canvas:', err);
+        toast('No se pudo generar la imagen, usa el botón Imprimir', 'warn');
+      }
+    }
+
+    async function eliminarPago(id) {
+      if (!confirm(`¿Estás seguro de anular el pago #${id}? Esta acción revertirá el registro.`)) return;
+      try {
+        await IDB.delete('pagos', id);
+        toast(`🗑️ Pago #${id} eliminado con éxito.`);
+        await cargarHistorialPagos();
+        actualizarEstadisticasSidebar();
+      } catch(err) {
+        toast('Error al eliminar pago: ' + err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

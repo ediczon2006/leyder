@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leytrix ISP — Registrar Cliente</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div class="page-header" style="margin-bottom:0">
+        <h2>➕ Registrar Nuevo Cliente</h2>
+        <p>Alta de abonados para Leytrix ISP • Contacto: +51 993 053 643 • fastnetloboyacu@gmail.com</p>
+      </div>
+      <div class="btn-group">
+        <a href="clientes.html" class="btn btn-outline">👥 Ver Todos los Clientes</a>
+      </div>
+    </div>
+
+    <div style="max-width:820px;margin:0 auto">
+      <div class="card" style="padding:32px 36px;border-radius:16px;box-shadow:var(--sombra-lg);border:1.5px solid var(--borde)">
+        
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;border-bottom:1.5px solid var(--borde);padding-bottom:16px">
+          <div>
+            <h3 style="font-size:1.15rem;color:var(--azul);font-weight:800;display:flex;align-items:center;gap:8px">
+              <span>📡</span> Formulario Oficial de Registro
+            </h3>
+            <p style="font-size:0.8rem;color:var(--gris);margin:3px 0 0">
+              Ingresa los datos indispensables del nuevo usuario para activarlo en red.
+            </p>
+          </div>
+          <span class="badge badge-act" style="padding:6px 14px;font-size:0.75rem">Sincronización en la Nube Activa</span>
+        </div>
+
+        <form id="formAgregarCliente" onsubmit="guardarCliente(event)">
+          
+          <!-- Bloque: Datos del Cliente -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:20px;margin-bottom:22px">
+            <div>
+              <label class="form-label" for="addNombre">
+                👤 Nombre Completo <span style="color:var(--rojo)">*</span>
+              </label>
+              <input type="text" id="addNombre" class="form-input" placeholder="Ej. Juan Pérez García" required autofocus style="font-size:0.92rem;font-weight:600" />
+            </div>
+
+            <div>
+              <label class="form-label" for="addCelular">
+                📱 Celular / WhatsApp <span style="color:var(--rojo)">*</span>
+              </label>
+              <input type="tel" id="addCelular" class="form-input" placeholder="Ej. 993053643" maxlength="15" required style="font-size:0.92rem" />
+            </div>
+          </div>
+
+          <!-- Bloque: Red y Ubicación -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:20px;margin-bottom:22px">
+            <div>
+              <label class="form-label" for="addZona">
+                🗺️ Zona de Cobertura <span style="color:var(--rojo)">*</span>
+              </label>
+              <select id="addZona" class="form-select" required style="font-weight:600">
+                <option value="Loboyacu" selected>Loboyacu</option>
+                <option value="Huayranga">Huayranga</option>
+                <option value="Pacotillo">Pacotillo</option>
+                <option value="Ramal de Cachiyacu">Ramal de Cachiyacu</option>
+                <option value="Palmeras">Palmeras</option>
+                <option value="Shishiyacu">Shishiyacu</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label" for="addIp">
+                🌐 Dirección IP Asignada <span style="color:var(--rojo)">*</span>
+              </label>
+              <input type="text" id="addIp" class="form-input" placeholder="Ej. 192.168.10.45" required style="font-family:monospace;font-size:0.92rem" />
+            </div>
+          </div>
+
+          <!-- Selección Interactiva de Plan -->
+          <div style="margin-bottom:22px;background:#F8FAFC;border:1.5px solid var(--borde);padding:18px 20px;border-radius:14px">
+            <label class="form-label" style="font-weight:700;color:var(--azul);margin-bottom:8px">
+              📶 Seleccionar Plan Mensual de Internet <span style="color:var(--rojo)">*</span>
+            </label>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:14px">
+              
+              <div class="card card-plan-opt" id="optPlan50" onclick="seleccionarPlan(50)" style="cursor:pointer;border:2px solid var(--borde);padding:14px;border-radius:12px;text-align:center;background:#fff;transition:all .2s ease">
+                <div style="font-weight:900;font-size:1.35rem;color:var(--azul)">S/. 50</div>
+                <div style="font-size:0.8rem;color:var(--gris);font-weight:600">Plan Básico</div>
+              </div>
+
+              <div class="card card-plan-opt" id="optPlan60" onclick="seleccionarPlan(60)" style="cursor:pointer;border:2px solid var(--borde);padding:14px;border-radius:12px;text-align:center;background:#fff;transition:all .2s ease">
+                <div style="font-weight:900;font-size:1.35rem;color:var(--azul)">S/. 60</div>
+                <div style="font-size:0.8rem;color:var(--gris);font-weight:600">Plan Plus</div>
+              </div>
+
+              <div class="card card-plan-opt active-plan" id="optPlan65" onclick="seleccionarPlan(65)" style="cursor:pointer;border:2px solid var(--azul);background:#EFF6FF;padding:14px;border-radius:12px;text-align:center;transition:all .2s ease">
+                <div style="font-weight:900;font-size:1.35rem;color:var(--azul)">S/. 65</div>
+                <div style="font-size:0.8rem;color:#1D4ED8;font-weight:800">⭐ Plan Normal</div>
+              </div>
+
+            </div>
+            <input type="hidden" id="addPlan" value="65" />
+          </div>
+
+          <!-- Bloque: Estado y Fecha -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:20px;margin-bottom:28px">
+            <div>
+              <label class="form-label" for="addEstado">
+                ⚡ Estado del Servicio
+              </label>
+              <select id="addEstado" class="form-select">
+                <option value="ACTIVO" selected>ACTIVO (Habilitado)</option>
+                <option value="PENDIENTE">PENDIENTE (Instalación)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label" for="addFecha">
+                📅 Fecha de Inicio / Alta
+              </label>
+              <input type="date" id="addFecha" class="form-input" />
+            </div>
+          </div>
+
+          <div style="display:flex;gap:12px;justify-content:flex-end;align-items:center;flex-wrap:wrap;border-top:1px solid var(--borde);padding-top:20px">
+            <button type="button" class="btn btn-outline" onclick="limpiarFormulario()">
+              🔄 Limpiar Formulario
+            </button>
+            <button type="submit" class="btn btn-primary" id="btnGuardarCli" style="padding:12px 28px;font-size:1rem;font-weight:700">
+              💾 Guardar Cliente en Leytrix
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </main>
+
+  <script src="js/security.js"></script><script src="js/db.js"></script>
+  <script src="js/ia-central.js"></script><script src="js/sidebar.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSidebar('agregar');
+      // Fecha de hoy por defecto
+      const hoy = new Date().toISOString().split('T')[0];
+      const fEl = document.getElementById('addFecha');
+      if (fEl) fEl.value = hoy;
+    });
+
+    function seleccionarPlan(precio) {
+      document.getElementById('addPlan').value = precio;
+      [50, 60, 65].forEach(p => {
+        const el = document.getElementById('optPlan' + p);
+        if (!el) return;
+        if (p === precio) {
+          el.style.border = '2px solid var(--azul)';
+          el.style.background = '#EFF6FF';
+        } else {
+          el.style.border = '2px solid var(--borde)';
+          el.style.background = '#fff';
+        }
+      });
+    }
+
+    function limpiarFormulario() {
+      document.getElementById('formAgregarCliente').reset();
+      seleccionarPlan(65);
+      const hoy = new Date().toISOString().split('T')[0];
+      const fEl = document.getElementById('addFecha');
+      if (fEl) fEl.value = hoy;
+      document.getElementById('addNombre').focus();
+    }
+
+    async function guardarCliente(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnGuardarCli');
+      btn.disabled = true;
+      btn.textContent = '⏳ Guardando en la nube...';
+
+      try {
+        const nombre    = (document.getElementById('addNombre')?.value || '').trim();
+        const celular   = (document.getElementById('addCelular')?.value || '').trim();
+        const zona      = document.getElementById('addZona')?.value || 'Loboyacu';
+        const ip        = (document.getElementById('addIp')?.value || '').trim();
+        const plan      = Number(document.getElementById('addPlan')?.value) || 65;
+        const estado    = document.getElementById('addEstado')?.value || 'ACTIVO';
+        const fecha     = document.getElementById('addFecha')?.value || new Date().toISOString().split('T')[0];
+
+        if (!nombre) {
+          toast('Por favor ingrese el nombre del cliente', 'warn');
+          btn.disabled = false;
+          btn.textContent = '💾 Guardar Cliente en Leytrix';
+          return;
+        }
+
+        const nuevoCliente = {
+          nombre,
+          celular,
+          zona,
+          ip,
+          plan,
+          estado,
+          fecha_inicio: fecha,
+          creado_el: new Date().toISOString()
+        };
+
+        const id = await IDB.add('clientes', nuevoCliente);
+        toast(`✅ ¡Cliente "${nombre}" registrado con éxito (ID #${id})!`);
+        actualizarEstadisticasSidebar();
+
+        setTimeout(() => {
+          if (confirm(`Cliente "${nombre}" guardado con éxito y sincronizado.\n¿Deseas ir al listado de clientes? (Presiona Cancelar para registrar otro)`)) {
+            window.location.href = 'clientes.html';
+          } else {
+            limpiarFormulario();
+            btn.disabled = false;
+            btn.textContent = '💾 Guardar Cliente en Leytrix';
+          }
+        }, 250);
+
+      } catch (err) {
+        console.error('Error al guardar cliente:', err);
+        toast('❌ Error al guardar el cliente: ' + (err.message || ''), 'error');
+        btn.disabled = false;
+        btn.textContent = '💾 Guardar Cliente en Leytrix';
+      }
+    }
+  </script>
+</body>
+</html>

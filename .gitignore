@@ -1,0 +1,7 @@
+.streamlit/
+database/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.db
+leytrix/

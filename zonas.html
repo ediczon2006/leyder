@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leytrix ISP — Vista por Zona</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    .zona-card {
+      background: #FFFFFF;
+      border: 1.5px solid var(--borde);
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .zona-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+      border-color: var(--azul);
+    }
+    .zona-card.selected {
+      border-color: var(--azul);
+      background: #F8FAFC;
+      box-shadow: 0 0 0 2px var(--azul);
+    }
+    .zona-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .zona-card-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--azul);
+      margin: 0;
+    }
+    .zona-card-badge {
+      background: #EFF6FF;
+      color: #1D4ED8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
+    .zona-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #F1F5F9;
+    }
+    .zona-stat-item {
+      font-size: 0.78rem;
+      color: var(--gris);
+    }
+    .zona-stat-item strong {
+      display: block;
+      font-size: 1.05rem;
+      color: #0F172A;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div class="page-header" style="margin-bottom:0">
+        <h2>🗺️ Distribución por Zonas — Leytrix ISP</h2>
+        <p>Control de clientes e ingresos por sector geográfico • +51 993 053 643 • fastnetloboyacu@gmail.com</p>
+      </div>
+      <div class="btn-group">
+        <a href="agregar.html" class="btn btn-primary">➕ Nuevo Cliente</a>
+        <button class="btn btn-outline" onclick="imprimirPadronZona()">🖨️ Imprimir Padrón</button>
+      </div>
+    </div>
+
+    <!-- Grid de las 6 Zonas -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;margin-bottom:24px" id="gridZonasCards">
+      <!-- Se llena dinámicamente -->
+    </div>
+
+    <!-- Sección de Clientes de la Zona Seleccionada -->
+    <div class="card" style="padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+        <div>
+          <h3 id="lblZonaSeleccionadaTitulo" style="font-size:1.15rem;color:var(--azul);font-weight:800;margin-bottom:2px">
+            📍 Todos los Clientes (Todas las Zonas)
+          </h3>
+          <p id="lblZonaSeleccionadaSub" style="font-size:0.8rem;color:var(--gris);margin:0">
+            Haz clic en una tarjeta superior para filtrar únicamente esa zona
+          </p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="busEnZona" placeholder="🔍 Buscar cliente en esta zona..." class="form-input" style="padding:7px 12px;font-size:0.82rem;min-width:220px" oninput="filtrarTablaZona()" />
+          <button class="btn btn-outline btn-sm" onclick="seleccionarZona('')">Mostrar Todas</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre del Cliente</th>
+              <th>Zona</th>
+              <th>IP Asignada</th>
+              <th>Plan</th>
+              <th>Estado</th>
+              <th>Celular / WhatsApp</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyClientesZona">
+            <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--gris)">Cargando clientes de la zona...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación Zonas -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
+        <span style="font-size:0.82rem;color:var(--gris)" id="paginfoZona">Mostrando clientes</span>
+        <div class="btn-group" id="paginacionZona">
+          <button class="btn btn-outline btn-sm" id="btnPagZonaPrev" onclick="cambiarPaginaZona(-1)">◀ Anterior</button>
+          <button class="btn btn-outline btn-sm" id="btnPagZonaNext" onclick="cambiarPaginaZona(1)">Siguiente ▶</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/security.js"></script><script src="js/db.js"></script>
+  <script src="js/ia-central.js"></script><script src="js/sidebar.js"></script>
+  <script>
+    let todosClientes = [];
+    let zonaActiva = '';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderSidebar('zonas');
+      window.onDatosActualizados = async () => {
+        todosClientes = await IDB.getAll('clientes');
+        renderTarjetasZonas();
+        renderTablaZona();
+      };
+      todosClientes = await IDB.getAll('clientes');
+      renderTarjetasZonas();
+      renderTablaZona();
+    });
+
+    function renderTarjetasZonas() {
+      const container = document.getElementById('gridZonasCards');
+      
+      const html = ZONAS.map(z => {
+        const cliZ = todosClientes.filter(c => c.zona === z);
+        const total = cliZ.length;
+        const activos = cliZ.filter(c => c.estado === 'ACTIVO').length;
+        const cortados = cliZ.filter(c => c.estado === 'CORTADO').length;
+        const ingresoMes = cliZ.filter(c => c.estado === 'ACTIVO').reduce((s, c) => s + (Number(c.plan) || 65), 0);
+
+        return `
+          <div class="zona-card ${zonaActiva === z ? 'selected' : ''}" onclick="seleccionarZona('${z}')">
+            <div class="zona-card-header">
+              <h4 class="zona-card-title">📍 ${esc(z)}</h4>
+              <span class="zona-card-badge">${total} clientes</span>
+            </div>
+            
+            <div style="font-size:0.75rem;color:var(--gris);margin-bottom:8px">
+              Ingresos Red: <strong style="color:#16A34A">S/. ${ingresoMes.toFixed(2)}/mes</strong>
+            </div>
+
+            <div class="zona-stats-grid">
+              <div class="zona-stat-item">
+                <span style="color:#16A34A">● Activos</span>
+                <strong style="color:#16A34A">${activos}</strong>
+              </div>
+              <div class="zona-stat-item">
+                <span style="color:#DC2626">● Cortados</span>
+                <strong style="color:#DC2626">${cortados}</strong>
+              </div>
+              <div class="zona-stat-item">
+                <span>Plan Promedio</span>
+                <strong>S/. ${total > 0 ? (cliZ.reduce((s,c)=>s+(Number(c.plan)||65),0)/total).toFixed(0) : '65'}</strong>
+              </div>
+              <div class="zona-stat-item">
+                <span>% Activos</span>
+                <strong>${total > 0 ? Math.round((activos/total)*100) : 0}%</strong>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    function seleccionarZona(z) {
+      zonaActiva = z;
+      renderTarjetasZonas();
+
+      const tit = document.getElementById('lblZonaSeleccionadaTitulo');
+      const sub = document.getElementById('lblZonaSeleccionadaSub');
+
+      if (!z) {
+        tit.textContent = '📍 Todos los Clientes (Todas las Zonas)';
+        sub.textContent = 'Mostrando todos los clientes de la red Leytrix ISP';
+      } else {
+        const cant = todosClientes.filter(c => c.zona === z).length;
+        tit.textContent = `📍 Zona: ${z} (${cant} clientes)`;
+        sub.textContent = `Listado exclusivo de usuarios registrados en el sector de ${z}`;
+      }
+
+      _pagZona = 0;
+      renderTablaZona();
+    }
+
+    let _pagZona = 0;
+    const ZONA_PAGE_SIZE = 50;
+
+    function renderTablaZona() {
+      const tbody = document.getElementById('tbodyClientesZona');
+      const q = (document.getElementById('busEnZona').value || '').toLowerCase().trim();
+
+      let lista = todosClientes;
+      if (zonaActiva) {
+        lista = lista.filter(c => c.zona === zonaActiva);
+      }
+
+      if (q) {
+        lista = lista.filter(c => 
+          (c.nombre && c.nombre.toLowerCase().includes(q)) ||
+          (c.ip && c.ip.includes(q)) ||
+          (c.celular && c.celular.includes(q))
+        );
+      }
+
+      const total = lista.length;
+      if (!total) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--gris)">No hay clientes en esta selección.</td></tr>';
+        document.getElementById('paginfoZona').textContent = '0 clientes encontrados';
+        document.getElementById('btnPagZonaPrev').disabled = true;
+        document.getElementById('btnPagZonaNext').disabled = true;
+        return;
+      }
+
+      const pagTotal = Math.ceil(total / ZONA_PAGE_SIZE) || 1;
+      if (_pagZona >= pagTotal) _pagZona = pagTotal - 1;
+      if (_pagZona < 0) _pagZona = 0;
+
+      const inicio = _pagZona * ZONA_PAGE_SIZE;
+      const paginaItems = lista.slice(inicio, inicio + ZONA_PAGE_SIZE);
+
+      tbody.innerHTML = paginaItems.map(c => `
+        <tr>
+          <td><strong style="color:var(--azul)">#${esc(c.id)}</strong></td>
+          <td><strong>${esc(c.nombre)}</strong></td>
+          <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
+          <td><code>${esc(c.ip || '—')}</code></td>
+          <td><strong>S/. ${c.plan || 65}</strong> (${labelPlan(c.plan)})</td>
+          <td>
+            <span class="badge ${c.estado === 'ACTIVO' ? 'badge-act' : c.estado === 'CORTADO' ? 'badge-cort' : 'badge-pend'}">
+              ${esc(c.estado)}
+            </span>
+          </td>
+          <td><strong>${esc(c.celular || '—')}</strong></td>
+          <td>
+            <div class="btn-group">
+              <a href="pagos.html?id=${encodeURIComponent(c.id)}" class="btn btn-outline btn-sm" title="Registrar Pago">💳</a>
+              <a href="clientes.html" class="btn btn-outline btn-sm" title="Editar en Clientes">✏️</a>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('paginfoZona').textContent = `Página ${_pagZona + 1} de ${pagTotal} (${total.toLocaleString()} clientes)`;
+      document.getElementById('btnPagZonaPrev').disabled = (_pagZona === 0);
+      document.getElementById('btnPagZonaNext').disabled = ((_pagZona + 1) >= pagTotal);
+    }
+
+    function cambiarPaginaZona(delta) {
+      _pagZona += delta;
+      renderTablaZona();
+    }
+
+    function filtrarTablaZona() {
+      _pagZona = 0;
+      renderTablaZona();
+    }
+
+    function imprimirPadronZona() {
+      window.print();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leytrix ISP — Panel de Control</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div class="page-header">
+      <h2>📡 Panel de Control — Leytrix ISP</h2>
+      <p>Resumen general del servicio de internet (Loboyacu, Huayranga, Pacotillo, Ramal, Palmeras, Shishiyacu)</p>
+    </div>
+
+    <!-- Aviso si Supabase requiere configuración SQL -->
+    <div id="bannerSupaAlerta" style="display:none;background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:12px;padding:14px 18px;margin-bottom:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:2rem">☁️</span>
+        <div>
+          <strong style="color:#92400E;font-size:0.92rem;display:block">Base de datos en la nube: Tablas pendientes de activar en Supabase</strong>
+          <p style="color:#B45309;font-size:0.8rem;margin:2px 0 0">Tus datos están guardados localmente. Para sincronizarlos y verlos desde cualquier celular o PC, solo ejecuta el script SQL en tu panel de Supabase (1 clic).</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="abrirModalSupabase()" style="background:#D97706;border-color:#D97706;padding:8px 14px">
+          ⚡ Activar Supabase Cloud
+        </button>
+      </div>
+    </div>
+
+    <!-- KPIs Principales -->
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi kpi-blue">
+        <div class="val" id="kpiTotal">—</div>
+        <div class="lbl">Total Clientes</div>
+      </div>
+      <div class="kpi kpi-green">
+        <div class="val" id="kpiActivos">—</div>
+        <div class="lbl">Activos en Red</div>
+      </div>
+      <div class="kpi kpi-red">
+        <div class="val" id="kpiCortados">—</div>
+        <div class="lbl">Cortados / Suspendidos</div>
+      </div>
+      <div class="kpi kpi-orange">
+        <div class="val" id="kpiCobrado">S/. 0.00</div>
+        <div class="lbl" id="kpiCobradoLbl">Cobrado este mes</div>
+      </div>
+    </div>
+
+    <!-- Acceso Rápido al Archivo Fotográfico ISP -->
+    <div class="card" style="margin-bottom:20px;background:linear-gradient(135deg,#F0FDF4 0%,#E0F2FE 50%,#EFF6FF 100%);border:1.5px solid #BAE6FD">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <span style="font-size:1.8rem">📸</span>
+            <h3 style="font-size:1.1rem;font-weight:800;color:#0F172A">Archivo Fotográfico &amp; Comprobantes ISP</h3>
+            <span class="badge" style="background:#0284C7;color:#fff;font-size:0.72rem">Fotos &amp; Vouchers</span>
+          </div>
+          <p style="font-size:0.85rem;color:#0369A1;line-height:1.4">
+            Organiza las fotos de tu empresa de internet: Comprobantes de pago (Yape/BCP), instalaciones de routers, cajas NAP en postes y fachadas de clientes por zona.
+          </p>
+        </div>
+        <div class="btn-group">
+          <a href="explorador.html" class="btn btn-primary" style="background:#0284C7;border-color:#0284C7">
+            📸 Abrir Galería ISP
+          </a>
+          <a href="agregar.html" class="btn btn-success">
+            ➕ Agregar Cliente
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribución por Zonas y Pendientes del Mes -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px" id="gridResumen">
+      <!-- Tarjeta 1: Clientes por Zona -->
+      <div class="card">
+        <div class="card-title">
+          <span>🗺️ Clientes por Zona</span>
+          <a href="zonas.html" class="btn btn-outline btn-sm">Ver Zonas ➔</a>
+        </div>
+        <div id="tablaZonasDash">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Zona</th><th>Total</th><th>Activos</th><th>Cortados</th></tr></thead>
+              <tbody id="tbodyZonasDash">
+                <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gris)">Cargando zonas...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta 2: Mensualidades Pendientes del Mes Actual -->
+      <div class="card">
+        <div class="card-title">
+          <span>⚠️ Clientes Pendientes (<span id="txtMesActual"></span>)</span>
+          <a href="pendientes.html" class="btn btn-outline btn-sm">Ver Pendientes ➔</a>
+        </div>
+        <div id="sinPagoDash">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Zona</th><th>Plan</th><th>Acción</th></tr></thead>
+              <tbody id="tbodyPendientesDash">
+                <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gris)">Consultando pendientes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel IA — Análisis del Negocio -->
+    <div class="card" style="margin-bottom:20px;border:1.5px solid #DDD6FE;background:linear-gradient(135deg,#FAFAFF,#F5F3FF)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:1.6rem">🤖</span>
+          <div>
+            <div style="font-weight:800;color:#4F46E5;font-size:1rem">Asistente IA — Leytrix ISP</div>
+            <div style="font-size:0.78rem;color:#7C3AED" id="iaResumenRed">Cargando estado de red...</div>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button onclick="ejecutarAnalisisIA()" class="btn btn-primary" style="background:#7C3AED;border-color:#7C3AED">
+            📊 Analizar Negocio con IA
+          </button>
+          <a href="pendientes.html" class="btn btn-outline" style="border-color:#DC2626;color:#DC2626">🔴 Ver Mora</a>
+        </div>
+      </div>
+      <div id="iaAnalisisDashboard" style="display:none;background:#fff;border-radius:10px;padding:14px;border:1px solid #DDD6FE;font-size:0.87rem;line-height:1.7;color:#1E1B4B"></div>
+    </div>
+
+  </main>
+
+  <script src="js/security.js"></script><script src="js/db.js"></script>
+  <script src="js/ia-central.js"></script><script src="js/sidebar.js"></script>
+  <script>
+    async function cargarDashboard() {
+      const mes = mesActual();
+      document.getElementById('txtMesActual').textContent = mes;
+      document.getElementById('kpiCobradoLbl').textContent = `Cobrado en ${mes}`;
+
+      try {
+        // 1. Cargar KPIs O(1) con IDB
+        const [total, activos, cortados, pagosMes] = await Promise.all([
+          IDB.count('clientes'),
+          IDB.countByIndex('clientes', 'estado', 'ACTIVO'),
+          IDB.countByIndex('clientes', 'estado', 'CORTADO'),
+          IDB.getByIndex('pagos', 'mes', mes)
+        ]);
+
+        const cobrado = (pagosMes || []).reduce((s, p) => s + (Number(p.monto) || 0), 0);
+
+        document.getElementById('kpiTotal').textContent = total.toLocaleString();
+        document.getElementById('kpiActivos').textContent = activos.toLocaleString();
+        document.getElementById('kpiCortados').textContent = cortados.toLocaleString();
+        document.getElementById('kpiCobrado').textContent = `S/. ${cobrado.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // 2. Conteo por zonas
+        const zonaCounts = await Promise.all(ZONAS.map(async z => {
+          const [totZ, actZ, cortZ] = await Promise.all([
+            IDB.countByIndex('clientes', 'zona', z),
+            IDB.countByIndex('clientes', 'zona_estado', [z, 'ACTIVO']),
+            IDB.countByIndex('clientes', 'zona_estado', [z, 'CORTADO'])
+          ]);
+          return { z, totZ, actZ, cortZ };
+        }));
+
+        const tbodyZonas = document.getElementById('tbodyZonasDash');
+        tbodyZonas.innerHTML = zonaCounts.map(item => `
+          <tr>
+            <td><strong>${esc(item.z)}</strong></td>
+            <td>${item.totZ.toLocaleString()}</td>
+            <td style="color:var(--verde);font-weight:700">${item.actZ.toLocaleString()}</td>
+            <td style="color:var(--rojo);font-weight:700">${item.cortZ.toLocaleString()}</td>
+          </tr>
+        `).join('');
+
+        // 3. Clientes pendientes de pago del mes
+        const conPagoIds = new Set((pagosMes || []).map(p => Number(p.id_cliente)));
+        const sinPagoQuery = await IDB.query('clientes', {
+          indexName: 'estado',
+          range: IDBKeyRange.only('ACTIVO'),
+          filter: c => !conPagoIds.has(Number(c.id)),
+          limit: 6
+        });
+
+        const tbodyPend = document.getElementById('tbodyPendientesDash');
+        if (!sinPagoQuery.results.length) {
+          tbodyPend.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--verde);font-weight:700">✅ Todos los clientes activos están al día este mes.</td></tr>';
+        } else {
+          tbodyPend.innerHTML = sinPagoQuery.results.map(c => `
+            <tr>
+              <td><strong>${esc(c.nombre)}</strong></td>
+              <td>${esc(c.zona)}</td>
+              <td><strong>S/. ${Number(c.plan || 0).toFixed(2)}</strong></td>
+              <td>
+                <a href="pagos.html?id=${c.id}" class="btn btn-success btn-sm">💳 Cobrar</a>
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch(err) {
+        console.error('Error cargando Dashboard:', err);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderSidebar('index');
+      window.onDatosActualizados = cargarDashboard;
+      await cargarDashboard();
+
+      // Cargar resumen de red con IA (no bloquea el dashboard)
+      setTimeout(async () => {
+        try {
+          const clientes = await IDB.getAll('clientes');
+          const resumen = await FASTNET_IA.resumirEstadoRed(clientes);
+          const el = document.getElementById('iaResumenRed');
+          if (el) el.textContent = resumen;
+        } catch (_) {}
+      }, 800);
+    });
+
+    async function ejecutarAnalisisIA() {
+      const panel = document.getElementById('iaAnalisisDashboard');
+      if (!panel) return;
+      panel.style.display = 'block';
+      panel.textContent = '⏳ Generando análisis con Gemini IA...';
+      try {
+        const [clientes, pagos] = await Promise.all([IDB.getAll('clientes'), IDB.getAll('pagos')]);
+        const analisis = await FASTNET_IA.analizarNegocio(clientes, pagos);
+        // Renderizar negritas de markdown
+        panel.innerHTML = analisis
+          .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+          .replace(/\*(.+?)\*/g, '<b>$1</b>')
+          .replace(/\n/g, '<br>');
+      } catch (err) {
+        panel.textContent = '❌ Error: ' + (err.message || 'Verifica tu API Key en ⚙️ Ajustes IA.');
+      }
+    }
+  </script>
+</body>
+</html>

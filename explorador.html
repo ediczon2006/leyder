@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leytrix ISP — Fotos &amp; Comprobantes</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    /* Galería Fotográfica ISP */
+    .galeria-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 18px;
+      margin-top: 20px;
+    }
+    .foto-card {
+      background: #FFFFFF;
+      border: 1.5px solid var(--borde);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .foto-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+      border-color: var(--azul);
+    }
+    .foto-thumb-wrap {
+      width: 100%;
+      height: 180px;
+      background: #0F172A;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .foto-thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    .foto-thumb-wrap:hover img {
+      transform: scale(1.05);
+    }
+    .foto-cat-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      backdrop-filter: blur(4px);
+    }
+    .foto-body {
+      padding: 14px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .foto-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .foto-meta {
+      font-size: 0.75rem;
+      color: var(--gris);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .foto-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid #F1F5F9;
+    }
+
+    /* Modal Visor / Lightbox */
+    .lightbox-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .lightbox-bg.open {
+      display: flex;
+    }
+    .lightbox-content {
+      max-width: 90vw;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .lightbox-img {
+      max-width: 100%;
+      max-height: 75vh;
+      border-radius: 8px;
+      object-fit: contain;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    .lightbox-bar {
+      margin-top: 14px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 10px 18px;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    /* Zona de arrastrar y soltar */
+    .dropzone {
+      border: 2px dashed #0284C7;
+      background: #F0F9FF;
+      border-radius: 14px;
+      padding: 30px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .dropzone:hover, .dropzone.dragover {
+      background: #E0F2FE;
+      border-color: #0369A1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar"></nav>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div class="page-header" style="margin-bottom:0">
+        <h2>📸 Archivo Fotográfico &amp; Comprobantes ISP</h2>
+        <p>Almacena imágenes de comprobantes Yape/BCP, routers ONT, cajas NAP en postes y fachadas de clientes</p>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="abrirModalSubir()" style="background:#0284C7;border-color:#0284C7">
+          ➕ Subir Nueva Foto
+        </button>
+        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
+      </div>
+    </div>
+
+    <!-- Indicador Supabase Cloud -->
+    <div id="expSupaBadge" style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;font-size:0.78rem;font-weight:700;margin-bottom:16px;border:1px solid #FDE68A;background:#FFFBEB;color:#B45309">
+      ☁️ Supabase Cloud: 🟡 Modo Local (Pendiente SQL)
+    </div>
+
+    <!-- Barra de Filtros -->
+    <div class="card" style="padding:16px 20px;margin-bottom:18px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="busFoto" placeholder="🔍 Buscar por nombre de foto, cliente, zona o notas..." class="form-input" style="flex:1;min-width:240px" oninput="filtrarGaleria()" />
+
+        <select id="filtCatFoto" class="form-select" style="max-width:220px" onchange="filtrarGaleria()">
+          <option value="">Todas las Categorías</option>
+          <option value="comprobante">🧾 Comprobantes de Pago</option>
+          <option value="router">📡 Routers / ONT</option>
+          <option value="caja_nap">📦 Cajas NAP / Postes</option>
+          <option value="fachada">🏠 Fachadas / Casas</option>
+          <option value="dni">🪪 DNI / Documentos</option>
+          <option value="averia">🛠️ Averías &amp; Fibras</option>
+          <option value="otro">📁 Otras Fotos</option>
+        </select>
+
+        <select id="filtZonaFoto" class="form-select" style="max-width:180px" onchange="filtrarGaleria()">
+          <option value="">Todas las Zonas</option>
+          <option value="Loboyacu">Loboyacu</option>
+          <option value="Huayranga">Huayranga</option>
+          <option value="Pacotillo">Pacotillo</option>
+          <option value="Ramal de Cachiyacu">Ramal de Cachiyacu</option>
+          <option value="Palmeras">Palmeras</option>
+          <option value="Shishiyacu">Shishiyacu</option>
+        </select>
+
+        <button class="btn btn-outline" onclick="limpiarFiltrosFotos()">Limpiar</button>
+      </div>
+    </div>
+
+    <!-- Contenedor de la Galería -->
+    <div id="contenedorGaleria" class="galeria-grid">
+      <div style="grid-column:1/-1;text-align:center;padding:50px;color:var(--gris)">
+        Cargando fotos...
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL PARA SUBIR FOTO -->
+  <div class="modal-bg" id="modalSubirFoto">
+    <div class="modal" style="max-width:560px">
+      <div class="modal-header">
+        <h3>📤 Subir Foto al Sistema</h3>
+        <button class="modal-close" onclick="cerrarModal('modalSubirFoto')">✕</button>
+      </div>
+
+      <form id="formSubirFoto" onsubmit="guardarFoto(event)">
+        <!-- Dropzone de archivo de imagen -->
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('inputArchivoFoto').click()">
+          <input type="file" id="inputArchivoFoto" accept="image/*" style="display:none" onchange="manejarSeleccionImagen(event)" />
+          <div id="dropzoneContent">
+            <span style="font-size:2.5rem;display:block;margin-bottom:8px">🖼️</span>
+            <strong style="color:var(--azul);font-size:0.95rem">Haz clic para abrir el Explorador de Windows</strong>
+            <p style="font-size:0.8rem;color:var(--gris);margin:4px 0 0">O arrastra tu foto aquí (JPG, PNG, WEBP, BMP)</p>
+          </div>
+          <!-- Vista previa -->
+          <div id="dropzonePreview" style="display:none;margin-top:10px">
+            <img id="imgPreviewSubida" style="max-height:160px;max-width:100%;border-radius:8px;border:1px solid #cbd5e1" />
+            <div style="font-size:0.75rem;color:var(--gris);margin-top:4px" id="lblInfoArchivo"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div>
+            <label class="form-label" for="subirCategoria">Categoría ISP <span style="color:var(--rojo)">*</span></label>
+            <select id="subirCategoria" class="form-select" required>
+              <option value="comprobante" selected>🧾 Comprobante (Yape/BCP)</option>
+              <option value="router">📡 Router / ONT Instalada</option>
+              <option value="caja_nap">📦 Caja NAP / Poste</option>
+              <option value="fachada">🏠 Fachada de Cliente</option>
+              <option value="dni">🪪 DNI / Ficha</option>
+              <option value="averia">🛠️ Avería / Mantenimiento</option>
+              <option value="otro">📁 Otro</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label" for="subirZona">Zona de Red</label>
+            <select id="subirZona" class="form-select">
+              <option value="">Seleccionar Zona</option>
+              <option value="Loboyacu">Loboyacu</option>
+              <option value="Huayranga">Huayranga</option>
+              <option value="Pacotillo">Pacotillo</option>
+              <option value="Ramal de Cachiyacu">Ramal de Cachiyacu</option>
+              <option value="Palmeras">Palmeras</option>
+              <option value="Shishiyacu">Shishiyacu</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:14px">
+          <label class="form-label" for="subirCliente">Asociar a Cliente (Opcional)</label>
+          <select id="subirCliente" class="form-select">
+            <option value="">— Ninguno / Foto General de Red —</option>
+          </select>
+        </div>
+
+        <div style="margin-top:14px">
+          <label class="form-label" for="subirTitulo">Título / Descripción Breve</label>
+          <input type="text" id="subirTitulo" class="form-input" placeholder="Ej. Voucher Yape S/. 65 mes de Octubre" />
+        </div>
+
+        <div style="margin-top:14px">
+          <label class="form-label" for="subirNotas">Notas Técnicas / Observaciones</label>
+          <textarea id="subirNotas" class="form-input" rows="2" placeholder="Ej. ONT Huawei en puerto 3 de NAP Shishiyacu, atenuación -19dBm"></textarea>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+          <button type="button" class="btn btn-outline" onclick="cerrarModal('modalSubirFoto')">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnGuardarFoto" style="background:#0284C7;border-color:#0284C7">
+            💾 Guardar Imagen
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX / VISOR DE FOTO COMPLETA -->
+  <div class="lightbox-bg" id="lightboxModal" onclick="cerrarLightbox(event)">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+      <button onclick="cerrarLightboxDirecto()" style="position:absolute;top:-36px;right:0;background:none;border:none;color:#fff;font-size:1.8rem;cursor:pointer;line-height:1">✕</button>
+      <img id="lightboxImg" class="lightbox-img" src="" alt="Foto ISP" />
+      <div class="lightbox-bar">
+        <div>
+          <strong id="lightboxTitulo" style="display:block;font-size:0.95rem">Título</strong>
+          <span id="lightboxSub" style="font-size:0.75rem;opacity:0.8">Detalle</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-success btn-sm" onclick="compartirFotoWA()">📲 WA</button>
+          <button class="btn btn-primary btn-sm" onclick="descargarFotoActual()">📥 Guardar</button>
+          <button class="btn btn-danger btn-sm" onclick="eliminarFotoActual()">🗑️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/security.js"></script><script src="js/db.js"></script>
+  <script src="js/ia-central.js"></script><script src="js/sidebar.js"></script>
+  <script>
+    let todasFotos = [];
+    let todosClientes = [];
+    let fotoActualLightbox = null;
+    let base64Seleccionado = '';
+
+    const COLORES_CAT = {
+      comprobante: '#059669',
+      router:      '#0284C7',
+      caja_nap:    '#D97706',
+      fachada:     '#7C3AED',
+      dni:         '#2563EB',
+      averia:      '#DC2626',
+      otro:        '#475569'
+    };
+
+    const ETIQUETAS_CAT = {
+      comprobante: '🧾 Comprobante',
+      router:      '📡 Router ONT',
+      caja_nap:    '📦 Caja NAP',
+      fachada:     '🏠 Fachada',
+      dni:         '🪪 DNI / Ficha',
+      averia:      '🛠️ Avería',
+      otro:        '📁 Foto'
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderSidebar('explorador');
+      configurarDragAndDrop();
+      window.onDatosActualizados = () => cargarDatos();
+      await cargarDatos();
+    });
+
+    async function cargarDatos() {
+      todasFotos    = await IDB.getAll('fotos');
+      todosClientes = await IDB.getAll('clientes');
+
+      poblarSelectClientes();
+      renderGaleria(todasFotos);
+    }
+
+    function poblarSelectClientes() {
+      const sel = document.getElementById('subirCliente');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">— Ninguno / Foto General de Red —</option>' +
+        todosClientes.map(c => `<option value="${c.id}">${esc(c.nombre)} (${esc(c.zona)})</option>`).join('');
+    }
+
+    function renderGaleria(fotos) {
+      const cont = document.getElementById('contenedorGaleria');
+      if (!fotos.length) {
+        cont.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:60px 20px;background:#fff;border:1.5px dashed var(--borde);border-radius:14px">
+            <span style="font-size:3rem;display:block;margin-bottom:10px">📸</span>
+            <h3 style="font-size:1.1rem;color:var(--azul);margin-bottom:6px">No hay fotos registradas aún</h3>
+            <p style="font-size:0.85rem;color:var(--gris);max-width:440px;margin:0 auto 18px">
+              Organiza aquí los comprobantes de tus clientes, fotos de instalaciones de routers, cajas NAP en postes y fachadas.
+            </p>
+            <button class="btn btn-primary" onclick="abrirModalSubir()" style="background:#0284C7;border-color:#0284C7">
+              ➕ Subir Primera Foto
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      // Ordenar más recientes primero
+      const ordenadas = [...fotos].sort((a,b) => (b.id || 0) - (a.id || 0));
+
+      cont.innerHTML = ordenadas.map(f => {
+        const catColor = COLORES_CAT[f.categoria] || '#475569';
+        const catLabel = ETIQUETAS_CAT[f.categoria] || f.categoria;
+        const fechaStr = f.creado_el ? new Date(f.creado_el).toLocaleDateString() : '';
+
+        return `
+          <div class="foto-card">
+            <div class="foto-thumb-wrap" onclick="abrirLightbox(${f.id})">
+              <img src="${f.data_url || f.url || ''}" alt="${esc(f.titulo || 'Foto')}" loading="lazy" />
+              <span class="foto-cat-badge" style="background:${catColor}">${catLabel}</span>
+            </div>
+            <div class="foto-body">
+              <div>
+                <h4 class="foto-title" title="${esc(f.titulo || 'Foto sin título')}">${esc(f.titulo || 'Foto sin título')}</h4>
+                <div class="foto-meta">
+                  <span>👤 <strong>${esc(f.cliente_nombre || 'General')}</strong></span>
+                  <span>📍 Zona: ${esc(f.zona || '—')}</span>
+                  <span>📅 ${fechaStr}</span>
+                </div>
+              </div>
+              <div class="foto-actions">
+                <button class="btn btn-outline btn-sm" style="flex:1" onclick="abrirLightbox(${f.id})">🔍 Ver</button>
+                <button class="btn btn-outline btn-sm" onclick="compartirFotoCardWA(${f.id})" title="Compartir WhatsApp">📲</button>
+                <button class="btn btn-danger btn-sm" onclick="eliminarFoto(${f.id})" title="Eliminar Foto">🗑️</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filtrarGaleria() {
+      const q = (document.getElementById('busFoto').value || '').toLowerCase().trim();
+      const cat = document.getElementById('filtCatFoto').value;
+      const zona = document.getElementById('filtZonaFoto').value;
+
+      let filtradas = todasFotos;
+      if (cat) filtradas = filtradas.filter(f => f.categoria === cat);
+      if (zona) filtradas = filtradas.filter(f => f.zona === zona);
+      if (q) {
+        filtradas = filtradas.filter(f =>
+          (f.titulo && f.titulo.toLowerCase().includes(q)) ||
+          (f.cliente_nombre && f.cliente_nombre.toLowerCase().includes(q)) ||
+          (f.zona && f.zona.toLowerCase().includes(q)) ||
+          (f.notas && f.notas.toLowerCase().includes(q))
+        );
+      }
+
+      renderGaleria(filtradas);
+    }
+
+    function limpiarFiltrosFotos() {
+      document.getElementById('busFoto').value = '';
+      document.getElementById('filtCatFoto').value = '';
+      document.getElementById('filtZonaFoto').value = '';
+      renderGaleria(todasFotos);
+    }
+
+    function abrirModalSubir() {
+      document.getElementById('formSubirFoto').reset();
+      base64Seleccionado = '';
+      document.getElementById('dropzonePreview').style.display = 'none';
+      document.getElementById('dropzoneContent').style.display = 'block';
+      document.getElementById('modalSubirFoto').classList.add('open');
+    }
+
+    function configurarDragAndDrop() {
+      const dz = document.getElementById('dropzone');
+      if (!dz) return;
+
+      ['dragenter', 'dragover'].forEach(name => {
+        dz.addEventListener(name, (e) => {
+          e.preventDefault();
+          dz.classList.add('dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(name => {
+        dz.addEventListener(name, (e) => {
+          e.preventDefault();
+          dz.classList.remove('dragover');
+        });
+      });
+
+      dz.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length) {
+          procesarArchivoImagen(files[0]);
+        }
+      });
+    }
+
+    function manejarSeleccionImagen(e) {
+      const files = e.target.files;
+      if (files && files.length) {
+        procesarArchivoImagen(files[0]);
+      }
+    }
+
+    function procesarArchivoImagen(file) {
+      if (!file.type.startsWith('image/')) {
+        toast('Por favor selecciona un archivo de imagen válido', 'warn');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // Comprimir suavemente si es muy grande para no saturar memoria
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1280;
+          const MAX_HEIGHT = 1280;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          base64Seleccionado = canvas.toDataURL('image/jpeg', 0.85);
+
+          // Mostrar preview
+          document.getElementById('dropzoneContent').style.display = 'none';
+          const prev = document.getElementById('dropzonePreview');
+          prev.style.display = 'block';
+          document.getElementById('imgPreviewSubida').src = base64Seleccionado;
+          document.getElementById('lblInfoArchivo').textContent = `${file.name} (${Math.round(base64Seleccionado.length * 0.75 / 1024)} KB aprox)`;
+
+          // Sugerir título si está vacío
+          const titEl = document.getElementById('subirTitulo');
+          if (!titEl.value) {
+            titEl.value = file.name.replace(/\.[^/.]+$/, "");
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function guardarFoto(e) {
+      e.preventDefault();
+      if (!base64Seleccionado) {
+        toast('Por favor selecciona una foto del explorador', 'warn');
+        return;
+      }
+
+      const btn = document.getElementById('btnGuardarFoto');
+      btn.disabled = true;
+      btn.textContent = '⏳ Guardando...';
+
+      try {
+        const categoria  = document.getElementById('subirCategoria')?.value || 'comprobante';
+        const zona       = document.getElementById('subirZona')?.value || '';
+        const cliId      = Number(document.getElementById('subirCliente')?.value) || null;
+        const titulo     = (document.getElementById('subirTitulo')?.value || '').trim() || 'Foto ISP';
+        const notas      = (document.getElementById('subirNotas')?.value || '').trim();
+
+        let cliNombre = '';
+        if (cliId) {
+          const cli = todosClientes.find(c => c.id === cliId);
+          if (cli) {
+            cliNombre = cli.nombre;
+          }
+        }
+
+        const registroFoto = {
+          titulo,
+          categoria,
+          zona,
+          cliente_id: cliId,
+          cliente_nombre: cliNombre,
+          data_url: base64Seleccionado,
+          notas,
+          creado_el: new Date().toISOString()
+        };
+
+        const id = await IDB.add('fotos', registroFoto);
+        toast(`✅ Foto "${titulo}" guardada con éxito (ID #${id})`);
+
+        cerrarModal('modalSubirFoto');
+        await cargarDatos();
+
+      } catch(err) {
+        console.error('Error al guardar foto:', err);
+        toast('Error al guardar imagen: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Guardar Imagen';
+      }
+    }
+
+    function abrirLightbox(id) {
+      const f = todasFotos.find(foto => foto.id === id);
+      if (!f) return;
+      fotoActualLightbox = f;
+
+      document.getElementById('lightboxImg').src = f.data_url || f.url || '';
+      document.getElementById('lightboxTitulo').textContent = f.titulo || 'Foto';
+      document.getElementById('lightboxSub').textContent = `${ETIQUETAS_CAT[f.categoria] || f.categoria} • ${f.cliente_nombre ? f.cliente_nombre + ' • ' : ''}${f.zona || ''}`;
+
+      document.getElementById('lightboxModal').classList.add('open');
+    }
+
+    function cerrarLightbox(e) {
+      document.getElementById('lightboxModal').classList.remove('open');
+    }
+
+    function cerrarLightboxDirecto() {
+      document.getElementById('lightboxModal').classList.remove('open');
+    }
+
+    function descargarFotoActual() {
+      if (!fotoActualLightbox) return;
+      const link = document.createElement('a');
+      link.download = `Foto_Leytrix_${fotoActualLightbox.id}_${(fotoActualLightbox.titulo || 'foto').replace(/\s+/g, '_')}.jpg`;
+      link.href = fotoActualLightbox.data_url || fotoActualLightbox.url;
+      link.click();
+    }
+
+    function compartirFotoWA() {
+      if (!fotoActualLightbox) return;
+      const f = fotoActualLightbox;
+      const texto = `*📡 FOTO LEYTRIX ISP*\n*Título:* ${f.titulo}\n*Categoría:* ${f.categoria}\n*Cliente:* ${f.cliente_nombre || 'General'}\n*Zona:* ${f.zona || '—'}\n*Notas:* ${f.notas || '—'}`;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+    }
+
+    function compartirFotoCardWA(id) {
+      const f = todasFotos.find(foto => foto.id === id);
+      if (!f) return;
+      const texto = `*📡 FOTO LEYTRIX ISP*\n*Título:* ${f.titulo}\n*Categoría:* ${f.categoria}\n*Cliente:* ${f.cliente_nombre || 'General'}\n*Zona:* ${f.zona || '—'}`;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+    }
+
+    async function eliminarFoto(id) {
+      if (!confirm(`¿Eliminar permanentemente esta foto del sistema?`)) return;
+      try {
+        await IDB.delete('fotos', id);
+        toast('🗑️ Foto eliminada con éxito');
+        await cargarDatos();
+      } catch(err) {
+        toast('Error al eliminar: ' + err.message, 'error');
+      }
+    }
+
+    async function eliminarFotoActual() {
+      if (!fotoActualLightbox) return;
+      cerrarLightboxDirecto();
+      await eliminarFoto(fotoActualLightbox.id);
+    }
+  </script>
+</body>
+</html>
