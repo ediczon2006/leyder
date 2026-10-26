@@ -391,13 +391,14 @@ tr.row-cortado td {
 .modal-bg {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(2px);
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000;
   padding: 16px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-bg.open {
@@ -434,15 +435,23 @@ tr.row-cortado td {
 .modal-close {
   background: none;
   border: none;
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   color: var(--gris);
   cursor: pointer;
-  padding: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
   line-height: 1;
+  transition: all .15s ease;
 }
 
-.modal-close:hover {
+.modal-close:hover,
+.modal-close:active {
   color: var(--rojo);
+  background: rgba(220, 38, 38, 0.08);
 }
 
 /* ══ TOAST NOTIFICACIONES ══════════════════════════════ */
@@ -693,17 +702,25 @@ tr.row-cortado td {
 
 /* ══ RESPONSIVE: CELULAR & TABLET (<= 900px) ══════════ */
 @media (max-width: 900px) {
+  body {
+    flex-direction: column !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+    overflow-x: hidden !important;
+  }
+
   #mobile-topbar {
     display: flex;
   }
 
   #sidebar {
-    width: 275px !important;
-    max-width: 85vw;
+    width: 285px !important;
+    max-width: 88vw;
     transform: translateX(-100%);
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1050;
     box-shadow: 4px 0 28px rgba(0,0,0,0.4);
+    -webkit-overflow-scrolling: touch;
   }
 
   #sidebar.open {
@@ -720,6 +737,8 @@ tr.row-cortado td {
   }
   .btn-sidebar-close {
     display: block !important;
+    min-width: 40px;
+    min-height: 40px;
   }
 
   #main {
@@ -729,9 +748,15 @@ tr.row-cortado td {
     overflow-x: hidden;
   }
 
+  .card {
+    padding: 16px 14px !important;
+    margin-bottom: 16px !important;
+  }
+
   /* Grids de contenido */
   #pagosGridContainer,
-  #gridResumen {
+  #gridResumen,
+  #gridZonasCards {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
   }
@@ -739,17 +764,17 @@ tr.row-cortado td {
   /* KPIs en celular: 2 columnas compactas */
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px !important;
-    margin-bottom: 18px !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
   }
   .kpi {
-    padding: 14px 12px !important;
+    padding: 12px 10px !important;
   }
   .kpi .val {
-    font-size: 1.45rem !important;
+    font-size: 1.35rem !important;
   }
   .kpi .lbl {
-    font-size: 0.68rem !important;
+    font-size: 0.65rem !important;
   }
 
   /* Encabezados de página */
@@ -763,10 +788,12 @@ tr.row-cortado td {
 
   /* Tablas responsivas con scroll horizontal suave */
   .table-wrap {
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: 10px;
     margin-bottom: 16px;
     border: 1px solid var(--borde);
+    width: 100%;
   }
   .table-wrap table {
     min-width: 680px;
@@ -776,11 +803,27 @@ tr.row-cortado td {
     font-size: 0.8rem !important;
   }
 
+  /* Botones de acción dentro de tablas: mantener alineados sin estirar */
+  .table-wrap .btn-group {
+    width: auto !important;
+    flex-wrap: nowrap !important;
+    display: inline-flex !important;
+    gap: 4px !important;
+  }
+  .table-wrap .btn-group .btn {
+    flex: 0 0 auto !important;
+    padding: 4px 8px !important;
+  }
+
   /* Formularios sin auto-zoom en iOS Safari */
+  input,
+  select,
+  textarea,
   .form-group input,
   .form-group select,
   .form-group textarea,
-  .form-input {
+  .form-input,
+  .form-select {
     font-size: 16px !important;
     padding: 10px 12px !important;
   }
@@ -792,24 +835,38 @@ tr.row-cortado td {
 
   /* Botones táctiles */
   .btn {
-    min-height: 40px;
+    min-height: 42px;
     padding: 8px 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   .btn-sm {
     min-height: 34px;
     padding: 4px 10px;
   }
 
-  /* Modales */
+  /* Modales en móvil: sobre todo y con scroll táctil */
   .modal-bg {
     padding: 10px !important;
+    z-index: 2000 !important;
   }
   .modal {
     padding: 16px !important;
     max-width: 96vw !important;
-    max-height: 94vh !important;
+    max-height: 92vh !important;
     border-radius: 12px !important;
     margin: 0 auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Toast en celular: centrado y visible */
+  #toast {
+    left: 14px !important;
+    right: 14px !important;
+    bottom: 20px !important;
+    max-width: none !important;
+    text-align: center;
   }
 
   /* Voucher bancario BCP en celular */
@@ -826,11 +883,16 @@ tr.row-cortado td {
     gap: 10px !important;
   }
 
-  /* Widget de IA flotante en celular */
+  /* Widget de IA flotante en celular: no tapar modales ni botones */
   #leytrix-ia-chat,
   #fastnet-ia-chat {
     bottom: 16px !important;
     right: 16px !important;
+    z-index: 1020 !important;
+  }
+  body:has(.modal-bg.open) #leytrix-ia-chat,
+  body:has(.modal-bg.open) #fastnet-ia-chat {
+    display: none !important;
   }
   #ia-chat-toggle {
     width: 48px !important;
@@ -851,11 +913,11 @@ tr.row-cortado td {
   .kpi-grid {
     grid-template-columns: 1fr !important;
   }
-  .btn-group {
+  .btn-group:not(.table-wrap .btn-group) {
     width: 100% !important;
     justify-content: stretch !important;
   }
-  .btn-group .btn {
+  .btn-group:not(.table-wrap .btn-group) .btn {
     flex: 1 1 auto !important;
     text-align: center !important;
   }

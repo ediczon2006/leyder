@@ -215,8 +215,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      renderSidebar('index');
       window.onDatosActualizados = cargarDashboard;
+      renderSidebar('index');
       await cargarDashboard();
 
       // Cargar resumen de red con IA (no bloquea el dashboard)

@@ -482,11 +482,11 @@
       renderSidebar('pagos');
       
       const hoy = new Date().toISOString().split('T')[0];
-      const mes = mesActual();
+      const mesISO = typeof mesActualISO === 'function' ? mesActualISO() : hoy.slice(0, 7);
 
       document.getElementById('pagoFecha').value = hoy;
-      document.getElementById('pagoMes').value = mes;
-      document.getElementById('filtHistMes').value = mes;
+      document.getElementById('pagoMes').value = mesISO;
+      document.getElementById('filtHistMes').value = mesISO;
 
       todosClientes = await IDB.getAll('clientes');
 
@@ -543,7 +543,7 @@
     }
 
     function seleccionarClientePorId(id) {
-      const cli = todosClientes.find(c => c.id === id);
+      const cli = todosClientes.find(c => c.id === id || String(c.id) === String(id));
       if (!cli) return;
 
       document.getElementById('pagoIdCliente').value = cli.id;
@@ -583,7 +583,8 @@
       btn.textContent = '⏳ Emitiendo Voucher Bancario...';
 
       try {
-        const mes       = document.getElementById('pagoMes')?.value || mesActual();
+        const mesRaw    = document.getElementById('pagoMes')?.value;
+        const mes       = (typeof mesISOaTexto === 'function' ? mesISOaTexto(mesRaw) : mesRaw) || mesActual();
         const monto     = Number(document.getElementById('pagoMonto')?.value) || 0;
         const metodo    = document.getElementById('pagoMetodo')?.value || 'Yape';
         const numOp     = (document.getElementById('pagoNumOperacion')?.value || '').trim() || `OP-${Date.now().toString().slice(-6)}`;
@@ -645,7 +646,11 @@
         pagos.sort((a, b) => (b.id || 0) - (a.id || 0));
 
         if (mesFiltro) {
-          pagos = pagos.filter(p => p.mes === mesFiltro);
+          const filtroTexto = typeof mesISOaTexto === 'function' ? mesISOaTexto(mesFiltro) : mesFiltro;
+          pagos = pagos.filter(p => {
+            const pTexto = typeof mesISOaTexto === 'function' ? mesISOaTexto(p.mes) : p.mes;
+            return pTexto === filtroTexto || p.mes === mesFiltro;
+          });
         }
 
         historialPagos = pagos;

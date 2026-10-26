@@ -29,8 +29,9 @@ const ESTADOS = ['ACTIVO', 'CORTADO', 'PENDIENTE', 'RETIRADO'];
 // desactiva los registros públicos y cambia REQUIRE_AUTH a true.
 const REQUIRE_AUTH = false;
 
-const SUPA_URL = 'https://nbgysgbizjyndcqsvvea.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZ3lzZ2Jpemp5bmRjcXN2dmVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NDYxNDAsImV4cCI6MjEwODUyMjE0MH0.6rTUz8JnqJe5Xh6_tugBKE-UmqT0zthnyTGEXlVJzh0';
+// Credenciales oficiales Supabase Leytrix ISP
+const SUPA_URL = 'https://baeobhvgfrdbwyqapqzf.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhZW9iaHZnZnJkYnd5cWFwcXpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2NjUyMzgsImV4cCI6MjEwNzI0MTIzOH0.gve1FoTF8kDnUrZfedGdWnZKV1e6uxgydXJBm_v5ILc';
 
 let _supa = null;
 let _supaOnline = false;
@@ -51,10 +52,26 @@ function sanitizarPayloadSupabase(item) {
   const copia = { ...item };
   for (const k of Object.keys(copia)) {
     if (typeof copia[k] === 'string' && copia[k].trim() === '') {
-      if (['fecha_inicio', 'fecha', 'fecha_corte', 'fecha_reconexion', 'ip', 'celular'].includes(k)) {
+      if (['fecha_inicio', 'fecha', 'fecha_corte', 'fecha_reconexion', 'ip', 'celular', 'dni', 'direccion', 'notas', 'obs'].includes(k)) {
         copia[k] = null;
       }
     }
+  }
+  if ('id' in copia) {
+    const numId = Number(copia.id);
+    if (Number.isFinite(numId) && numId > 0) {
+      copia.id = numId;
+    } else if (copia.id === null || copia.id === undefined || copia.id === '') {
+      delete copia.id;
+    }
+  }
+  if ('id_cliente' in copia && copia.id_cliente !== null && copia.id_cliente !== undefined) {
+    const cid = Number(copia.id_cliente);
+    if (Number.isFinite(cid)) copia.id_cliente = cid;
+  }
+  if ('cliente_id' in copia && copia.cliente_id !== null && copia.cliente_id !== undefined) {
+    const cid = Number(copia.cliente_id);
+    if (Number.isFinite(cid)) copia.cliente_id = cid;
   }
   if ('plan' in copia && copia.plan !== null && copia.plan !== undefined) {
     copia.plan = Number(copia.plan) || 65;
@@ -62,9 +79,25 @@ function sanitizarPayloadSupabase(item) {
   if ('monto' in copia && copia.monto !== null && copia.monto !== undefined) {
     copia.monto = Number(copia.monto) || 0;
   }
-  // [CABLE] Siempre booleano para la columna BOOLEAN de Supabase
+  // [CABLE] Compatible con tipo NUMERIC / INTEGER o BOOLEAN en Supabase
   if ('cable' in copia) {
-    copia.cable = copia.cable === true || copia.cable === 'true' || copia.cable === 1;
+    copia.cable = (copia.cable === true || copia.cable === 'true' || Number(copia.cable) > 0) ? 1 : 0;
+  }
+  return copia;
+}
+
+// Normalizador para registros que llegan desde Supabase hacia IndexedDB
+function normalizarRegistroSupabase(item) {
+  if (!item || typeof item !== 'object') return item;
+  const copia = { ...item };
+  if ('cable' in copia) {
+    copia.cable = Boolean(copia.cable === true || copia.cable === 1 || copia.cable === '1' || copia.cable === 'true');
+  }
+  if ('plan' in copia && copia.plan !== null && copia.plan !== undefined) {
+    copia.plan = Number(copia.plan) || 65;
+  }
+  if ('monto' in copia && copia.monto !== null && copia.monto !== undefined) {
+    copia.monto = Number(copia.monto) || 0;
   }
   return copia;
 }
@@ -169,9 +202,15 @@ const IDB = (() => {
   async function subir(store, data) {
     if (!_supa) return;
     try {
-      const { error } = await _supa.from(store).upsert(sanitizarPayloadSupabase(data), { onConflict: 'id' });
+      const payload = sanitizarPayloadSupabase(data);
+      const { error } = await _supa.from(store).upsert(payload, { onConflict: 'id' });
       if (error) {
-        console.warn(`[Supabase upsert] Error en ${store}:`, error.message);
+        if (error.message && error.message.includes('actualizado_el')) {
+          console.warn(`[Supabase upsert] Falta columna 'actualizado_el' en tabla ${store}:`, error.message);
+          toast('⚠️ Supabase requiere la columna actualizado_el. Abre "Configurar Nube" para ejecutar el script SQL.', 'warn');
+        } else {
+          console.warn(`[Supabase upsert] Error en ${store}:`, error.message);
+        }
       } else {
         _supaOnline = true;
         actualizarBadgesSupabase(true);
@@ -541,6 +580,45 @@ function mesActual() {
   return `${meses[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+// Formato ISO YYYY-MM para inputs type="month"
+function mesActualISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+// Convierte "2026-10" a "Octubre 2026", o retorna el valor si ya es texto
+function mesISOaTexto(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^[A-Za-záéíóúÁÉÍÓÚñÑ]+\s+\d{4}$/.test(s)) return s;
+  const parts = s.split('-');
+  if (parts.length === 2) {
+    const y = parts[0];
+    const m = parseInt(parts[1], 10) - 1;
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
+    if (m >= 0 && m < 12) return `${meses[m]} ${y}`;
+  }
+  return s;
+}
+
+// Convierte "Octubre 2026" a "2026-10" para inputs type="month"
+function mesTextoaISO(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^\d{4}-\d{2}$/.test(s)) return s;
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];
+  const parts = s.toLowerCase().split(/\s+/);
+  if (parts.length === 2) {
+    const idx = meses.indexOf(parts[0]);
+    if (idx !== -1 && /^\d{4}$/.test(parts[1])) {
+      return `${parts[1]}-${String(idx + 1).padStart(2, '0')}`;
+    }
+  }
+  return '';
+}
+
 function fechaHoy() {
   const d = new Date();
   const y = d.getFullYear();
@@ -704,8 +782,9 @@ CREATE TABLE IF NOT EXISTS public.clientes (
   actualizado_el TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW())
 );
 
--- [CABLE] Para bases ya creadas: agrega la columna cable (+S/. 10) si falta
-ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS cable BOOLEAN NOT NULL DEFAULT false;
+-- Asegurar columnas si la tabla clientes ya existía previamente
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS actualizado_el TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW());
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS cable NUMERIC NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS public.pagos (
   id                BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
@@ -805,7 +884,7 @@ let _realtimeIniciado = false;
 async function _aplicarCambioRealtime(tabla, p) {
   // Escritura LOCAL: evita que el cambio rebote de vuelta a Supabase
   if ((p.eventType === 'INSERT' || p.eventType === 'UPDATE') && p.new && p.new.id !== undefined) {
-    await IDB.putLocal(tabla, p.new);
+    await IDB.putLocal(tabla, normalizarRegistroSupabase(p.new));
   } else if (p.eventType === 'DELETE' && p.old && p.old.id !== undefined) {
     await IDB.deleteLocal(tabla, p.old.id);
   }
@@ -955,7 +1034,7 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
           break;
         }
         if (!data || !data.length) break;
-        registros.push(...data);
+        registros.push(...data.map(normalizarRegistroSupabase));
         if (data.length < CHUNK) break;
         desde += CHUNK;
       }
@@ -1009,4 +1088,22 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
   } finally {
     _sincronizando = false;
   }
+}
+// ══ EVENTOS DE RED Y CONECTIVIDAD MÓVIL ═════════════════
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    if (typeof toast === 'function') toast('📶 Conexión restablecida. Sincronizando con Supabase...', 'info');
+    verificarSupabase(false);
+  });
+  window.addEventListener('offline', () => {
+    actualizarBadgesSupabase(false);
+    if (typeof toast === 'function') toast('📡 Modo sin conexión activado (Datos guardados localmente)', 'warn');
+  });
+
+  // Cerrar cualquier modal al tocar fuera en celular o PC
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains('modal-bg')) {
+      e.target.classList.remove('open');
+    }
+  });
 }

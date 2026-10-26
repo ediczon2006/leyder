@@ -130,7 +130,12 @@ function renderSidebar(activePage) {
           </button>
         </div>
         <div style="border-top:1px solid var(--borde);padding-top:14px">
-          <h4 style="font-size:0.88rem;margin-bottom:6px">📋 Script SQL para crear tablas en Supabase</h4>
+          <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;margin-bottom:12px">
+            <strong style="color:#DC2626;font-size:0.8rem">⚠️ Migración Rápida (para bases ya creadas):</strong>
+            <p style="font-size:0.74rem;color:#991B1B;margin:3px 0 6px">Si al editar clientes ves error de campo o deseas sincronizar todo al 100%, copia y corre en Supabase SQL Editor:</p>
+            <code style="display:block;background:#450A0A;color:#FCA5A5;padding:6px 8px;border-radius:6px;font-size:0.72rem;user-select:all;word-break:break-all">ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS actualizado_el TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW()); ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS cable NUMERIC NOT NULL DEFAULT 0;</code>
+          </div>
+          <h4 style="font-size:0.88rem;margin-bottom:6px">📋 Script SQL Completo para Supabase</h4>
           <p style="font-size:0.78rem;color:var(--gris);margin-bottom:8px">
             Si aún no has creado las tablas en tu proyecto, copia este código, entra a <strong>Supabase Dashboard &gt; SQL Editor &gt; New Query</strong>, pégalo y presiona <strong>Run</strong>:
           </p>

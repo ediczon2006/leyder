@@ -19,9 +19,14 @@ CREATE TABLE IF NOT EXISTS public.clientes (
   zona           VARCHAR(80) NOT NULL DEFAULT 'Loboyacu',
   plan           NUMERIC(8,2) NOT NULL DEFAULT 65.00 CHECK (plan >= 0),
   estado         VARCHAR(20) NOT NULL DEFAULT 'ACTIVO' CHECK (estado IN ('ACTIVO', 'CORTADO', 'PENDIENTE', 'RETIRADO')),
+  cable          NUMERIC NOT NULL DEFAULT 0,
   creado_el      TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW()),
   actualizado_el TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW())
 );
+
+-- Asegurar columnas si la tabla ya fue creada previamente
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS actualizado_el TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW());
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS cable NUMERIC NOT NULL DEFAULT 0;
 
 -- ── Pagos ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.pagos (
@@ -73,15 +78,19 @@ CREATE TABLE IF NOT EXISTS public.fotos (
 
 -- 3. Trigger: actualizar timestamp de modificación en clientes
 CREATE OR REPLACE FUNCTION public.leytrix_actualizar_timestamp()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $
 BEGIN
-  NEW.actualizado_el = timezone('America/Lima', NOW());
+  BEGIN
+    NEW.actualizado_el = timezone('America/Lima', NOW());
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
   -- Proteger campos inmutables
   NEW.id        = OLD.id;
   NEW.creado_el = OLD.creado_el;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_clientes_ts ON public.clientes;
 CREATE TRIGGER trg_clientes_ts

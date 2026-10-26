@@ -203,12 +203,11 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      renderSidebar('clientes');
-      cargarClientes(0);
-
       window.onDatosActualizados = () => {
         cargarClientes(_paginaActual);
       };
+      renderSidebar('clientes');
+      cargarClientes(0);
 
       // Eventos de filtros
       ['filtZona', 'filtEstado', 'filtPlan'].forEach(id => {

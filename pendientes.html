@@ -313,8 +313,8 @@
     document.addEventListener('DOMContentLoaded', async () => {
       renderSidebar('pendientes');
       
-      const mes = mesActual();
-      document.getElementById('selMesPendiente').value = mes;
+      const mesISO = typeof mesActualISO === 'function' ? mesActualISO() : new Date().toISOString().slice(0, 7);
+      document.getElementById('selMesPendiente').value = mesISO;
 
       window.onDatosActualizados = () => cargarDatos();
       await cargarDatos();
@@ -327,15 +327,19 @@
     }
 
     function calcularPendientes() {
-      const mesSel = document.getElementById('selMesPendiente').value;
-      if (!mesSel) return;
+      const mesRaw = document.getElementById('selMesPendiente').value;
+      if (!mesRaw) return;
+      const mesTexto = typeof mesISOaTexto === 'function' ? mesISOaTexto(mesRaw) : mesRaw;
 
-      const pagosDelMes = pagosLista.filter(p => p.mes === mesSel);
+      const pagosDelMes = pagosLista.filter(p => {
+        const pTexto = typeof mesISOaTexto === 'function' ? mesISOaTexto(p.mes) : p.mes;
+        return pTexto === mesTexto || p.mes === mesRaw;
+      });
       const clientesQuePagaron = new Set(pagosDelMes.map(p => Number(p.id_cliente)));
 
       listaPendientes = clientesLista.filter(c => {
         if (c.estado === 'RETIRADO') return false;
-        return !clientesQuePagaron.has(c.id);
+        return !clientesQuePagaron.has(Number(c.id));
       });
 
       const totalClientesRed = clientesLista.filter(c => c.estado !== 'RETIRADO').length;

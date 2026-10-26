@@ -42,7 +42,7 @@
     </div>
 
     <!-- Pestañas de Navegación Rápida -->
-    <div style="display:flex;gap:10px;margin-bottom:18px;border-bottom:2px solid var(--borde);padding-bottom:10px">
+    <div style="display:flex;gap:10px;margin-bottom:18px;border-bottom:2px solid var(--borde);padding-bottom:10px;flex-wrap:wrap">
       <button class="btn btn-primary" id="tabBtnCortados" onclick="cambiarTab('cortados')" style="background:var(--rojo);border-color:var(--rojo)">
         ✂️ Clientes Cortados (<span id="lblBadgeCortados">0</span>)
       </button>
@@ -377,7 +377,7 @@
     }
 
     async function reconectarCliente(id) {
-      const cli = todosClientes.find(c => c.id === id);
+      const cli = todosClientes.find(c => c.id === id || String(c.id) === String(id));
       if (!cli) return;
 
       if (!confirm(`¿Confirmas la RECONEXIÓN del cliente "${cli.nombre}"? Pasará a estado ACTIVO en la red.`)) return;
@@ -388,7 +388,7 @@
 
         // Buscar registro de corte pendiente para marcar fecha_reconexion
         const cortes = await IDB.getAll('cortes');
-        const ultimoCorte = cortes.filter(k => k.id_cliente === cli.id && k.estado === 'CORTADO').pop();
+        const ultimoCorte = cortes.filter(k => String(k.id_cliente) === String(cli.id) && k.estado === 'CORTADO').pop();
         if (ultimoCorte) {
           ultimoCorte.estado = 'RECONECTADO';
           ultimoCorte.fecha_reconexion = new Date().toISOString().split('T')[0];
