@@ -4,10 +4,11 @@
 -- Ejecutar en: Supabase Dashboard > SQL Editor > New Query > Run
 -- ====================================================================
 
--- 1. Habilitar extensiones de seguridad
+-- 0. Habilitar extensiones de seguridad
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- 2. Tablas principales del sistema Leytrix ISP
+-- 1. Limpiar triggers y asegurar columnas en tablas existentes (Sin perder datos)
+DROP TRIGGER IF EXISTS trg_clientes_ts ON public.clientes;
 
 -- ── Clientes ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.clientes (
@@ -24,7 +25,7 @@ CREATE TABLE IF NOT EXISTS public.clientes (
   actualizado_el TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW())
 );
 
--- Asegurar columnas si la tabla ya fue creada previamente
+-- Migración segura si la tabla ya existía
 ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS actualizado_el TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW());
 ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS cable NUMERIC NOT NULL DEFAULT 0;
 
@@ -76,9 +77,9 @@ CREATE TABLE IF NOT EXISTS public.fotos (
   creado_el      TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW())
 );
 
--- 3. Trigger: actualizar timestamp de modificación en clientes
+-- 2. Trigger seguro: actualizar timestamp de modificación en clientes
 CREATE OR REPLACE FUNCTION public.leytrix_actualizar_timestamp()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
   BEGIN
     NEW.actualizado_el = timezone('America/Lima', NOW());
@@ -90,92 +91,60 @@ BEGIN
   NEW.creado_el = OLD.creado_el;
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_clientes_ts ON public.clientes;
 CREATE TRIGGER trg_clientes_ts
   BEFORE UPDATE ON public.clientes
   FOR EACH ROW EXECUTE FUNCTION public.leytrix_actualizar_timestamp();
 
--- 4. Row Level Security (RLS)
+-- 3. Row Level Security (RLS)
 ALTER TABLE public.clientes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pagos    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cortes   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fotos    ENABLE ROW LEVEL SECURITY;
 
 -- Limpiar políticas previas
-DROP POLICY IF EXISTS "Lectura autorizada clientes"      ON public.clientes;
-DROP POLICY IF EXISTS "Insercion autorizada clientes"    ON public.clientes;
-DROP POLICY IF EXISTS "Actualizacion autorizada clientes" ON public.clientes;
-DROP POLICY IF EXISTS "Eliminacion autorizada clientes"  ON public.clientes;
-DROP POLICY IF EXISTS "Acceso total clientes"            ON public.clientes;
-DROP POLICY IF EXISTS "Permitir select clientes"         ON public.clientes;
-DROP POLICY IF EXISTS "Permitir insert clientes"         ON public.clientes;
-DROP POLICY IF EXISTS "Permitir update clientes"         ON public.clientes;
-DROP POLICY IF EXISTS "Permitir delete clientes"         ON public.clientes;
-DROP POLICY IF EXISTS "leytrix_clientes_select"          ON public.clientes;
-DROP POLICY IF EXISTS "leytrix_clientes_insert"          ON public.clientes;
-DROP POLICY IF EXISTS "leytrix_clientes_update"          ON public.clientes;
-DROP POLICY IF EXISTS "leytrix_clientes_delete"          ON public.clientes;
+DROP POLICY IF EXISTS "leytrix_clientes_select" ON public.clientes;
+DROP POLICY IF EXISTS "leytrix_clientes_insert" ON public.clientes;
+DROP POLICY IF EXISTS "leytrix_clientes_update" ON public.clientes;
+DROP POLICY IF EXISTS "leytrix_clientes_delete" ON public.clientes;
 
-DROP POLICY IF EXISTS "Lectura autorizada pagos"         ON public.pagos;
-DROP POLICY IF EXISTS "Insercion autorizada pagos"       ON public.pagos;
-DROP POLICY IF EXISTS "Acceso total pagos"               ON public.pagos;
-DROP POLICY IF EXISTS "Permitir select pagos"            ON public.pagos;
-DROP POLICY IF EXISTS "Permitir insert pagos"            ON public.pagos;
-DROP POLICY IF EXISTS "Permitir delete pagos"            ON public.pagos;
-DROP POLICY IF EXISTS "leytrix_pagos_select"             ON public.pagos;
-DROP POLICY IF EXISTS "leytrix_pagos_insert"             ON public.pagos;
-DROP POLICY IF EXISTS "leytrix_pagos_update"             ON public.pagos;
-DROP POLICY IF EXISTS "leytrix_pagos_delete"             ON public.pagos;
+DROP POLICY IF EXISTS "leytrix_pagos_select" ON public.pagos;
+DROP POLICY IF EXISTS "leytrix_pagos_insert" ON public.pagos;
+DROP POLICY IF EXISTS "leytrix_pagos_update" ON public.pagos;
+DROP POLICY IF EXISTS "leytrix_pagos_delete" ON public.pagos;
 
-DROP POLICY IF EXISTS "Lectura autorizada cortes"        ON public.cortes;
-DROP POLICY IF EXISTS "Escritura autorizada cortes"      ON public.cortes;
-DROP POLICY IF EXISTS "Acceso total cortes"              ON public.cortes;
-DROP POLICY IF EXISTS "Permitir select cortes"           ON public.cortes;
-DROP POLICY IF EXISTS "Permitir insert cortes"           ON public.cortes;
-DROP POLICY IF EXISTS "Permitir delete cortes"           ON public.cortes;
-DROP POLICY IF EXISTS "Permitir update cortes"           ON public.cortes;
-DROP POLICY IF EXISTS "leytrix_cortes_select"            ON public.cortes;
-DROP POLICY IF EXISTS "leytrix_cortes_insert"            ON public.cortes;
-DROP POLICY IF EXISTS "leytrix_cortes_update"            ON public.cortes;
-DROP POLICY IF EXISTS "leytrix_cortes_delete"            ON public.cortes;
+DROP POLICY IF EXISTS "leytrix_cortes_select" ON public.cortes;
+DROP POLICY IF EXISTS "leytrix_cortes_insert" ON public.cortes;
+DROP POLICY IF EXISTS "leytrix_cortes_update" ON public.cortes;
+DROP POLICY IF EXISTS "leytrix_cortes_delete" ON public.cortes;
 
-DROP POLICY IF EXISTS "Lectura autorizada fotos"         ON public.fotos;
-DROP POLICY IF EXISTS "Escritura autorizada fotos"       ON public.fotos;
-DROP POLICY IF EXISTS "Acceso total fotos"               ON public.fotos;
-DROP POLICY IF EXISTS "Permitir select fotos"            ON public.fotos;
-DROP POLICY IF EXISTS "Permitir insert fotos"            ON public.fotos;
-DROP POLICY IF EXISTS "Permitir delete fotos"            ON public.fotos;
-DROP POLICY IF EXISTS "leytrix_fotos_select"             ON public.fotos;
-DROP POLICY IF EXISTS "leytrix_fotos_insert"             ON public.fotos;
-DROP POLICY IF EXISTS "leytrix_fotos_delete"             ON public.fotos;
+DROP POLICY IF EXISTS "leytrix_fotos_select" ON public.fotos;
+DROP POLICY IF EXISTS "leytrix_fotos_insert" ON public.fotos;
+DROP POLICY IF EXISTS "leytrix_fotos_delete" ON public.fotos;
 
--- 5. Políticas RLS — acceso completo para la app Leytrix ISP
--- Clientes
+-- 4. Políticas de Acceso Completo (Anon y Authenticated)
 CREATE POLICY "leytrix_clientes_select" ON public.clientes FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY "leytrix_clientes_insert" ON public.clientes FOR INSERT TO anon, authenticated WITH CHECK (true);
 CREATE POLICY "leytrix_clientes_update" ON public.clientes FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "leytrix_clientes_delete" ON public.clientes FOR DELETE TO anon, authenticated USING (true);
 
--- Pagos
 CREATE POLICY "leytrix_pagos_select" ON public.pagos FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY "leytrix_pagos_insert" ON public.pagos FOR INSERT TO anon, authenticated WITH CHECK (true);
 CREATE POLICY "leytrix_pagos_update" ON public.pagos FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "leytrix_pagos_delete" ON public.pagos FOR DELETE TO anon, authenticated USING (true);
 
--- Cortes
 CREATE POLICY "leytrix_cortes_select" ON public.cortes FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY "leytrix_cortes_insert" ON public.cortes FOR INSERT TO anon, authenticated WITH CHECK (true);
 CREATE POLICY "leytrix_cortes_update" ON public.cortes FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "leytrix_cortes_delete" ON public.cortes FOR DELETE TO anon, authenticated USING (true);
 
--- Fotos
 CREATE POLICY "leytrix_fotos_select" ON public.fotos FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY "leytrix_fotos_insert" ON public.fotos FOR INSERT TO anon, authenticated WITH CHECK (true);
 CREATE POLICY "leytrix_fotos_delete" ON public.fotos FOR DELETE TO anon, authenticated USING (true);
 
--- 6. Índices de rendimiento (crítico para 10,000+ clientes)
+-- 5. Índices de rendimiento
 CREATE INDEX IF NOT EXISTS idx_clientes_zona        ON public.clientes(zona);
 CREATE INDEX IF NOT EXISTS idx_clientes_estado      ON public.clientes(estado);
 CREATE INDEX IF NOT EXISTS idx_clientes_zona_estado ON public.clientes(zona, estado);
@@ -185,13 +154,19 @@ CREATE INDEX IF NOT EXISTS idx_cortes_id_cliente    ON public.cortes(id_cliente)
 CREATE INDEX IF NOT EXISTS idx_cortes_estado        ON public.cortes(estado);
 CREATE INDEX IF NOT EXISTS idx_fotos_cliente_id     ON public.fotos(cliente_id);
 
--- 7. Realtime — publicar cambios en tiempo real
+-- 6. Realtime — Publicar cambios en tiempo real a todos los dispositivos
 DO $$
+DECLARE
+  t text;
 BEGIN
-  BEGIN
-    ALTER PUBLICATION supabase_realtime
-      ADD TABLE public.clientes, public.pagos, public.cortes, public.fotos;
-  EXCEPTION WHEN OTHERS THEN
-    NULL; -- Ya estaba en la publicación
-  END;
+  FOR t IN SELECT unnest(ARRAY['clientes', 'pagos', 'cortes', 'fotos'])
+  LOOP
+    BEGIN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    WHEN OTHERS THEN
+      NULL;
+    END;
+  END LOOP;
 END $$;

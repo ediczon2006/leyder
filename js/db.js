@@ -895,11 +895,20 @@ function iniciarRealtimeSupabase() {
   if (_realtimeIniciado || !_supa) return;
   _realtimeIniciado = true;
   try {
-    _supa.channel('leytrix-realtime-all')
+    const channel = _supa.channel('leytrix-realtime-all');
+    channel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, p => _aplicarCambioRealtime('clientes', p))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pagos' },    p => _aplicarCambioRealtime('pagos', p))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cortes' },   p => _aplicarCambioRealtime('cortes', p))
-      .subscribe();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fotos' },    p => _aplicarCambioRealtime('fotos', p))
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          _supaOnline = true;
+          actualizarBadgesSupabase(true);
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          _realtimeIniciado = false;
+        }
+      });
   } catch (e) {
     console.warn('Realtime notice:', e);
   }
@@ -965,6 +974,7 @@ function actualizarBadgesSupabase(online) {
 }
 
 function abrirModalSupabase() {
+  if (typeof cerrarSidebarMobile === 'function') cerrarSidebarMobile();
   const codeEl = document.getElementById('codigoSqlSupa');
   if (codeEl) codeEl.textContent = SUPABASE_SETUP_SQL;
   const mod = document.getElementById('modalSupabase');
@@ -1089,18 +1099,39 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
     _sincronizando = false;
   }
 }
-// ══ EVENTOS DE RED Y CONECTIVIDAD MÓVIL ═════════════════
+// ══ EVENTOS DE RED Y CONECTIVIDAD MÓVIL MULTI-DISPOSITIVO ══
 if (typeof window !== 'undefined') {
+  // 1. Sincronizar al volver de modo avión o recuperar señal
   window.addEventListener('online', () => {
-    if (typeof toast === 'function') toast('📶 Conexión restablecida. Sincronizando con Supabase...', 'info');
+    if (typeof toast === 'function') toast('📶 Conexión restablecida. Sincronizando...', 'info');
     verificarSupabase(false);
   });
   window.addEventListener('offline', () => {
     actualizarBadgesSupabase(false);
-    if (typeof toast === 'function') toast('📡 Modo sin conexión activado (Datos guardados localmente)', 'warn');
+    if (typeof toast === 'function') toast('📡 Modo sin conexión (Datos guardados localmente)', 'warn');
   });
 
-  // Cerrar cualquier modal al tocar fuera en celular o PC
+  // 2. Sincronizar al desbloquear celular o volver a la pestaña
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && _supa && !_sincronizando) {
+      sincronizarConSupabase(false);
+    }
+  });
+  window.addEventListener('focus', () => {
+    if (_supa && !_sincronizando) {
+      sincronizarConSupabase(false);
+    }
+  });
+
+  // 3. Intervalo de sondeo en segundo plano (cada 25 segundos)
+  // Garantiza que cambios hechos en PC aparezcan en Celular y viceversa automáticamente
+  setInterval(() => {
+    if (_supa && !_sincronizando && navigator.onLine) {
+      sincronizarConSupabase(false);
+    }
+  }, 25000);
+
+  // 4. Cerrar cualquier modal al tocar fuera en celular o PC
   document.addEventListener('click', (e) => {
     if (e.target && e.target.classList && e.target.classList.contains('modal-bg')) {
       e.target.classList.remove('open');
