@@ -146,12 +146,12 @@
     let zonaActiva = '';
 
     document.addEventListener('DOMContentLoaded', async () => {
-      renderSidebar('zonas');
       window.onDatosActualizados = async () => {
         todosClientes = await IDB.getAll('clientes');
         renderTarjetasZonas();
         renderTablaZona();
       };
+      renderSidebar('zonas');
       todosClientes = await IDB.getAll('clientes');
       renderTarjetasZonas();
       renderTablaZona();
