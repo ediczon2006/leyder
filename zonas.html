@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <link rel="icon" type="image/png" href="img/logo.png"/>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Distribución geográfica por zonas de Leytrix ISP — Clientes e ingresos en Loboyacu, Huayranga, Pacotillo, Ramal, Palmeras y Shishiyacu."/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta name="theme-color" content="#0F2A4A"/>
   <title>Leytrix ISP — Vista por Zona</title>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <link rel="apple-touch-icon" href="img/logo.png"/>
+  <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
@@ -76,17 +81,17 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>🗺️ Distribución por Zonas — Leytrix ISP</h2>
+        <h1>🗺️ Distribución por Zonas — Leytrix ISP</h1>
         <p>Control de clientes e ingresos por sector geográfico • +51 993 053 643 • fastnetloboyacu@gmail.com</p>
       </div>
       <div class="btn-group">
         <a href="agregar.html" class="btn btn-primary">➕ Nuevo Cliente</a>
-        <button class="btn btn-outline" onclick="imprimirPadronZona()">🖨️ Imprimir Padrón</button>
+        <button type="button" class="btn btn-outline" onclick="imprimirPadronZona()">🖨️ Imprimir Padrón</button>
       </div>
     </div>
 
     <!-- Grid de las 6 Zonas -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;margin-bottom:24px" id="gridZonasCards">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;margin-bottom:24px" id="gridZonasCards">
       <!-- Se llena dinámicamente -->
     </div>
 
@@ -94,16 +99,16 @@
     <div class="card" style="padding:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
         <div>
-          <h3 id="lblZonaSeleccionadaTitulo" style="font-size:1.15rem;color:var(--azul);font-weight:800;margin-bottom:2px">
+          <h2 id="lblZonaSeleccionadaTitulo" style="font-size:1.15rem;color:var(--azul);font-weight:800;margin-bottom:2px">
             📍 Todos los Clientes (Todas las Zonas)
-          </h3>
+          </h2>
           <p id="lblZonaSeleccionadaSub" style="font-size:0.8rem;color:var(--gris);margin:0">
             Haz clic en una tarjeta superior para filtrar únicamente esa zona
           </p>
         </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <input type="text" id="busEnZona" placeholder="🔍 Buscar cliente en esta zona..." class="form-input" style="padding:7px 12px;font-size:0.82rem;min-width:220px" oninput="filtrarTablaZona()" />
-          <button class="btn btn-outline btn-sm" onclick="seleccionarZona('')">Mostrar Todas</button>
+        <div class="no-print" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="busEnZona" aria-label="Buscar cliente en la zona seleccionada" placeholder="🔍 Buscar cliente en esta zona..." class="form-input" style="padding:7px 12px;font-size:0.82rem;width:auto;min-width:200px" oninput="filtrarTablaZona()" />
+          <button type="button" class="btn btn-outline btn-sm" onclick="seleccionarZona('')">Mostrar Todas</button>
         </div>
       </div>
 
@@ -115,10 +120,10 @@
               <th>Nombre del Cliente</th>
               <th>Zona</th>
               <th>IP Asignada</th>
-              <th>Plan</th>
+              <th>Tarifa</th>
               <th>Estado</th>
               <th>Celular / WhatsApp</th>
-              <th>Acciones</th>
+              <th class="no-print">Acciones</th>
             </tr>
           </thead>
           <tbody id="tbodyClientesZona">
@@ -128,11 +133,11 @@
       </div>
 
       <!-- Paginación Zonas -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
+      <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
         <span style="font-size:0.82rem;color:var(--gris)" id="paginfoZona">Mostrando clientes</span>
         <div class="btn-group" id="paginacionZona">
-          <button class="btn btn-outline btn-sm" id="btnPagZonaPrev" onclick="cambiarPaginaZona(-1)">◀ Anterior</button>
-          <button class="btn btn-outline btn-sm" id="btnPagZonaNext" onclick="cambiarPaginaZona(1)">Siguiente ▶</button>
+          <button type="button" class="btn btn-outline btn-sm" id="btnPagZonaPrev" onclick="cambiarPaginaZona(-1)">◀ Anterior</button>
+          <button type="button" class="btn btn-outline btn-sm" id="btnPagZonaNext" onclick="cambiarPaginaZona(1)">Siguiente ▶</button>
         </div>
       </div>
     </div>
@@ -165,12 +170,13 @@
         const total = cliZ.length;
         const activos = cliZ.filter(c => c.estado === 'ACTIVO').length;
         const cortados = cliZ.filter(c => c.estado === 'CORTADO').length;
-        const ingresoMes = cliZ.filter(c => c.estado === 'ACTIVO').reduce((s, c) => s + (Number(c.plan) || 65), 0);
+        const ingresoMes = cliZ.filter(c => c.estado === 'ACTIVO').reduce((s, c) => s + precioTotalCliente(c), 0);
+        const promPlan = total > 0 ? (cliZ.reduce((s, c) => s + precioTotalCliente(c), 0) / total).toFixed(0) : '65';
 
         return `
-          <div class="zona-card ${zonaActiva === z ? 'selected' : ''}" onclick="seleccionarZona('${z}')">
+          <div class="zona-card ${zonaActiva === z ? 'selected' : ''}" role="button" tabindex="0" onclick="seleccionarZona('${z}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();seleccionarZona('${z}');}">
             <div class="zona-card-header">
-              <h4 class="zona-card-title">📍 ${esc(z)}</h4>
+              <h3 class="zona-card-title">📍 ${esc(z)}</h3>
               <span class="zona-card-badge">${total} clientes</span>
             </div>
             
@@ -188,8 +194,8 @@
                 <strong style="color:#DC2626">${cortados}</strong>
               </div>
               <div class="zona-stat-item">
-                <span>Plan Promedio</span>
-                <strong>S/. ${total > 0 ? (cliZ.reduce((s,c)=>s+(Number(c.plan)||65),0)/total).toFixed(0) : '65'}</strong>
+                <span>Tarifa Promedio</span>
+                <strong>S/. ${promPlan}</strong>
               </div>
               <div class="zona-stat-item">
                 <span>% Activos</span>
@@ -259,27 +265,27 @@
       const inicio = _pagZona * ZONA_PAGE_SIZE;
       const paginaItems = lista.slice(inicio, inicio + ZONA_PAGE_SIZE);
 
-      tbody.innerHTML = paginaItems.map(c => `
+      tbody.innerHTML = paginaItems.map(c => {
+        const tarifa = precioTotalCliente(c);
+        return `
         <tr>
           <td><strong style="color:var(--azul)">#${esc(c.id)}</strong></td>
           <td><strong>${esc(c.nombre)}</strong></td>
           <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
           <td><code>${esc(c.ip || '—')}</code></td>
-          <td><strong>S/. ${c.plan || 65}</strong> (${labelPlan(c.plan)})</td>
           <td>
-            <span class="badge ${c.estado === 'ACTIVO' ? 'badge-act' : c.estado === 'CORTADO' ? 'badge-cort' : 'badge-pend'}">
-              ${esc(c.estado)}
-            </span>
+            <strong>S/. ${tarifa.toFixed(2)}</strong> (${labelPlan(c.plan, c.cable)})
           </td>
+          <td>${badgeEstado(c.estado)}</td>
           <td><strong>${esc(c.celular || '—')}</strong></td>
-          <td>
+          <td class="no-print">
             <div class="btn-group">
               <a href="pagos.html?id=${encodeURIComponent(c.id)}" class="btn btn-outline btn-sm" title="Registrar Pago">💳</a>
-              <a href="clientes.html" class="btn btn-outline btn-sm" title="Editar en Clientes">✏️</a>
+              <a href="clientes.html?editar=${encodeURIComponent(c.id)}" class="btn btn-outline btn-sm" title="Editar Cliente">✏️</a>
             </div>
           </td>
-        </tr>
-      `).join('');
+        </tr>`;
+      }).join('');
 
       document.getElementById('paginfoZona').textContent = `Página ${_pagZona + 1} de ${pagTotal} (${total.toLocaleString()} clientes)`;
       document.getElementById('btnPagZonaPrev').disabled = (_pagZona === 0);

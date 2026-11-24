@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <link rel="icon" type="image/png" href="img/logo.png"/>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Gestión de cortes y reconexiones de Leytrix ISP — Suspensión por morosidad, reconexión inmediata e historial."/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta name="theme-color" content="#0F2A4A"/>
   <title>Leytrix ISP — Cortes &amp; Reconexión</title>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <link rel="apple-touch-icon" href="img/logo.png"/>
+  <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -17,11 +22,11 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>✂️ Gestión de Cortes &amp; Reconexión</h2>
+        <h1>✂️ Gestión de Cortes &amp; Reconexión</h1>
         <p>Suspende temporalmente el servicio por morosidad o reconecta a usuarios al día</p>
       </div>
       <div class="btn-group">
-        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar</button>
+        <button type="button" class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar</button>
       </div>
     </div>
 
@@ -42,14 +47,14 @@
     </div>
 
     <!-- Pestañas de Navegación Rápida -->
-    <div style="display:flex;gap:10px;margin-bottom:18px;border-bottom:2px solid var(--borde);padding-bottom:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" id="tabBtnCortados" onclick="cambiarTab('cortados')" style="background:var(--rojo);border-color:var(--rojo)">
+    <div role="tablist" aria-label="Secciones de cortes" style="display:flex;gap:10px;margin-bottom:18px;border-bottom:2px solid var(--borde);padding-bottom:10px;flex-wrap:wrap">
+      <button type="button" role="tab" aria-selected="true" class="btn btn-primary" id="tabBtnCortados" onclick="cambiarTab('cortados')" style="background:var(--rojo);border-color:var(--rojo)">
         ✂️ Clientes Cortados (<span id="lblBadgeCortados">0</span>)
       </button>
-      <button class="btn btn-outline" id="tabBtnCortarNuevo" onclick="cambiarTab('nuevo')">
+      <button type="button" role="tab" aria-selected="false" class="btn btn-outline" id="tabBtnCortarNuevo" onclick="cambiarTab('nuevo')">
         ➕ Realizar Nuevo Corte
       </button>
-      <button class="btn btn-outline" id="tabBtnHistorial" onclick="cambiarTab('historial')">
+      <button type="button" role="tab" aria-selected="false" class="btn btn-outline" id="tabBtnHistorial" onclick="cambiarTab('historial')">
         📋 Historial de Cortes
       </button>
     </div>
@@ -58,8 +63,8 @@
     <div id="tabCortados" style="display:block">
       <div class="card" style="padding:16px 20px;margin-bottom:18px">
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-          <input type="text" id="busCortados" placeholder="🔍 Buscar entre cortados (Nombre, IP, DNI, Zona)..." class="form-input" style="flex:1;min-width:240px" oninput="filtrarCortados()" />
-          <select id="filtZonaCortados" class="form-select" style="max-width:200px" onchange="filtrarCortados()">
+          <input type="text" id="busCortados" aria-label="Buscar entre clientes cortados" placeholder="🔍 Buscar entre cortados (Nombre, IP, DNI, Zona)..." class="form-input" style="flex:1;min-width:200px" oninput="filtrarCortados()" />
+          <select id="filtZonaCortados" aria-label="Filtrar cortados por zona" class="form-select" style="width:auto;min-width:180px" onchange="filtrarCortados()">
             <option value="">Todas las Zonas</option>
             <option value="Loboyacu">Loboyacu</option>
             <option value="Huayranga">Huayranga</option>
@@ -79,7 +84,7 @@
               <th>Cliente</th>
               <th>Zona</th>
               <th>Dirección IP</th>
-              <th>Plan</th>
+              <th>Tarifa</th>
               <th>Celular</th>
               <th>Estado</th>
               <th>Acciones de Reconexión</th>
@@ -95,13 +100,13 @@
     <!-- TAB 2: SUSPENDER / CORTAR CLIENTE ACTIVO -->
     <div id="tabNuevo" style="display:none">
       <div class="card" style="max-width:760px;margin:0 auto;padding:26px">
-        <h3 style="font-size:1.1rem;color:var(--rojo);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-          <span>✂️</span> Suspender / Cortar Cliente Activo
-        </h3>
+        <h2 style="font-size:1.1rem;color:var(--rojo);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span aria-hidden="true">✂️</span> Suspender / Cortar Cliente Activo
+        </h2>
 
         <form id="formCorte" onsubmit="ejecutarCorte(event)">
-          <div style="margin-bottom:16px">
-            <label class="form-label">Seleccionar Cliente Activo <span style="color:var(--rojo)">*</span></label>
+          <div style="margin-bottom:16px;position:relative">
+            <label class="form-label" for="busCliCorte">Seleccionar Cliente Activo <span style="color:var(--rojo)">*</span></label>
             <input type="text" id="busCliCorte" class="form-input" placeholder="🔍 Escribe nombre o IP del cliente activo..." autocomplete="off" oninput="buscarCliParaCorte()" />
             <div id="listaSugCorte" style="display:none;position:relative;background:#fff;border:1.5px solid var(--rojo);border-radius:8px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 8px 18px rgba(0,0,0,0.1);margin-top:4px"></div>
             <input type="hidden" id="corteIdCliente" required />
@@ -115,7 +120,7 @@
             </div>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="form-grid" style="margin-bottom:16px">
             <div>
               <label class="form-label" for="corteMotivo">Motivo del Corte</label>
               <select id="corteMotivo" class="form-select">
@@ -137,7 +142,7 @@
             <textarea id="corteNotas" class="form-input" rows="2" placeholder="Opcional: Debe 2 meses, se le llamó y no contestó, etc."></textarea>
           </div>
 
-          <div style="display:flex;justify-content:flex-end;gap:12px">
+          <div style="display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap">
             <button type="button" class="btn btn-outline" onclick="cambiarTab('cortados')">Cancelar</button>
             <button type="submit" class="btn btn-danger" id="btnEjecutarCorte" style="padding:10px 22px">
               ✂️ Confirmar y Cortar Servicio
@@ -179,24 +184,24 @@
     let cortesHistorial = [];
 
     document.addEventListener('DOMContentLoaded', async () => {
+      window.onDatosActualizados = () => recargarDatos();
       renderSidebar('cortes');
       const hoy = new Date().toISOString().split('T')[0];
       document.getElementById('corteFecha').value = hoy;
-      window.onDatosActualizados = () => recargarDatos();
       await recargarDatos();
     });
 
     async function recargarDatos() {
-      todosClientes = await IDB.getAll('clientes');
+      todosClientes   = await IDB.getAll('clientes');
       cortesHistorial = await IDB.getAll('cortes');
 
       const cortados = todosClientes.filter(c => c.estado === 'CORTADO');
       const activos  = todosClientes.filter(c => c.estado === 'ACTIVO');
 
-      document.getElementById('kpiCortadosCount').textContent = cortados.length;
-      document.getElementById('kpiActivosCount').textContent = activos.length;
+      document.getElementById('kpiCortadosCount').textContent   = cortados.length;
+      document.getElementById('kpiActivosCount').textContent    = activos.length;
       document.getElementById('kpiHistoricoCortes').textContent = cortesHistorial.length;
-      document.getElementById('lblBadgeCortados').textContent = cortados.length;
+      document.getElementById('lblBadgeCortados').textContent   = cortados.length;
 
       renderCortados(cortados);
       renderHistorialCortes(cortesHistorial);
@@ -215,6 +220,10 @@
       btn2.className = tab === 'nuevo'     ? 'btn btn-primary' : 'btn btn-outline';
       btn3.className = tab === 'historial' ? 'btn btn-primary' : 'btn btn-outline';
 
+      btn1.setAttribute('aria-selected', tab === 'cortados' ? 'true' : 'false');
+      btn2.setAttribute('aria-selected', tab === 'nuevo' ? 'true' : 'false');
+      btn3.setAttribute('aria-selected', tab === 'historial' ? 'true' : 'false');
+
       if (tab === 'cortados') {
         btn1.style.background = 'var(--rojo)';
         btn1.style.borderColor = 'var(--rojo)';
@@ -231,30 +240,32 @@
         return;
       }
 
-      tbody.innerHTML = lista.map(c => `
+      tbody.innerHTML = lista.map(c => {
+        const tarifa = precioTotalCliente(c);
+        return `
         <tr>
-          <td><strong style="color:var(--azul)">#${c.id}</strong></td>
+          <td><strong style="color:var(--azul)">#${esc(c.id)}</strong></td>
           <td><strong>${esc(c.nombre)}</strong></td>
           <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
           <td><code>${esc(c.ip || '—')}</code></td>
-          <td><strong>S/. ${c.plan || 65}</strong> (${labelPlan(c.plan)})</td>
+          <td><strong>S/. ${tarifa.toFixed(2)}</strong> (${labelPlan(c.plan, c.cable)})</td>
           <td>${esc(c.celular || '—')}</td>
-          <td><span class="badge badge-cort">CORTADO</span></td>
+          <td><span class="badge badge-cortado">✂️ CORTADO</span></td>
           <td>
             <div class="btn-group">
-              <button class="btn btn-success btn-sm" onclick="reconectarCliente(${c.id})">
+              <button type="button" class="btn btn-success btn-sm" onclick="reconectarCliente(${c.id})">
                 🔌 Reconectar
               </button>
-              <a href="pagos.html?id=${c.id}" class="btn btn-outline btn-sm">
+              <a href="pagos.html?id=${encodeURIComponent(c.id)}" class="btn btn-outline btn-sm">
                 💳 Pagar
               </a>
-              <button class="btn btn-outline btn-sm" onclick="enviarAvisoCorteWA(${c.id})" title="Enviar Aviso por WhatsApp">
+              <button type="button" class="btn btn-outline btn-sm" onclick="enviarAvisoCorteWA(${c.id})" title="Enviar Aviso por WhatsApp">
                 📲 WA
               </button>
             </div>
           </td>
-        </tr>
-      `).join('');
+        </tr>`;
+      }).join('');
     }
 
     function filtrarCortados() {
@@ -297,7 +308,7 @@
             <strong>${esc(c.nombre)}</strong>
             <span style="font-size:0.75rem;color:var(--gris);display:block">${esc(c.zona)} • IP: ${esc(c.ip || '—')}</span>
           </div>
-          <span class="badge badge-act">ACTIVO</span>
+          <span class="badge badge-activo">ACTIVO</span>
         </div>
       `).join('');
       wrap.style.display = 'block';
@@ -338,11 +349,9 @@
       btn.textContent = '⏳ Procesando corte...';
 
       try {
-        // 1. Cambiar estado a CORTADO
         cli.estado = 'CORTADO';
         await IDB.put('clientes', cli);
 
-        // 2. Registrar en tabla cortes
         const registroCorte = {
           id_cliente: cli.id,
           cliente_nombre: cli.nombre,
@@ -358,7 +367,6 @@
         toast(`✂️ Servicio del cliente "${cli.nombre}" marcado como CORTADO.`);
         actualizarEstadisticasSidebar();
 
-        // Reset
         document.getElementById('corteIdCliente').value = '';
         document.getElementById('busCliCorte').value = '';
         document.getElementById('infoCorteCli').style.display = 'none';
@@ -367,7 +375,7 @@
         await recargarDatos();
         cambiarTab('cortados');
 
-      } catch(err) {
+      } catch (err) {
         console.error('Error al cortar:', err);
         toast('Error al procesar el corte: ' + err.message, 'error');
       } finally {
@@ -386,7 +394,6 @@
         cli.estado = 'ACTIVO';
         await IDB.put('clientes', cli);
 
-        // Buscar registro de corte pendiente para marcar fecha_reconexion
         const cortes = await IDB.getAll('cortes');
         const ultimoCorte = cortes.filter(k => String(k.id_cliente) === String(cli.id) && k.estado === 'CORTADO').pop();
         if (ultimoCorte) {
@@ -399,7 +406,7 @@
         actualizarEstadisticasSidebar();
         await recargarDatos();
 
-      } catch(err) {
+      } catch (err) {
         toast('Error al reconectar: ' + err.message, 'error');
       }
     }
@@ -411,18 +418,17 @@
         return;
       }
 
-      // Orden descendente
       const ordenados = [...lista].sort((a,b) => (b.id || 0) - (a.id || 0));
 
       tbody.innerHTML = ordenados.map(k => `
         <tr>
-          <td><strong style="color:var(--azul)">#${k.id}</strong></td>
+          <td><strong style="color:var(--azul)">#${esc(k.id)}</strong></td>
           <td><strong>${esc(k.cliente_nombre || 'Cliente #' + k.id_cliente)}</strong></td>
           <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(k.zona || '—')}</span></td>
           <td style="font-size:0.8rem;color:var(--rojo)">${esc(k.fecha_corte || '—')}</td>
           <td>${esc(k.motivo || 'Morosidad')}</td>
           <td>
-            <span class="badge ${k.estado === 'RECONECTADO' ? 'badge-act' : 'badge-cort'}">
+            <span class="badge ${k.estado === 'RECONECTADO' ? 'badge-activo' : 'badge-cortado'}">
               ${esc(k.estado || 'CORTADO')}
             </span>
           </td>
@@ -437,13 +443,14 @@
       if (!cli) return;
 
       const cel = (cli.celular || '').replace(/\D/g, '');
+      const tarifa = precioTotalCliente(cli).toFixed(2);
       const mensaje = 
 `*📡 AVISO IMPORTANTE — LEYTRIX INTERNET*
 ━━━━━━━━━━━━━━━━━━━━━
 Estimado(a) *${cli.nombre}*:
 Le informamos que su servicio de internet en la zona *${cli.zona}* presenta una suspensión temporal por pago pendiente.
 
-💰 *Plan Mensual:* S/. ${cli.plan || 65}
+💰 *Tarifa Mensual:* S/. ${tarifa} (${labelPlan(cli.plan, cli.cable)})
 Para reactivar su servicio de manera inmediata, por favor realice su pago por Yape, Plin o BCP y envíenos la captura del comprobante por este medio.
 
 ¡Muchas gracias!
@@ -451,7 +458,7 @@ Para reactivar su servicio de manera inmediata, por favor realice su pago por Ya
 
       const numDestino = cel.length >= 9 ? (cel.startsWith('51') ? cel : '51' + cel) : '';
       const url = `https://api.whatsapp.com/send?phone=${numDestino}&text=${encodeURIComponent(mensaje)}`;
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   </script>
 </body>

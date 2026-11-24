@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <link rel="icon" type="image/png" href="img/logo.png"/>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Archivo fotográfico y comprobantes ISP de Leytrix — Vouchers Yape/BCP, routers ONT, cajas NAP y fachadas de clientes."/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta name="theme-color" content="#0F2A4A"/>
   <title>Leytrix ISP — Fotos &amp; Comprobantes</title>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <link rel="apple-touch-icon" href="img/logo.png"/>
+  <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     /* Galería Fotográfica ISP */
     .galeria-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
       gap: 18px;
       margin-top: 20px;
     }
@@ -97,7 +102,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.88);
-      z-index: 1000;
+      z-index: 2100;
       display: none;
       align-items: center;
       justify-content: center;
@@ -123,7 +128,7 @@
     }
     .lightbox-bar {
       margin-top: 14px;
-      background: rgba(15, 23, 42, 0.85);
+      background: rgba(15, 23, 42, 0.88);
       border: 1px solid rgba(255,255,255,0.2);
       border-radius: 12px;
       padding: 10px 18px;
@@ -131,7 +136,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      flex-wrap: wrap;
+      gap: 14px;
       width: 100%;
       max-width: 600px;
     }
@@ -141,7 +147,7 @@
       border: 2px dashed #0284C7;
       background: #F0F9FF;
       border-radius: 14px;
-      padding: 30px 20px;
+      padding: 28px 20px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -161,14 +167,14 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>📸 Archivo Fotográfico &amp; Comprobantes ISP</h2>
+        <h1>📸 Archivo Fotográfico &amp; Comprobantes ISP</h1>
         <p>Almacena imágenes de comprobantes Yape/BCP, routers ONT, cajas NAP en postes y fachadas de clientes</p>
       </div>
       <div class="btn-group">
-        <button class="btn btn-primary" onclick="abrirModalSubir()" style="background:#0284C7;border-color:#0284C7">
+        <button type="button" class="btn btn-primary" onclick="abrirModalSubir()" style="background:#0284C7;border-color:#0284C7">
           ➕ Subir Nueva Foto
         </button>
-        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
+        <button type="button" class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
       </div>
     </div>
 
@@ -180,9 +186,9 @@
     <!-- Barra de Filtros -->
     <div class="card" style="padding:16px 20px;margin-bottom:18px">
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-        <input type="text" id="busFoto" placeholder="🔍 Buscar por nombre de foto, cliente, zona o notas..." class="form-input" style="flex:1;min-width:240px" oninput="filtrarGaleria()" />
+        <input type="text" id="busFoto" aria-label="Buscar foto por título, cliente, zona o notas" placeholder="🔍 Buscar por nombre de foto, cliente, zona o notas..." class="form-input" style="flex:1;min-width:200px" oninput="filtrarGaleria()" />
 
-        <select id="filtCatFoto" class="form-select" style="max-width:220px" onchange="filtrarGaleria()">
+        <select id="filtCatFoto" aria-label="Filtrar por categoría de foto" class="form-select" style="width:auto;max-width:220px" onchange="filtrarGaleria()">
           <option value="">Todas las Categorías</option>
           <option value="comprobante">🧾 Comprobantes de Pago</option>
           <option value="router">📡 Routers / ONT</option>
@@ -193,7 +199,7 @@
           <option value="otro">📁 Otras Fotos</option>
         </select>
 
-        <select id="filtZonaFoto" class="form-select" style="max-width:180px" onchange="filtrarGaleria()">
+        <select id="filtZonaFoto" aria-label="Filtrar fotos por zona" class="form-select" style="width:auto;max-width:180px" onchange="filtrarGaleria()">
           <option value="">Todas las Zonas</option>
           <option value="Loboyacu">Loboyacu</option>
           <option value="Huayranga">Huayranga</option>
@@ -203,7 +209,7 @@
           <option value="Shishiyacu">Shishiyacu</option>
         </select>
 
-        <button class="btn btn-outline" onclick="limpiarFiltrosFotos()">Limpiar</button>
+        <button type="button" class="btn btn-outline" onclick="limpiarFiltrosFotos()">Limpiar</button>
       </div>
     </div>
 
@@ -217,30 +223,30 @@
   </main>
 
   <!-- MODAL PARA SUBIR FOTO -->
-  <div class="modal-bg" id="modalSubirFoto">
+  <div class="modal-bg" id="modalSubirFoto" role="dialog" aria-modal="true" aria-labelledby="modalSubirFotoTit">
     <div class="modal" style="max-width:560px">
       <div class="modal-header">
-        <h3>📤 Subir Foto al Sistema</h3>
-        <button class="modal-close" onclick="cerrarModal('modalSubirFoto')">✕</button>
+        <h3 id="modalSubirFotoTit">📤 Subir Foto al Sistema</h3>
+        <button type="button" class="modal-close" onclick="cerrarModal('modalSubirFoto')" aria-label="Cerrar ventana">✕</button>
       </div>
 
       <form id="formSubirFoto" onsubmit="guardarFoto(event)">
         <!-- Dropzone de archivo de imagen -->
-        <div class="dropzone" id="dropzone" onclick="document.getElementById('inputArchivoFoto').click()">
+        <div class="dropzone" id="dropzone" role="button" tabindex="0" onclick="document.getElementById('inputArchivoFoto').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('inputArchivoFoto').click();}">
           <input type="file" id="inputArchivoFoto" accept="image/*" style="display:none" onchange="manejarSeleccionImagen(event)" />
           <div id="dropzoneContent">
-            <span style="font-size:2.5rem;display:block;margin-bottom:8px">🖼️</span>
-            <strong style="color:var(--azul);font-size:0.95rem">Haz clic para abrir el Explorador de Windows</strong>
+            <span style="font-size:2.5rem;display:block;margin-bottom:8px" aria-hidden="true">🖼️</span>
+            <strong style="color:var(--azul);font-size:0.95rem">Haz clic para seleccionar una imagen</strong>
             <p style="font-size:0.8rem;color:var(--gris);margin:4px 0 0">O arrastra tu foto aquí (JPG, PNG, WEBP, BMP)</p>
           </div>
           <!-- Vista previa -->
           <div id="dropzonePreview" style="display:none;margin-top:10px">
-            <img id="imgPreviewSubida" style="max-height:160px;max-width:100%;border-radius:8px;border:1px solid #cbd5e1" />
+            <img id="imgPreviewSubida" alt="Vista previa de imagen seleccionada" style="max-height:160px;max-width:100%;border-radius:8px;border:1px solid #cbd5e1" />
             <div style="font-size:0.75rem;color:var(--gris);margin-top:4px" id="lblInfoArchivo"></div>
           </div>
         </div>
 
-        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-grid" style="margin-top:16px">
           <div>
             <label class="form-label" for="subirCategoria">Categoría ISP <span style="color:var(--rojo)">*</span></label>
             <select id="subirCategoria" class="form-select" required>
@@ -285,7 +291,7 @@
           <textarea id="subirNotas" class="form-input" rows="2" placeholder="Ej. ONT Huawei en puerto 3 de NAP Shishiyacu, atenuación -19dBm"></textarea>
         </div>
 
-        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap">
           <button type="button" class="btn btn-outline" onclick="cerrarModal('modalSubirFoto')">Cancelar</button>
           <button type="submit" class="btn btn-primary" id="btnGuardarFoto" style="background:#0284C7;border-color:#0284C7">
             💾 Guardar Imagen
@@ -296,19 +302,19 @@
   </div>
 
   <!-- LIGHTBOX / VISOR DE FOTO COMPLETA -->
-  <div class="lightbox-bg" id="lightboxModal" onclick="cerrarLightbox(event)">
+  <div class="lightbox-bg" id="lightboxModal" role="dialog" aria-modal="true" aria-labelledby="lightboxTitulo" onclick="cerrarLightbox(event)">
     <div class="lightbox-content" onclick="event.stopPropagation()">
-      <button onclick="cerrarLightboxDirecto()" style="position:absolute;top:-36px;right:0;background:none;border:none;color:#fff;font-size:1.8rem;cursor:pointer;line-height:1">✕</button>
-      <img id="lightboxImg" class="lightbox-img" src="" alt="Foto ISP" />
+      <button type="button" onclick="cerrarLightboxDirecto()" aria-label="Cerrar visor de imagen" style="position:absolute;top:-36px;right:0;background:none;border:none;color:#fff;font-size:1.8rem;cursor:pointer;line-height:1">✕</button>
+      <img id="lightboxImg" class="lightbox-img" src="" alt="Foto ampliada Leytrix ISP" />
       <div class="lightbox-bar">
         <div>
           <strong id="lightboxTitulo" style="display:block;font-size:0.95rem">Título</strong>
           <span id="lightboxSub" style="font-size:0.75rem;opacity:0.8">Detalle</span>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-success btn-sm" onclick="compartirFotoWA()">📲 WA</button>
-          <button class="btn btn-primary btn-sm" onclick="descargarFotoActual()">📥 Guardar</button>
-          <button class="btn btn-danger btn-sm" onclick="eliminarFotoActual()">🗑️</button>
+          <button type="button" class="btn btn-success btn-sm" onclick="compartirFotoWA()">📲 WA</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="descargarFotoActual()">📥 Guardar</button>
+          <button type="button" class="btn btn-danger btn-sm" onclick="eliminarFotoActual()" aria-label="Eliminar foto">🗑️</button>
         </div>
       </div>
     </div>
@@ -321,6 +327,7 @@
     let todosClientes = [];
     let fotoActualLightbox = null;
     let base64Seleccionado = '';
+    let nombreArchivoSeleccionado = '';
 
     const COLORES_CAT = {
       comprobante: '#059669',
@@ -342,10 +349,15 @@
       otro:        '📁 Foto'
     };
 
+    // Imagen SVG de espera para fotos sincronizadas cuya imagen remota se está descargando
+    const PLACEHOLDER_SVG = "data:image/svg+xml;utf8," + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="260" viewBox="0 0 400 260"><rect width="400" height="260" fill="#0F172A"/><text x="50%" y="50%" fill="#38BDF8" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">☁️ Cargando imagen de la nube...</text></svg>'
+    );
+
     document.addEventListener('DOMContentLoaded', async () => {
+      window.onDatosActualizados = () => cargarDatos();
       renderSidebar('explorador');
       configurarDragAndDrop();
-      window.onDatosActualizados = () => cargarDatos();
       await cargarDatos();
     });
 
@@ -369,12 +381,12 @@
       if (!fotos.length) {
         cont.innerHTML = `
           <div style="grid-column:1/-1;text-align:center;padding:60px 20px;background:#fff;border:1.5px dashed var(--borde);border-radius:14px">
-            <span style="font-size:3rem;display:block;margin-bottom:10px">📸</span>
-            <h3 style="font-size:1.1rem;color:var(--azul);margin-bottom:6px">No hay fotos registradas aún</h3>
+            <span style="font-size:3rem;display:block;margin-bottom:10px" aria-hidden="true">📸</span>
+            <h2 style="font-size:1.1rem;color:var(--azul);margin-bottom:6px">No hay fotos registradas aún</h2>
             <p style="font-size:0.85rem;color:var(--gris);max-width:440px;margin:0 auto 18px">
               Organiza aquí los comprobantes de tus clientes, fotos de instalaciones de routers, cajas NAP en postes y fachadas.
             </p>
-            <button class="btn btn-primary" onclick="abrirModalSubir()" style="background:#0284C7;border-color:#0284C7">
+            <button type="button" class="btn btn-primary" onclick="abrirModalSubir()" style="background:#0284C7;border-color:#0284C7">
               ➕ Subir Primera Foto
             </button>
           </div>
@@ -382,23 +394,23 @@
         return;
       }
 
-      // Ordenar más recientes primero
       const ordenadas = [...fotos].sort((a,b) => (b.id || 0) - (a.id || 0));
 
       cont.innerHTML = ordenadas.map(f => {
         const catColor = COLORES_CAT[f.categoria] || '#475569';
         const catLabel = ETIQUETAS_CAT[f.categoria] || f.categoria;
         const fechaStr = f.creado_el ? new Date(f.creado_el).toLocaleDateString() : '';
+        const imgSrc   = f.data_url || f.url || PLACEHOLDER_SVG;
 
         return `
           <div class="foto-card">
             <div class="foto-thumb-wrap" onclick="abrirLightbox(${f.id})">
-              <img src="${f.data_url || f.url || ''}" alt="${esc(f.titulo || 'Foto')}" loading="lazy" />
+              <img id="thumb-foto-${f.id}" src="${imgSrc}" alt="${esc(f.titulo || 'Foto ISP')}" loading="lazy" />
               <span class="foto-cat-badge" style="background:${catColor}">${catLabel}</span>
             </div>
             <div class="foto-body">
               <div>
-                <h4 class="foto-title" title="${esc(f.titulo || 'Foto sin título')}">${esc(f.titulo || 'Foto sin título')}</h4>
+                <h3 class="foto-title" title="${esc(f.titulo || 'Foto sin título')}">${esc(f.titulo || 'Foto sin título')}</h3>
                 <div class="foto-meta">
                   <span>👤 <strong>${esc(f.cliente_nombre || 'General')}</strong></span>
                   <span>📍 Zona: ${esc(f.zona || '—')}</span>
@@ -406,14 +418,31 @@
                 </div>
               </div>
               <div class="foto-actions">
-                <button class="btn btn-outline btn-sm" style="flex:1" onclick="abrirLightbox(${f.id})">🔍 Ver</button>
-                <button class="btn btn-outline btn-sm" onclick="compartirFotoCardWA(${f.id})" title="Compartir WhatsApp">📲</button>
-                <button class="btn btn-danger btn-sm" onclick="eliminarFoto(${f.id})" title="Eliminar Foto">🗑️</button>
+                <button type="button" class="btn btn-outline btn-sm" style="flex:1" onclick="abrirLightbox(${f.id})">🔍 Ver</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="compartirFotoCardWA(${f.id})" title="Compartir WhatsApp">📲</button>
+                <button type="button" class="btn btn-danger btn-sm" onclick="eliminarFoto(${f.id})" title="Eliminar Foto">🗑️</button>
               </div>
             </div>
           </div>
         `;
       }).join('');
+
+      // Descargar bajo demanda las imágenes de fotos que llegaron de Supabase sin data_url
+      cargarMiniaturasRemotas(ordenadas);
+    }
+
+    async function cargarMiniaturasRemotas(listaFotos) {
+      const faltantes = listaFotos.filter(f => !f.data_url && !f.url);
+      for (const f of faltantes) {
+        try {
+          const completa = await IDB.cargarFotoRemota(f.id);
+          if (completa && completa.data_url) {
+            f.data_url = completa.data_url;
+            const imgEl = document.getElementById(`thumb-foto-${f.id}`);
+            if (imgEl) imgEl.src = completa.data_url;
+          }
+        } catch (_) {}
+      }
     }
 
     function filtrarGaleria() {
@@ -446,6 +475,7 @@
     function abrirModalSubir() {
       document.getElementById('formSubirFoto').reset();
       base64Seleccionado = '';
+      nombreArchivoSeleccionado = '';
       document.getElementById('dropzonePreview').style.display = 'none';
       document.getElementById('dropzoneContent').style.display = 'block';
       document.getElementById('modalSubirFoto').classList.add('open');
@@ -490,11 +520,12 @@
         return;
       }
 
+      nombreArchivoSeleccionado = file.name || 'foto_isp.jpg';
+
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          // Comprimir suavemente si es muy grande para no saturar memoria
           const canvas = document.createElement('canvas');
           const MAX_WIDTH = 1280;
           const MAX_HEIGHT = 1280;
@@ -520,14 +551,12 @@
 
           base64Seleccionado = canvas.toDataURL('image/jpeg', 0.85);
 
-          // Mostrar preview
           document.getElementById('dropzoneContent').style.display = 'none';
           const prev = document.getElementById('dropzonePreview');
           prev.style.display = 'block';
           document.getElementById('imgPreviewSubida').src = base64Seleccionado;
           document.getElementById('lblInfoArchivo').textContent = `${file.name} (${Math.round(base64Seleccionado.length * 0.75 / 1024)} KB aprox)`;
 
-          // Sugerir título si está vacío
           const titEl = document.getElementById('subirTitulo');
           if (!titEl.value) {
             titEl.value = file.name.replace(/\.[^/.]+$/, "");
@@ -541,7 +570,7 @@
     async function guardarFoto(e) {
       e.preventDefault();
       if (!base64Seleccionado) {
-        toast('Por favor selecciona una foto del explorador', 'warn');
+        toast('Por favor selecciona una foto', 'warn');
         return;
       }
 
@@ -550,11 +579,11 @@
       btn.textContent = '⏳ Guardando...';
 
       try {
-        const categoria  = document.getElementById('subirCategoria')?.value || 'comprobante';
-        const zona       = document.getElementById('subirZona')?.value || '';
-        const cliId      = Number(document.getElementById('subirCliente')?.value) || null;
-        const titulo     = (document.getElementById('subirTitulo')?.value || '').trim() || 'Foto ISP';
-        const notas      = (document.getElementById('subirNotas')?.value || '').trim();
+        const categoria = document.getElementById('subirCategoria')?.value || 'comprobante';
+        const zona      = document.getElementById('subirZona')?.value || '';
+        const cliId     = Number(document.getElementById('subirCliente')?.value) || null;
+        const titulo    = (document.getElementById('subirTitulo')?.value || '').trim() || 'Foto ISP';
+        const notas     = (document.getElementById('subirNotas')?.value || '').trim();
 
         let cliNombre = '';
         if (cliId) {
@@ -566,22 +595,25 @@
 
         const registroFoto = {
           titulo,
+          nombre: nombreArchivoSeleccionado || `${titulo.replace(/\s+/g, '_')}.jpg`,
           categoria,
           zona,
           cliente_id: cliId,
           cliente_nombre: cliNombre,
+          tipo_mime: 'image/jpeg',
+          tamano: Math.round(base64Seleccionado.length * 0.75),
           data_url: base64Seleccionado,
           notas,
           creado_el: new Date().toISOString()
         };
 
         const id = await IDB.add('fotos', registroFoto);
-        toast(`✅ Foto "${titulo}" guardada con éxito (ID #${id})`);
+        toast(`✅ Foto "${titulo}" guardada y sincronizada con éxito (ID #${id})`);
 
         cerrarModal('modalSubirFoto');
         await cargarDatos();
 
-      } catch(err) {
+      } catch (err) {
         console.error('Error al guardar foto:', err);
         toast('Error al guardar imagen: ' + err.message, 'error');
       } finally {
@@ -590,16 +622,25 @@
       }
     }
 
-    function abrirLightbox(id) {
-      const f = todasFotos.find(foto => foto.id === id);
+    async function abrirLightbox(id) {
+      let f = todasFotos.find(foto => foto.id === id);
       if (!f) return;
-      fotoActualLightbox = f;
 
-      document.getElementById('lightboxImg').src = f.data_url || f.url || '';
+      document.getElementById('lightboxImg').src = f.data_url || f.url || PLACEHOLDER_SVG;
       document.getElementById('lightboxTitulo').textContent = f.titulo || 'Foto';
       document.getElementById('lightboxSub').textContent = `${ETIQUETAS_CAT[f.categoria] || f.categoria} • ${f.cliente_nombre ? f.cliente_nombre + ' • ' : ''}${f.zona || ''}`;
-
       document.getElementById('lightboxModal').classList.add('open');
+
+      if (!f.data_url && !f.url) {
+        const completa = await IDB.cargarFotoRemota(id);
+        if (completa && completa.data_url) {
+          f.data_url = completa.data_url;
+          document.getElementById('lightboxImg').src = completa.data_url;
+          const thumbEl = document.getElementById(`thumb-foto-${id}`);
+          if (thumbEl) thumbEl.src = completa.data_url;
+        }
+      }
+      fotoActualLightbox = f;
     }
 
     function cerrarLightbox(e) {
@@ -622,14 +663,14 @@
       if (!fotoActualLightbox) return;
       const f = fotoActualLightbox;
       const texto = `*📡 FOTO LEYTRIX ISP*\n*Título:* ${f.titulo}\n*Categoría:* ${f.categoria}\n*Cliente:* ${f.cliente_nombre || 'General'}\n*Zona:* ${f.zona || '—'}\n*Notas:* ${f.notas || '—'}`;
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank', 'noopener,noreferrer');
     }
 
     function compartirFotoCardWA(id) {
       const f = todasFotos.find(foto => foto.id === id);
       if (!f) return;
       const texto = `*📡 FOTO LEYTRIX ISP*\n*Título:* ${f.titulo}\n*Categoría:* ${f.categoria}\n*Cliente:* ${f.cliente_nombre || 'General'}\n*Zona:* ${f.zona || '—'}`;
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank', 'noopener,noreferrer');
     }
 
     async function eliminarFoto(id) {
@@ -638,7 +679,7 @@
         await IDB.delete('fotos', id);
         toast('🗑️ Foto eliminada con éxito');
         await cargarDatos();
-      } catch(err) {
+      } catch (err) {
         toast('Error al eliminar: ' + err.message, 'error');
       }
     }

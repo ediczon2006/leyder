@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <link rel="icon" type="image/png" href="img/logo.png"/>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Listado y administración de clientes de Leytrix ISP — Filtros por zona, estado, plan, servicio de cable y historial de pagos."/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta name="theme-color" content="#0F2A4A"/>
   <title>Leytrix ISP — Clientes</title>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <link rel="apple-touch-icon" href="img/logo.png"/>
+  <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/ai-cobranza.js"></script>
@@ -18,23 +23,22 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>👥 Clientes Registrados — Leytrix ISP</h2>
+        <h1>👥 Clientes Registrados — Leytrix ISP</h1>
         <p id="txtContadorClientes">Cargando clientes...</p>
       </div>
       <div class="btn-group">
         <a href="agregar.html" class="btn btn-primary">➕ Nuevo Cliente</a>
-        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
+        <button type="button" class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
       </div>
     </div>
 
     <!-- Barra de Filtros y Búsqueda -->
     <div class="card" style="padding:16px 20px;margin-bottom:18px">
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-        <div style="flex:1;min-width:240px">
-          <input type="text" id="filtBus" placeholder="🔍 Buscar por nombre, IP, celular o zona..."
-            style="width:100%;padding:9px 14px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;outline:none"/>
+        <div style="flex:1;min-width:200px">
+          <input type="text" id="filtBus" class="form-input" aria-label="Buscar cliente por nombre, IP, celular o zona" placeholder="🔍 Buscar por nombre, IP, celular o zona..." />
         </div>
-        <select id="filtZona" style="padding:9px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;outline:none">
+        <select id="filtZona" class="form-select" aria-label="Filtrar por zona" style="width:auto;min-width:165px">
           <option value="">Todas las Zonas</option>
           <option value="Loboyacu">Loboyacu</option>
           <option value="Huayranga">Huayranga</option>
@@ -43,20 +47,20 @@
           <option value="Palmeras">Palmeras</option>
           <option value="Shishiyacu">Shishiyacu</option>
         </select>
-        <select id="filtEstado" style="padding:9px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;outline:none">
+        <select id="filtEstado" class="form-select" aria-label="Filtrar por estado" style="width:auto;min-width:160px">
           <option value="">Todos los Estados</option>
           <option value="ACTIVO">ACTIVO</option>
           <option value="CORTADO">CORTADO</option>
           <option value="PENDIENTE">PENDIENTE</option>
           <option value="RETIRADO">RETIRADO</option>
         </select>
-        <select id="filtPlan" style="padding:9px 12px;border:1.5px solid var(--borde);border-radius:8px;font-size:0.85rem;background:#fff;outline:none">
+        <select id="filtPlan" class="form-select" aria-label="Filtrar por plan" style="width:auto;min-width:160px">
           <option value="">Todos los Planes</option>
           <option value="50">S/. 50 — Básico</option>
           <option value="60">S/. 60 — Plus</option>
           <option value="65">S/. 65 — Normal</option>
         </select>
-        <button class="btn btn-outline" onclick="resetFiltros()">Limpiar</button>
+        <button type="button" class="btn btn-outline" onclick="resetFiltros()">Limpiar</button>
       </div>
     </div>
 
@@ -86,40 +90,40 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
       <span style="font-size:0.82rem;color:var(--gris)" id="paginfoClientes">Página 1</span>
       <div class="btn-group" id="paginacionClientes">
-        <button class="btn btn-outline btn-sm" id="btnPagPrev" onclick="cambiarPagina(-1)">◀ Anterior</button>
-        <button class="btn btn-outline btn-sm" id="btnPagNext" onclick="cambiarPagina(1)">Siguiente ▶</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btnPagPrev" onclick="cambiarPagina(-1)">◀ Anterior</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btnPagNext" onclick="cambiarPagina(1)">Siguiente ▶</button>
       </div>
     </div>
   </main>
 
-  <!-- MODAL EDITAR CLIENTE (Sin campos eliminados) -->
-  <div class="modal-bg" id="modalEditar">
+  <!-- MODAL EDITAR CLIENTE -->
+  <div class="modal-bg" id="modalEditar" role="dialog" aria-modal="true" aria-labelledby="modalEditarTit">
     <div class="modal" style="max-width:580px">
       <div class="modal-header">
-        <h3>✏️ Editar Cliente — Leytrix ISP</h3>
-        <button class="modal-close" onclick="cerrarModal('modalEditar')">✕</button>
+        <h3 id="modalEditarTit">✏️ Editar Cliente — Leytrix ISP</h3>
+        <button type="button" class="modal-close" onclick="cerrarModal('modalEditar')" aria-label="Cerrar ventana">✕</button>
       </div>
-      <form id="formEditar">
+      <form id="formEditar" novalidate>
         <input type="hidden" id="eId"/>
         <div class="form-grid">
           <div class="form-group form-full">
-            <label>Nombre Completo *</label>
-            <input id="eNombre" required maxlength="100"/>
+            <label for="eNombre">Nombre Completo <span style="color:var(--rojo)">*</span></label>
+            <input id="eNombre" required maxlength="150"/>
           </div>
           <div class="form-group">
-            <label>Celular / WhatsApp *</label>
-            <input id="eCelular" required maxlength="15"/>
+            <label for="eCelular">Celular / WhatsApp <span style="color:var(--rojo)">*</span></label>
+            <input id="eCelular" type="tel" required maxlength="15"/>
           </div>
           <div class="form-group">
-            <label>Fecha de Inicio</label>
+            <label for="eFechaInicio">Fecha de Inicio</label>
             <input type="date" id="eFechaInicio"/>
           </div>
           <div class="form-group">
-            <label>Dirección IP *</label>
+            <label for="eIp">Dirección IP <span style="color:var(--rojo)">*</span></label>
             <input id="eIp" required maxlength="25" style="font-family:monospace"/>
           </div>
           <div class="form-group">
-            <label>Zona de Cobertura</label>
+            <label for="eZona">Zona de Cobertura</label>
             <select id="eZona">
               <option value="Loboyacu">Loboyacu</option>
               <option value="Huayranga">Huayranga</option>
@@ -130,7 +134,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Plan Mensual</label>
+            <label for="ePlan">Plan Mensual</label>
             <select id="ePlan">
               <option value="50">S/. 50 — Plan Básico</option>
               <option value="60">S/. 60 — Plan Plus</option>
@@ -138,7 +142,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Estado del Servicio</label>
+            <label for="eEstado">Estado del Servicio</label>
             <select id="eEstado">
               <option value="ACTIVO">ACTIVO</option>
               <option value="CORTADO">CORTADO</option>
@@ -147,9 +151,9 @@
             </select>
           </div>
           <div class="form-group form-full">
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+            <label for="eCable" style="display:flex;align-items:center;gap:10px;cursor:pointer">
               <input type="checkbox" id="eCable" style="width:18px;height:18px"/>
-              📺 Servicio de Cable (+ S/. 10)
+              <span>📺 Servicio de Cable (+ S/. 10)</span>
             </label>
           </div>
         </div>
@@ -162,11 +166,11 @@
   </div>
 
   <!-- MODAL HISTORIAL DE PAGOS -->
-  <div class="modal-bg" id="modalPagos">
+  <div class="modal-bg" id="modalPagos" role="dialog" aria-modal="true" aria-labelledby="modalPagosTit">
     <div class="modal" style="max-width:520px">
       <div class="modal-header">
         <h3 id="modalPagosTit">💰 Historial de Pagos</h3>
-        <button class="modal-close" onclick="cerrarModal('modalPagos')">✕</button>
+        <button type="button" class="modal-close" onclick="cerrarModal('modalPagos')" aria-label="Cerrar ventana">✕</button>
       </div>
       <div id="modalPagosBody"></div>
     </div>
@@ -180,12 +184,11 @@
     let _totalClientes = 0;
     let _busTimer = null;
 
-    // ===== CABLE (+S/. 10) =====
-    const CABLE_EXTRA = 10;
-
     // Precio real que debe pagar el cliente (plan + cable si está activo)
     function precioTotal(c) {
-      return Number(c.plan || 0) + (c.cable ? CABLE_EXTRA : 0);
+      return typeof precioTotalCliente === 'function'
+        ? precioTotalCliente(c)
+        : (Number(c.plan || 0) + (c.cable ? 10 : 0));
     }
 
     // Activar / desactivar cable manualmente
@@ -202,12 +205,19 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       window.onDatosActualizados = () => {
         cargarClientes(_paginaActual);
       };
       renderSidebar('clientes');
-      cargarClientes(0);
+      await cargarClientes(0);
+
+      // Si viene desde zonas.html con ?editar=ID, abrir el modal de edición automáticamente
+      const params = new URLSearchParams(window.location.search);
+      const editId = params.get('editar');
+      if (editId) {
+        abrirEditar(editId);
+      }
 
       // Eventos de filtros
       ['filtZona', 'filtEstado', 'filtPlan'].forEach(id => {
@@ -295,11 +305,11 @@
               <td>
                 <div class="btn-group">
                   <a href="pagos.html?id=${encodeURIComponent(c.id)}" class="btn btn-success btn-sm" title="Registrar pago">💳 Pagar</a>
-                  <button class="btn btn-sm" onclick="toggleCable('${esc(c.id)}')" style="background:${c.cable ? '#16a34a' : '#64748B'};color:#fff;border:none" title="${c.cable ? 'Quitar cable' : 'Activar cable (+S/. 10)'}">📺 ${c.cable ? 'ON' : 'OFF'}</button>
-                  <button class="btn btn-primary btn-sm" onclick="enviarMensajeIACliente('${esc(c.id)}')" style="background:#7C3AED;border-color:#7C3AED" title="Enviar recordatorio con IA a WhatsApp">🤖</button>
-                  <button class="btn btn-outline btn-sm" onclick="abrirEditar('${esc(c.id)}')" title="Editar">✏️</button>
-                  <button class="btn btn-ghost btn-sm" onclick="verHistorialPagos('${esc(c.id)}')" title="Ver pagos">💰</button>
-                  <button class="btn btn-danger btn-sm" onclick="eliminarCliente('${esc(c.id)}')" title="Eliminar">🗑️</button>
+                  <button type="button" class="btn btn-sm" onclick="toggleCable('${esc(c.id)}')" style="background:${c.cable ? '#16a34a' : '#64748B'};color:#fff;border:none" title="${c.cable ? 'Quitar cable' : 'Activar cable (+S/. 10)'}">📺 ${c.cable ? 'ON' : 'OFF'}</button>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="enviarMensajeIACliente('${esc(c.id)}')" style="background:#7C3AED;border-color:#7C3AED" title="Enviar recordatorio con IA a WhatsApp">🤖</button>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="abrirEditar('${esc(c.id)}')" title="Editar">✏️</button>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="verHistorialPagos('${esc(c.id)}')" title="Ver pagos">💰</button>
+                  <button type="button" class="btn btn-danger btn-sm" onclick="eliminarCliente('${esc(c.id)}')" title="Eliminar">🗑️</button>
                 </div>
               </td>
             </tr>
@@ -311,9 +321,9 @@
         document.getElementById('paginfoClientes').textContent = `Página ${_paginaActual + 1} de ${pagTotal} (${total.toLocaleString()} total)`;
         document.getElementById('btnPagPrev').disabled = (_paginaActual === 0);
         document.getElementById('btnPagNext').disabled = ((_paginaActual + 1) >= pagTotal);
-      } catch(err) {
+      } catch (err) {
         console.error('cargarClientes error:', err);
-        tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes: ' + (err.message || '') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;color:var(--rojo);text-align:center">Error cargando clientes: ' + esc(err.message || '') + '</td></tr>';
       }
     }
 
@@ -364,10 +374,30 @@
           return;
         }
 
-        c.nombre       = safe(document.getElementById('eNombre').value, 100);
-        c.celular      = safe(document.getElementById('eCelular').value, 15);
+        const nuevoNombre  = safe(document.getElementById('eNombre').value, 150);
+        const nuevoCelular = safe(document.getElementById('eCelular').value, 15);
+        const nuevaIp      = safe(document.getElementById('eIp').value, 25);
+
+        if (!LeytrixSecurity.isValid.nombre(nuevoNombre)) {
+          toast('⚠️ Ingresa un nombre válido (mínimo 2 caracteres).', 'warn');
+          document.getElementById('eNombre').focus();
+          return;
+        }
+        if (nuevoCelular && !LeytrixSecurity.isValid.celular(nuevoCelular)) {
+          toast('⚠️ Ingresa un número de celular válido.', 'warn');
+          document.getElementById('eCelular').focus();
+          return;
+        }
+        if (nuevaIp && !LeytrixSecurity.isValid.ip(nuevaIp)) {
+          toast('⚠️ Ingresa una dirección IPv4 válida (ej. 192.168.10.45).', 'warn');
+          document.getElementById('eIp').focus();
+          return;
+        }
+
+        c.nombre       = nuevoNombre;
+        c.celular      = nuevoCelular;
         c.fecha_inicio = document.getElementById('eFechaInicio').value || null;
-        c.ip           = safe(document.getElementById('eIp').value, 25);
+        c.ip           = nuevaIp;
         c.zona         = document.getElementById('eZona').value;
         c.plan         = Number(document.getElementById('ePlan').value) || 65;
         c.estado       = document.getElementById('eEstado').value;
@@ -403,7 +433,7 @@
                 <tbody>
                   ${pagos.map(p => `
                     <tr>
-                      <td>${p.fecha ? p.fecha.slice(0, 10) : '—'}</td>
+                      <td>${p.fecha ? esc(p.fecha.slice(0, 10)) : '—'}</td>
                       <td><strong>${esc(p.mes)}</strong></td>
                       <td style="color:var(--verde);font-weight:700">S/. ${Number(p.monto).toFixed(2)}</td>
                       <td><span class="badge" style="background:#F1F5F9">${esc(p.metodo || 'EFECTIVO')}</span></td>

@@ -79,9 +79,15 @@ function sanitizarPayloadSupabase(item) {
   if ('monto' in copia && copia.monto !== null && copia.monto !== undefined) {
     copia.monto = Number(copia.monto) || 0;
   }
-  // [CABLE] Compatible con tipo NUMERIC / INTEGER o BOOLEAN en Supabase
+  // [CABLE] Compatible con tipo NUMERIC / INTEGER en Supabase
   if ('cable' in copia) {
     copia.cable = (copia.cable === true || copia.cable === 'true' || Number(copia.cable) > 0) ? 1 : 0;
+  }
+  // [FOTOS] Asegurar columna obligatoria "nombre" (NOT NULL en public.fotos)
+  if (('data_url' in copia || 'categoria' in copia || 'tipo_mime' in copia) && !('plan' in copia) && !('monto' in copia) && !('motivo' in copia)) {
+    if (!copia.nombre || String(copia.nombre).trim() === '') {
+      copia.nombre = String(copia.titulo || 'foto_isp.jpg').trim();
+    }
   }
   return copia;
 }
@@ -268,9 +274,26 @@ const IDB = (() => {
       });
     },
 
+    async clear(store) {
+      const d = await db();
+      return new Promise((resolve, reject) => {
+        const tx = d.transaction([store], 'readwrite');
+        tx.objectStore(store).clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = e => reject(e.target.error);
+        tx.onabort = e => reject(e.target.error);
+      });
+    },
+
     // ── Escritura local + nube ─────────────────────────────
     async add(store, data) {
       if (!data || typeof data !== 'object') throw new Error(`[IDB.add] dato inválido en store "${store}"`);
+      if (store === 'clientes' && !data.actualizado_el) {
+        data.actualizado_el = new Date().toISOString();
+      }
+      if (store === 'fotos' && (!data.nombre || String(data.nombre).trim() === '')) {
+        data.nombre = String(data.titulo || 'foto_isp.jpg').trim();
+      }
       const id = await this.addLocal(store, data);
       await subir(store, { ...data, id });
       return id;
@@ -281,6 +304,12 @@ const IDB = (() => {
       if (data.id === undefined || data.id === null) {
         console.warn(`[IDB.put] Llamado sin 'id' en store "${store}". Se usará add() en su lugar.`);
         return this.add(store, data);
+      }
+      if (store === 'clientes') {
+        data.actualizado_el = new Date().toISOString();
+      }
+      if (store === 'fotos' && (!data.nombre || String(data.nombre).trim() === '')) {
+        data.nombre = String(data.titulo || 'foto_isp.jpg').trim();
       }
       const id = await this.putLocal(store, data);
       await subir(store, data);
@@ -627,12 +656,24 @@ function fechaHoy() {
   return `${y}-${m}-${dia}`;
 }
 
-function labelPlan(plan) {
+const CABLE_EXTRA = 10;
+
+// Calcula el precio mensual real de un cliente (Plan base + S/. 10 si tiene Cable activo)
+function precioTotalCliente(c) {
+  if (!c || typeof c !== 'object') return 65;
+  const base = Number(c.plan);
+  const planBase = (Number.isFinite(base) && base > 0) ? base : 65;
+  const tieneCable = Boolean(c.cable === true || c.cable === 1 || c.cable === '1' || c.cable === 'true');
+  return planBase + (tieneCable ? CABLE_EXTRA : 0);
+}
+
+function labelPlan(plan, conCable = false) {
   const p = Number(plan);
-  if (p === 50) return 'Plan Básico';
-  if (p === 60) return 'Plan Plus';
-  if (p === 65) return 'Plan Normal';
-  return `Plan S/. ${p || 65}`;
+  let base = `Plan S/. ${p || 65}`;
+  if (p === 50) base = 'Plan Básico';
+  else if (p === 60) base = 'Plan Plus';
+  else if (p === 65) base = 'Plan Normal';
+  return conCable ? `${base} + Cable` : base;
 }
 
 function badgeEstado(e) {
@@ -642,10 +683,14 @@ function badgeEstado(e) {
   return '<span class="badge badge-retirado">⚪ RETIRADO</span>';
 }
 
-// Legacy: el campo 'cable' ya no existe; se conserva por compatibilidad con registros viejos.
-// [CABLE] Nota: el campo 'cable' (+S/. 10) vuelve a usarse desde clientes.html y agregar.html.
+// [CABLE] Indicador visual de servicio de Cable (+S/. 10)
 function badgeCable(c) {
   return c ? '<span style="color:var(--verde);font-weight:700">✅ Cable</span>' : '<span style="color:var(--gris)">❌ Sin cable</span>';
+}
+
+if (typeof window !== 'undefined') {
+  window.CABLE_EXTRA = CABLE_EXTRA;
+  window.precioTotalCliente = precioTotalCliente;
 }
 
 let _toastTimer = null;
@@ -777,14 +822,28 @@ CREATE TABLE IF NOT EXISTS public.clientes (
   zona           VARCHAR(80) NOT NULL DEFAULT 'Loboyacu',
   plan           NUMERIC(8,2) NOT NULL DEFAULT 65.00 CHECK (plan >= 0),
   estado         VARCHAR(20) NOT NULL DEFAULT 'ACTIVO' CHECK (estado IN ('ACTIVO', 'CORTADO', 'PENDIENTE', 'RETIRADO')),
-  cable          BOOLEAN NOT NULL DEFAULT false,
+  cable          NUMERIC NOT NULL DEFAULT 0,
   creado_el      TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW()),
   actualizado_el TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW())
 );
 
--- Asegurar columnas si la tabla clientes ya existía previamente
+-- Asegurar columnas y tipo NUMERIC de cable si la tabla clientes ya existía previamente
 ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS actualizado_el TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW());
 ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS cable NUMERIC NOT NULL DEFAULT 0;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'clientes'
+      AND column_name = 'cable' AND data_type = 'boolean'
+  ) THEN
+    ALTER TABLE public.clientes ALTER COLUMN cable DROP DEFAULT;
+    ALTER TABLE public.clientes ALTER COLUMN cable TYPE NUMERIC
+      USING (CASE WHEN cable::text IN ('true', 't', '1') THEN 1 ELSE 0 END);
+    ALTER TABLE public.clientes ALTER COLUMN cable SET DEFAULT 0;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.pagos (
   id                BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
@@ -818,7 +877,7 @@ CREATE TABLE IF NOT EXISTS public.cortes (
 CREATE TABLE IF NOT EXISTS public.fotos (
   id             BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   titulo         TEXT,
-  nombre         TEXT NOT NULL,
+  nombre         TEXT NOT NULL DEFAULT 'foto_isp.jpg',
   categoria      VARCHAR(40) DEFAULT 'comprobante',
   cliente_id     BIGINT,
   cliente_nombre TEXT,
@@ -830,6 +889,8 @@ CREATE TABLE IF NOT EXISTS public.fotos (
   mtime          TIMESTAMPTZ DEFAULT timezone('America/Lima', NOW()),
   creado_el      TIMESTAMPTZ NOT NULL DEFAULT timezone('America/Lima', NOW())
 );
+
+ALTER TABLE public.fotos ALTER COLUMN nombre SET DEFAULT 'foto_isp.jpg';
 
 CREATE OR REPLACE FUNCTION public.leytrix_actualizar_timestamp()
 RETURNS TRIGGER AS $$
@@ -1051,10 +1112,17 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
       return registros;
     }
 
-    // Sube a Supabase los registros locales que no existen en la nube
+    // Sube a Supabase los registros locales que no existen en la nube o que fueron editados localmente más recientemente
     async function subirFaltantes(tabla, remotos, tamLote, filtro = null) {
-      const idsRemotos = new Set(remotos.map(r => String(r.id)));
-      let locales = (await IDB.getAll(tabla)).filter(l => !idsRemotos.has(String(l.id)));
+      const mapaRemotos = new Map(remotos.map(r => [String(r.id), r]));
+      let locales = (await IDB.getAll(tabla)).filter(l => {
+        const rem = mapaRemotos.get(String(l.id));
+        if (!rem) return true;
+        if (tabla === 'clientes' && l.actualizado_el && rem.actualizado_el) {
+          return new Date(l.actualizado_el).getTime() > new Date(rem.actualizado_el).getTime() + 1000;
+        }
+        return false;
+      });
       if (filtro) locales = locales.filter(filtro);
       for (let i = 0; i < locales.length; i += tamLote) {
         const lote = locales.slice(i, i + tamLote).map(sanitizarPayloadSupabase);
@@ -1063,15 +1131,24 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
       }
     }
 
-    // PASO 1: descargar (solo escritura local)
+    // PASO 1: descargar (solo escritura local, respetando ediciones locales más recientes en clientes)
     const supaCli = await descargarTablaCompleta('clientes');
     const supaPag = await descargarTablaCompleta('pagos');
     const supaCor = await descargarTablaCompleta('cortes');
     const supaFot = await descargarTablaCompleta('fotos', 'id,titulo,nombre,categoria,cliente_id,cliente_nombre,zona,tamano,tipo_mime,notas,mtime,creado_el');
 
-    if (supaCli.length) await IDB.bulkPut('clientes', supaCli, { remoto: false });
-    if (supaPag.length) await IDB.bulkPut('pagos',    supaPag, { remoto: false });
-    if (supaCor.length) await IDB.bulkPut('cortes',   supaCor, { remoto: false });
+    if (supaCli.length) {
+      const localesCli = await IDB.getAll('clientes');
+      const mapaLocalCli = new Map(localesCli.map(c => [String(c.id), c]));
+      const cliParaGuardar = supaCli.filter(rem => {
+        const loc = mapaLocalCli.get(String(rem.id));
+        if (!loc || !loc.actualizado_el || !rem.actualizado_el) return true;
+        return new Date(rem.actualizado_el).getTime() >= new Date(loc.actualizado_el).getTime();
+      });
+      if (cliParaGuardar.length) await IDB.bulkPut('clientes', cliParaGuardar, { remoto: false });
+    }
+    if (supaPag.length) await IDB.bulkPut('pagos',  supaPag, { remoto: false });
+    if (supaCor.length) await IDB.bulkPut('cortes', supaCor, { remoto: false });
 
     // Fotos: no pisar las locales (tienen data_url); solo agregar las que faltan
     if (supaFot.length) {
@@ -1080,7 +1157,7 @@ async function sincronizarConSupabase(mostrarFeedback = true) {
       if (nuevas.length) await IDB.bulkPut('fotos', nuevas, { remoto: false });
     }
 
-    // PASO 2: subir lo que solo existe en local
+    // PASO 2: subir lo que solo existe en local o tiene cambios locales más recientes
     await subirFaltantes('clientes', supaCli, 300);
     await subirFaltantes('pagos',    supaPag, 300);
     await subirFaltantes('cortes',   supaCor, 300);
@@ -1123,18 +1200,40 @@ if (typeof window !== 'undefined') {
     }
   });
 
-  // 3. Intervalo de sondeo en segundo plano (cada 25 segundos)
-  // Garantiza que cambios hechos en PC aparezcan en Celular y viceversa automáticamente
+  // 3. Intervalo de sondeo inteligente en segundo plano
+  // Si Realtime WebSocket está activo, espaciamos el sondeo de respaldo para ahorrar datos móviles
   setInterval(() => {
-    if (_supa && !_sincronizando && navigator.onLine) {
+    if (_supa && !_sincronizando && navigator.onLine && document.visibilityState === 'visible') {
       sincronizarConSupabase(false);
     }
-  }, 25000);
+  }, 60000);
 
-  // 4. Cerrar cualquier modal al tocar fuera en celular o PC
+  // 4. Cerrar cualquier modal al tocar fuera en celular o PC y cerrar autocompletados
   document.addEventListener('click', (e) => {
     if (e.target && e.target.classList && e.target.classList.contains('modal-bg')) {
       e.target.classList.remove('open');
+    }
+    // Cerrar listas de sugerencias de clientes si se hace clic fuera
+    ['listaSugClientes', 'listaSugCorte'].forEach(listId => {
+      const listEl = document.getElementById(listId);
+      if (listEl && listEl.style.display === 'block') {
+        const parent = listEl.parentElement;
+        if (parent && !parent.contains(e.target)) {
+          listEl.style.display = 'none';
+        }
+      }
+    });
+  });
+
+  // 5. Accesibilidad: Cerrar modales, lightbox y menú móvil con la tecla Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-bg.open, .lightbox-bg.open').forEach(m => m.classList.remove('open'));
+      if (typeof cerrarSidebarMobile === 'function') cerrarSidebarMobile();
+      ['listaSugClientes', 'listaSugCorte'].forEach(listId => {
+        const listEl = document.getElementById(listId);
+        if (listEl) listEl.style.display = 'none';
+      });
     }
   });
 }

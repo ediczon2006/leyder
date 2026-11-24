@@ -5,13 +5,10 @@
 //  - Motor neural local ISP + Compatibilidad opcional con Gemini API
 // ========================================================
 
-// Clave de config unificada — usa 'leytrix_ai_config' como primary,
-// mantiene 'fastnet_ai_config' solo para leer datos viejos migrados.
 const AI_CONFIG_KEY = 'leytrix_ai_config';
 
 function obtenerConfiguracionIA() {
   try {
-    // Intentar leer config nueva primero; migrar la vieja si existe
     const raw = localStorage.getItem('leytrix_ai_config')
               || localStorage.getItem('fastnet_ai_config');
     if (raw) {
@@ -28,7 +25,7 @@ function obtenerConfiguracionIA() {
         titularBcp:    cfg.titularBcp    || 'Leytrix ISP'
       };
     }
-  } catch(_) {}
+  } catch (_) {}
   return {
     geminiApiKey:  '',
     nombreEmpresa: 'Leytrix',
@@ -43,7 +40,6 @@ function obtenerConfiguracionIA() {
 }
 
 function guardarConfiguracionIA(config) {
-  // Guardar en la clave nueva; limpiar la vieja para no generar confusión
   localStorage.setItem('leytrix_ai_config', JSON.stringify(config));
   localStorage.removeItem('fastnet_ai_config');
 }
@@ -54,16 +50,21 @@ async function generarMensajeCobranzaIA({ cliente, mes, monto, tono = 'amable' }
   const nombre = cliente.nombre || 'Estimado(a) Cliente';
   const primerNombre = nombre.split(' ')[0];
   const zona = cliente.zona || 'su sector';
-  const planMonto = Number(monto || cliente.plan || 65).toFixed(2);
-  const planTipo = (cliente.plan == 65) ? 'Plan Normal' : (cliente.plan == 60 ? 'Plan Plus' : 'Plan Básico');
+  const mesLegible = (typeof mesISOaTexto === 'function' ? mesISOaTexto(mes) : mes) || mes;
+  const tieneCable = Boolean(cliente.cable === true || cliente.cable === 1 || cliente.cable === '1' || cliente.cable === 'true');
+  const tarifaReal = typeof precioTotalCliente === 'function'
+    ? precioTotalCliente(cliente)
+    : (Number(cliente.plan || 65) + (tieneCable ? 10 : 0));
+  const planMonto = Number(monto || tarifaReal).toFixed(2);
+  const baseTipo = (Number(cliente.plan) === 65) ? 'Plan Normal' : (Number(cliente.plan) === 60 ? 'Plan Plus' : 'Plan Básico');
+  const planTipo = tieneCable ? `${baseTipo} + Cable` : baseTipo;
 
-  // Si el usuario configuró una clave de Gemini, intentamos generar con Gemini
   if (cfg.geminiApiKey && cfg.geminiApiKey.trim().length > 10) {
     try {
       const prompt = `Eres el asistente virtual de cobranzas de la empresa de internet "${cfg.nombreEmpresa}".
 Redacta un mensaje de WhatsApp para el cliente "${nombre}" de la zona "${zona}".
 Datos del cobro:
-- Mes pendiente: ${mes}
+- Mes pendiente: ${mesLegible}
 - Monto a pagar: S/. ${planMonto} (${planTipo})
 - Tono solicitado: ${tono} (amable, formal, urgente o facilidad de pago).
 - Métodos de pago disponibles: Yape/Plin al ${cfg.numeroYape} (${cfg.titularYape}), BCP Cuenta ${cfg.cuentaBcp} o Soporte al ${cfg.telefono} (${cfg.correo}).
@@ -89,7 +90,7 @@ Instrucciones:
           return textoIA.trim();
         }
       }
-    } catch(err) {
+    } catch (err) {
       console.warn('Fallo Gemini API, usando motor neural integrado:', err);
     }
   }
@@ -104,7 +105,7 @@ Te saludamos de *${cfg.nombreEmpresa}* 📡 para recordarte cordialmente que ya 
 📌 *Detalles del Servicio:*
 👤 *Abonado:* ${nombre}
 📍 *Zona:* ${zona}
-📅 *Mes:* ${mes}
+📅 *Mes:* ${mesLegible}
 💰 *Total:* S/. ${planMonto} (${planTipo})
 
 💳 *Puedes pagar rápido y fácil por:*
@@ -120,7 +121,7 @@ Por favor, al realizar tu abono envíanos la captura de tu comprobante por este 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 Estimado(a) *${nombre}*, le saludamos cordialmente.
 
-Le comunicamos que a la fecha registramos pendiente la mensualidad de su servicio de internet correspondiente al periodo *${mes}*.
+Le comunicamos que a la fecha registramos pendiente la mensualidad de su servicio de internet correspondiente al periodo *${mesLegible}*.
 
 📋 *ESTADO DE CUENTA:*
 • *Titular:* ${nombre}
@@ -144,9 +145,9 @@ Atentamente,
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 Estimado(a) *${nombre}* (${zona}):
 
-Le informamos que su servicio de internet se encuentra programado para *SUSPENSIÓN TEMPORAL* debido a la mensualidad pendiente de *${mes}*.
+Le informamos que su servicio de internet se encuentra programado para *SUSPENSIÓN TEMPORAL* debido a la mensualidad pendiente de *${mesLegible}*.
 
-🚨 *Deuda Pendiente:* S/. ${planMonto}
+🚨 *Deuda Pendiente:* S/. ${planMonto} (${planTipo})
 ⛔ *Estado:* Próximo a corte en sistema
 
 Para evitar la interrupción de su señal de internet y costos adicionales por reconexión, por favor realice su pago de inmediato:
@@ -165,7 +166,7 @@ Para evitar la interrupción de su señal de internet y costos adicionales por r
 
 Nos comunicamos de *${cfg.nombreEmpresa}* porque valoramos mucho que seas parte de nuestra red.
 
-Notamos que tienes pendiente tu mensualidad de *${mes}* por un importe de *S/. ${planMonto}*. Si has tenido algún inconveniente o deseas coordinar una facilidad de pago o fecha de compromiso, por favor escríbenos por este medio para ayudarte y evitar que te quedes sin internet en casa.
+Notamos que tienes pendiente tu mensualidad de *${mesLegible}* por un importe de *S/. ${planMonto}*. Si has tenido algún inconveniente o deseas coordinar una facilidad de pago o fecha de compromiso, por favor escríbenos por este medio para ayudarte y evitar que te quedes sin internet en casa.
 
 Si ya puedes cancelarlo hoy:
 📱 *Yape / Plin:* ${cfg.numeroYape} (${cfg.titularYape})
@@ -175,7 +176,7 @@ Si ya puedes cancelarlo hoy:
 *${cfg.nombreEmpresa}* • ${cfg.telefono}`;
 
     default:
-      return `Estimado(a) *${nombre}*, le recordamos el pago pendiente de su internet ${cfg.nombreEmpresa} del mes *${mes}* por S/. ${planMonto}. Pague por Yape al ${cfg.numeroYape} (${cfg.titularYape}) y envíe su voucher por aquí. ¡Gracias! Contacto: ${cfg.telefono}`;
+      return `Estimado(a) *${nombre}*, le recordamos el pago pendiente de su internet ${cfg.nombreEmpresa} del mes *${mesLegible}* por S/. ${planMonto}. Pague por Yape al ${cfg.numeroYape} (${cfg.titularYape}) y envíe su voucher por aquí. ¡Gracias! Contacto: ${cfg.telefono}`;
   }
 }
 
@@ -183,11 +184,15 @@ Si ya puedes cancelarlo hoy:
 function abrirWhatsAppConMensaje(celular, mensaje) {
   const numLimpio = String(celular || '').replace(/\D/g, '');
   if (!numLimpio || numLimpio.length < 9) {
-    alert('El cliente no tiene un número de celular o WhatsApp válido registrado.');
+    if (typeof toast === 'function') {
+      toast('⚠️ El cliente no tiene un número de celular o WhatsApp válido registrado.', 'warn');
+    } else {
+      alert('El cliente no tiene un número de celular o WhatsApp válido registrado.');
+    }
     return;
   }
   const codificado = encodeURIComponent(mensaje);
   const destino = numLimpio.startsWith('51') ? numLimpio : ('51' + numLimpio);
   const url = `https://api.whatsapp.com/send?phone=${destino}&text=${codificado}`;
-  window.open(url, '_blank');
+  window.open(url, '_blank', 'noopener,noreferrer');
 }

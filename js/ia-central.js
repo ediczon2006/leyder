@@ -24,6 +24,13 @@ const LEYTRIX_IA = (() => {
     return '';
   }
 
+  function tarifaCliente(c) {
+    if (typeof precioTotalCliente === 'function') return precioTotalCliente(c);
+    const base = Number(c?.plan) || 65;
+    const cable = Boolean(c?.cable === true || c?.cable === 1 || c?.cable === '1' || c?.cable === 'true');
+    return base + (cable ? 10 : 0);
+  }
+
   async function callGemini(prompt, { temperature = 0.7, maxTokens = 800 } = {}) {
     const key = getApiKey();
     if (!key || key.trim().length < 10) return null;
@@ -45,7 +52,6 @@ const LEYTRIX_IA = (() => {
   }
 
   // ── 1. ASISTENTE CONVERSACIONAL ISP ──────────────────
-  // Historial de la conversación actual
   let _historialChat = [];
 
   async function chatISP(preguntaUsuario, contextoNegocio = '') {
@@ -53,7 +59,7 @@ const LEYTRIX_IA = (() => {
 Tu rol: ayudar al administrador del sistema ISP con análisis, decisiones de negocio, cobranza, y soporte técnico básico.
 Datos de la empresa:
 - Zonas de cobertura: Loboyacu, Huayranga, Pacotillo, Ramal de Cachiyacu, Palmeras, Shishiyacu
-- Planes: S/. 50 (Básico), S/. 60 (Plus), S/. 65 (Normal)
+- Planes: S/. 50 (Básico), S/. 60 (Plus), S/. 65 (Normal), más servicio opcional de Cable (+S/. 10)
 - Teléfono: +51 993 053 643 | Email: fastnetloboyacu@gmail.com
 ${contextoNegocio ? `\nContexto actual del sistema:\n${contextoNegocio}` : ''}
 Responde en español, de forma concisa y práctica. Usa listas o negritas cuando ayude a la claridad.`;
@@ -81,8 +87,7 @@ Responde en español, de forma concisa y práctica. Usa listas o negritas cuando
   async function predecirRiesgoMora(clientes, pagos) {
     if (!clientes || !clientes.length) return [];
 
-    // Calcular historial de pagos por cliente (motor local siempre disponible)
-    const mesActualStr = mesActual(); // función de db.js
+    const mesActualStr = mesActual();
     const pagosPorCliente = {};
     (pagos || []).forEach(p => {
       if (!pagosPorCliente[p.id_cliente]) pagosPorCliente[p.id_cliente] = [];
@@ -100,7 +105,6 @@ Responde en español, de forma concisa y práctica. Usa listas o negritas cuando
           ? Math.floor((Date.now() - new Date(ultimoPago.fecha || ultimoPago.creado_el)) / 86400000)
           : 999;
 
-        // Score de riesgo local (0=bajo, 1=medio, 2=alto)
         let riesgo = 0;
         let razones = [];
         if (c.estado === 'CORTADO')      { riesgo += 2; razones.push('Servicio cortado'); }
@@ -121,12 +125,11 @@ Responde en español, de forma concisa y práctica. Usa listas o negritas cuando
       .filter(r => r.riesgo > 0)
       .sort((a, b) => b.riesgo - a.riesgo);
 
-    // Si hay API key, enriquecer con IA el top 5
     const key = getApiKey();
     if (key && analisis.length > 0) {
       try {
         const resumenCasos = analisis.slice(0, 5).map((r, i) =>
-          `${i+1}. ${r.cliente.nombre} (${r.cliente.zona}) - Plan S/.${r.cliente.plan} - Razones: ${r.razones.join(', ')}`
+          `${i+1}. ${r.cliente.nombre} (${r.cliente.zona}) - Tarifa S/.${tarifaCliente(r.cliente)} - Razones: ${r.razones.join(', ')}`
         ).join('\n');
 
         const prompt = `Analiza estos ${Math.min(5, analisis.length)} clientes en riesgo de mora de Leytrix ISP:
@@ -156,15 +159,15 @@ Formato: "1. [estrategia]" para cada cliente. Máximo 15 palabras por línea.`;
   async function analizarNegocio(clientes, pagos) {
     if (!clientes) return 'Sin datos disponibles.';
 
-    const total       = clientes.length;
-    const activos     = clientes.filter(c => c.estado === 'ACTIVO').length;
-    const cortados    = clientes.filter(c => c.estado === 'CORTADO').length;
-    const pendientes  = clientes.filter(c => c.estado === 'PENDIENTE').length;
-    const ingresoMes  = clientes.filter(c => c.estado === 'ACTIVO').reduce((s, c) => s + (Number(c.plan) || 65), 0);
-    const mesStr      = mesActual();
+    const total        = clientes.length;
+    const activos      = clientes.filter(c => c.estado === 'ACTIVO').length;
+    const cortados     = clientes.filter(c => c.estado === 'CORTADO').length;
+    const pendientes   = clientes.filter(c => c.estado === 'PENDIENTE').length;
+    const ingresoMes   = clientes.filter(c => c.estado === 'ACTIVO').reduce((s, c) => s + tarifaCliente(c), 0);
+    const mesStr       = mesActual();
     const pagosEsteMes = (pagos || []).filter(p => p.mes === mesStr);
-    const cobradoMes  = pagosEsteMes.reduce((s, p) => s + (Number(p.monto) || 0), 0);
-    const tasaActivos = total > 0 ? Math.round((activos / total) * 100) : 0;
+    const cobradoMes   = pagosEsteMes.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const tasaActivos  = total > 0 ? Math.round((activos / total) * 100) : 0;
 
     const zonaStats = {};
     clientes.forEach(c => {
@@ -175,12 +178,12 @@ Formato: "1. [estrategia]" para cada cliente. Máximo 15 palabras por línea.`;
     const mejorZona = Object.entries(zonaStats).sort((a, b) => b[1].activos - a[1].activos)[0];
 
     const contexto = `Total clientes: ${total} | Activos: ${activos} (${tasaActivos}%) | Cortados: ${cortados} | Pendientes: ${pendientes}
-Ingreso mensual potencial: S/. ${ingresoMes} | Cobrado en ${mesStr}: S/. ${cobradoMes.toFixed(2)}
+Ingreso mensual potencial: S/. ${ingresoMes.toFixed(2)} | Cobrado en ${mesStr}: S/. ${cobradoMes.toFixed(2)}
 Mejor zona: ${mejorZona ? mejorZona[0] + ' (' + mejorZona[1].activos + ' activos)' : 'N/A'}`;
 
     const key = getApiKey();
     if (!key || key.trim().length < 10) {
-      return `📊 *Resumen ${mesStr}:*\n• ${activos}/${total} activos (${tasaActivos}%)\n• Cortados: ${cortados}\n• Cobrado: S/. ${cobradoMes.toFixed(2)} de S/. ${ingresoMes} potencial\n• Mejor zona: ${mejorZona?.[0] || 'N/A'}`;
+      return `📊 *Resumen ${mesStr}:*\n• ${activos}/${total} activos (${tasaActivos}%)\n• Cortados: ${cortados}\n• Cobrado: S/. ${cobradoMes.toFixed(2)} de S/. ${ingresoMes.toFixed(2)} potencial\n• Mejor zona: ${mejorZona?.[0] || 'N/A'}`;
     }
 
     try {
@@ -200,7 +203,7 @@ Usa emojis relevantes. Sé directo y práctico.`;
       return analisis || `📊 ${contexto}`;
     } catch (err) {
       console.warn('[IA análisis] Falló Gemini:', err);
-      return `📊 *Resumen ${mesStr}:*\n• ${activos}/${total} activos (${tasaActivos}%)\n• Cobrado: S/. ${cobradoMes.toFixed(2)} / S/. ${ingresoMes}`;
+      return `📊 *Resumen ${mesStr}:*\n• ${activos}/${total} activos (${tasaActivos}%)\n• Cobrado: S/. ${cobradoMes.toFixed(2)} / S/. ${ingresoMes.toFixed(2)}`;
     }
   }
 
@@ -208,9 +211,9 @@ Usa emojis relevantes. Sé directo y práctico.`;
   async function resumirEstadoRed(clientes) {
     if (!clientes || !clientes.length) return '📡 Sin datos de red disponibles.';
 
-    const activos   = clientes.filter(c => c.estado === 'ACTIVO').length;
-    const cortados  = clientes.filter(c => c.estado === 'CORTADO').length;
-    const total     = clientes.length;
+    const activos  = clientes.filter(c => c.estado === 'ACTIVO').length;
+    const cortados = clientes.filter(c => c.estado === 'CORTADO').length;
+    const total    = clientes.length;
 
     const key = getApiKey();
     if (!key || key.trim().length < 10) {
@@ -229,7 +232,6 @@ Máximo 20 palabras, usa un emoji relevante al inicio.`;
     }
   }
 
-  // ── API PÚBLICA ───────────────────────────────────────
   return {
     chatISP,
     limpiarHistorialChat,
@@ -241,13 +243,11 @@ Máximo 20 palabras, usa un emoji relevante al inicio.`;
 
 })();
 
-// Exportación explícita al contexto global
 if (typeof window !== 'undefined') {
   window.LEYTRIX_IA = LEYTRIX_IA;
   window.FASTNET_IA = LEYTRIX_IA;
 }
 
-// Retrocompatibilidad con scripts existentes
 const FASTNET_IA = LEYTRIX_IA;
 
 // ========================================================
@@ -255,7 +255,6 @@ const FASTNET_IA = LEYTRIX_IA;
 // ========================================================
 
 (function inyectarChatIA() {
-  // Evitar doble inyección
   if (document.getElementById('leytrix-ia-chat') || document.getElementById('fastnet-ia-chat')) return;
 
   const html = `
@@ -265,7 +264,7 @@ const FASTNET_IA = LEYTRIX_IA;
     font-family:'Segoe UI',sans-serif;
   ">
     <!-- Burbuja toggle -->
-    <button id="ia-chat-toggle" onclick="toggleChatIA()" title="Asistente IA Leytrix" style="
+    <button type="button" id="ia-chat-toggle" onclick="toggleChatIA()" title="Asistente IA Leytrix" aria-label="Abrir chat del Asistente IA" style="
       width:56px; height:56px; border-radius:50%;
       background:linear-gradient(135deg,#7C3AED,#4F46E5);
       border:none; cursor:pointer; box-shadow:0 4px 20px rgba(124,58,237,0.4);
@@ -274,7 +273,7 @@ const FASTNET_IA = LEYTRIX_IA;
     ">🤖</button>
 
     <!-- Ventana del chat -->
-    <div id="ia-chat-window" style="
+    <div id="ia-chat-window" role="dialog" aria-label="Asistente IA Leytrix" style="
       display:none; width:340px; max-height:480px;
       background:#fff; border-radius:16px;
       box-shadow:0 8px 40px rgba(0,0,0,0.16);
@@ -295,18 +294,18 @@ const FASTNET_IA = LEYTRIX_IA;
           </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button onclick="analizarNegocioIA()" title="Análisis del negocio" style="
+          <button type="button" onclick="analizarNegocioIA()" title="Análisis del negocio" style="
             background:rgba(255,255,255,0.15); border:none; color:#fff;
             border-radius:8px; padding:4px 8px; cursor:pointer; font-size:0.75rem;
           ">📊 Análisis</button>
-          <button onclick="toggleChatIA()" style="
+          <button type="button" onclick="toggleChatIA()" aria-label="Cerrar chat IA" style="
             background:none;border:none;color:#C4B5FD;cursor:pointer;font-size:1.1rem;
           ">✕</button>
         </div>
       </div>
 
       <!-- Mensajes -->
-      <div id="ia-chat-msgs" style="
+      <div id="ia-chat-msgs" aria-live="polite" style="
         flex:1; overflow-y:auto; padding:14px; display:flex;
         flex-direction:column; gap:10px; max-height:320px;
         background:#F8FAFC;
@@ -320,6 +319,7 @@ const FASTNET_IA = LEYTRIX_IA;
       <div style="padding:12px;border-top:1px solid #F1F5F9;background:#fff;display:flex;gap:8px">
         <input id="ia-chat-input" type="text"
           placeholder="Escribe tu consulta..."
+          aria-label="Escribe tu consulta para el asistente IA"
           onkeydown="if(event.key==='Enter')enviarMensajeIA()"
           style="
             flex:1; border:1.5px solid #E5E7EB; border-radius:10px;
@@ -329,7 +329,7 @@ const FASTNET_IA = LEYTRIX_IA;
           onfocus="this.style.borderColor='#7C3AED'"
           onblur="this.style.borderColor='#E5E7EB'"
         />
-        <button onclick="enviarMensajeIA()" style="
+        <button type="button" onclick="enviarMensajeIA()" aria-label="Enviar mensaje" style="
           background:#7C3AED; color:#fff; border:none; border-radius:10px;
           padding:8px 14px; cursor:pointer; font-size:1rem;
           transition:background 0.2s;
@@ -381,11 +381,16 @@ function agregarMensajeChat(texto, tipo = 'bot') {
   if (!msgs) return;
   const div = document.createElement('div');
   div.className = tipo === 'user' ? 'ia-msg-user' : (tipo === 'typing' ? 'ia-msg-typing' : 'ia-msg-bot');
-  // Soportar negritas **texto** → <b>texto</b>
-  div.innerHTML = String(texto)
-    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-    .replace(/\*(.+?)\*/g, '<b>$1</b>')
-    .replace(/\n/g, '<br>');
+  // Sanitizar contra XSS antes de formatear negritas
+  if (typeof LeytrixSecurity !== 'undefined' && LeytrixSecurity.formatMarkdown) {
+    div.innerHTML = LeytrixSecurity.formatMarkdown(texto);
+  } else {
+    const safeTxt = typeof esc === 'function' ? esc(texto) : String(texto).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    div.innerHTML = safeTxt
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/\*(.+?)\*/g, '<b>$1</b>')
+      .replace(/\n/g, '<br>');
+  }
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   return div;
@@ -399,12 +404,9 @@ async function enviarMensajeIA() {
   input.value = '';
 
   agregarMensajeChat(texto, 'user');
-
-  // Indicador "escribiendo..."
   const typing = agregarMensajeChat('⏳ Procesando...', 'typing');
 
   try {
-    // Construir contexto del negocio si los datos están disponibles
     let contexto = '';
     if (typeof IDB !== 'undefined') {
       try {
@@ -423,7 +425,7 @@ async function enviarMensajeIA() {
     if (!FASTNET_IA.tieneApiKey()) {
       typing.remove();
       agregarMensajeChat(
-        '⚠️ Para usar el chat IA necesitas configurar tu clave Gemini API.\n\nVe a ⚙️ *Ajustes IA* en el menú lateral y agrega tu API Key gratuita de Google AI Studio.',
+        '⚠️ Para usar el chat IA necesitas configurar tu clave Gemini API.\n\nVe a *Pendientes del Mes > ⚙️ Cuentas & Clave IA* y agrega tu API Key gratuita de Google AI Studio.',
         'bot'
       );
       return;

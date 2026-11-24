@@ -17,20 +17,30 @@ const LeytrixSecurity = (() => {
       .replace(/`/g, '&#96;');
   }
 
+  // 1b. Formateo seguro de Markdown básico (negritas y saltos de línea) sin riesgo XSS
+  function formatMarkdownSafe(str) {
+    const limpio = sanitizeHTML(str);
+    return limpio
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+  }
+
   // 2. Validadores de formato estricto (Entradas PII y Red)
   const Validators = {
     celular(num) {
       if (!num) return false;
-      const clean = String(num).replace(/[\s\-\+]/g, '');
-      // Válido si tiene 9 dígitos (Perú) o formato internacional +51
-      return /^(51)?9\d{8}$/.test(clean);
+      const clean = String(num).replace(/[\s\-\+\(\)]/g, '');
+      // Válido si tiene 9 dígitos (Perú) o formato internacional +51 (9 a 15 dígitos numéricos)
+      return /^(51)?9\d{8}$/.test(clean) || /^\d{9,15}$/.test(clean);
     },
     ip(ipStr) {
       if (!ipStr) return false;
-      // Formato IPv4 válido (192.168.x.x o 10.x.x.x)
+      // Formato IPv4 válido (ej. 192.168.10.45)
       const parts = String(ipStr).trim().split('.');
       if (parts.length !== 4) return false;
       return parts.every(p => {
+        if (!/^\d{1,3}$/.test(p)) return false;
         const n = parseInt(p, 10);
         return !isNaN(n) && n >= 0 && n <= 255 && String(n) === p;
       });
@@ -42,7 +52,7 @@ const LeytrixSecurity = (() => {
     nombre(str) {
       if (!str) return false;
       const s = String(str).trim();
-      return s.length >= 2 && s.length <= 120 && /^[\w\sáéíóúÁÉÍÓÚñÑ\.\-]+$/i.test(s);
+      return s.length >= 2 && s.length <= 150 && !/[<>]/.test(s);
     }
   };
 
@@ -104,6 +114,7 @@ const LeytrixSecurity = (() => {
 
   return {
     sanitize: sanitizeHTML,
+    formatMarkdown: formatMarkdownSafe,
     isValid: Validators,
     verificarSesion: verificarSesionActiva,
     rateLimit: checkRateLimit

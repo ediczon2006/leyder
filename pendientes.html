@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <link rel="icon" type="image/png" href="img/logo.png"/>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Control de clientes pendientes del mes y asistente IA de cobranza por WhatsApp para Leytrix ISP."/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta name="theme-color" content="#0F2A4A"/>
   <title>Leytrix ISP — Pendientes del Mes</title>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <link rel="apple-touch-icon" href="img/logo.png"/>
+  <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
@@ -52,28 +57,28 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>📅 Pendientes del Mes &amp; Asistente IA WhatsApp — Leytrix ISP</h2>
+        <h1>📅 Pendientes del Mes &amp; Asistente IA WhatsApp — Leytrix ISP</h1>
         <p>Cobranza inteligente con IA • Contacto: +51 993 053 643 • fastnetloboyacu@gmail.com</p>
       </div>
       <div class="btn-group">
-        <button class="btn btn-primary" onclick="abrirModalCobranzaIA()" style="background:#7C3AED;border-color:#7C3AED">
+        <button type="button" class="btn btn-primary" onclick="abrirModalCobranzaIA()" style="background:#7C3AED;border-color:#7C3AED">
           🤖 Asistente IA de Cobranzas
         </button>
-        <button id="btnRiesgoIA" class="btn btn-outline" onclick="analizarRiesgoMoraIA()" style="border-color:#DC2626;color:#DC2626">
+        <button type="button" id="btnRiesgoIA" class="btn btn-outline" onclick="analizarRiesgoMoraIA()" style="border-color:#DC2626;color:#DC2626">
           🔴 Riesgo de Mora (IA)
         </button>
-        <button class="btn btn-outline" onclick="abrirModalAjustesIA()">
+        <button type="button" class="btn btn-outline" onclick="abrirModalAjustesIA()">
           ⚙️ Cuentas &amp; Clave IA
         </button>
-        <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
+        <button type="button" class="btn btn-outline" onclick="window.print()">🖨️ Imprimir</button>
       </div>
     </div>
 
     <!-- Panel de Riesgo IA -->
     <div id="panelRiesgoIA" style="display:none;background:#fff;border:1.5px solid #FCA5A5;border-radius:12px;padding:18px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h3 style="font-size:1rem;font-weight:800;color:#DC2626;margin:0">🔴 Análisis de Riesgo de Mora — Gemini IA</h3>
-        <button onclick="document.getElementById('panelRiesgoIA').style.display='none'" style="background:none;border:none;cursor:pointer;color:#94A3B8;font-size:1.2rem">✕</button>
+        <h2 style="font-size:1rem;font-weight:800;color:#DC2626;margin:0">🔴 Análisis de Riesgo de Mora — Gemini IA</h2>
+        <button type="button" onclick="document.getElementById('panelRiesgoIA').style.display='none'" aria-label="Cerrar panel de riesgo" style="background:none;border:none;cursor:pointer;color:#94A3B8;font-size:1.2rem">✕</button>
       </div>
       <div id="panelRiesgoIA-content"></div>
     </div>
@@ -99,10 +104,10 @@
     </div>
 
     <!-- Barra de Acciones Inteligentes IA -->
-    <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg, #FAF5FF 0%, #F5F3FF 50%, #EFF6FF 100%);border:1.5px solid #DDD6FE;padding:16px 20px">
+    <div class="card no-print" style="margin-bottom:18px;background:linear-gradient(135deg, #FAF5FF 0%, #F5F3FF 50%, #EFF6FF 100%);border:1.5px solid #DDD6FE;padding:16px 20px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
         <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-size:2rem">🤖</span>
+          <span style="font-size:2rem" aria-hidden="true">🤖</span>
           <div>
             <strong style="color:#5B21B6;font-size:0.95rem;display:block">Cobranza Inteligente con Inteligencia Artificial</strong>
             <p style="color:#6D28D9;font-size:0.8rem;margin:2px 0 0">
@@ -111,7 +116,7 @@
           </div>
         </div>
         <div class="btn-group">
-          <button class="btn btn-primary btn-sm" onclick="iniciarEnvioMasivoIA()" style="background:#6D28D9;border-color:#6D28D9">
+          <button type="button" class="btn btn-primary btn-sm" onclick="iniciarEnvioMasivoIA()" style="background:#6D28D9;border-color:#6D28D9">
             ⚡ Iniciar Cobranza Rápida IA
           </button>
         </div>
@@ -119,18 +124,18 @@
     </div>
 
     <!-- Filtros de Búsqueda y Selección de Mes -->
-    <div class="card" style="padding:16px 20px;margin-bottom:18px">
+    <div class="card no-print" style="padding:16px 20px;margin-bottom:18px">
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
         <div style="display:flex;align-items:center;gap:8px">
-          <label class="form-label" style="margin:0;font-weight:700">Mes:</label>
-          <input type="month" id="selMesPendiente" class="form-input" style="padding:7px 10px;max-width:170px" onchange="calcularPendientes()" />
+          <label class="form-label" for="selMesPendiente" style="margin:0;font-weight:700">Mes:</label>
+          <input type="month" id="selMesPendiente" class="form-input" style="padding:7px 10px;width:auto;max-width:170px" onchange="calcularPendientes()" />
         </div>
 
-        <div style="flex:1;min-width:200px">
-          <input type="text" id="busPendiente" placeholder="🔍 Buscar por nombre, IP o celular..." class="form-input" style="padding:7px 12px;font-size:0.85rem" oninput="filtrarTablaPendientes()" />
+        <div style="flex:1;min-width:180px">
+          <input type="text" id="busPendiente" aria-label="Buscar cliente pendiente por nombre, IP o celular" placeholder="🔍 Buscar por nombre, IP o celular..." class="form-input" style="padding:7px 12px;font-size:0.85rem" oninput="filtrarTablaPendientes()" />
         </div>
 
-        <select id="filtZonaPend" class="form-select" style="max-width:190px;padding:7px 10px" onchange="filtrarTablaPendientes()">
+        <select id="filtZonaPend" aria-label="Filtrar pendientes por zona" class="form-select" style="width:auto;max-width:190px;padding:7px 10px" onchange="filtrarTablaPendientes()">
           <option value="">Todas las Zonas</option>
           <option value="Loboyacu">Loboyacu</option>
           <option value="Huayranga">Huayranga</option>
@@ -140,7 +145,7 @@
           <option value="Shishiyacu">Shishiyacu</option>
         </select>
 
-        <select id="filtEstadoPend" class="form-select" style="max-width:160px;padding:7px 10px" onchange="filtrarTablaPendientes()">
+        <select id="filtEstadoPend" aria-label="Filtrar pendientes por estado" class="form-select" style="width:auto;max-width:160px;padding:7px 10px" onchange="filtrarTablaPendientes()">
           <option value="">Todos los Estados</option>
           <option value="ACTIVO">Solo Activos</option>
           <option value="CORTADO">Solo Cortados</option>
@@ -157,10 +162,10 @@
             <th>Cliente</th>
             <th>Zona</th>
             <th>IP</th>
-            <th>Plan (S/.)</th>
+            <th>Tarifa (S/.)</th>
             <th>Estado Red</th>
             <th>Celular / WhatsApp</th>
-            <th>Acciones de Cobranza</th>
+            <th class="no-print">Acciones de Cobranza</th>
           </tr>
         </thead>
         <tbody id="tbodyPendientes">
@@ -170,24 +175,24 @@
     </div>
 
     <!-- Paginación Pendientes -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px">
       <span style="font-size:0.82rem;color:var(--gris)" id="paginfoPendientes">Mostrando clientes pendientes</span>
       <div class="btn-group" id="paginacionPendientes">
-        <button class="btn btn-outline btn-sm" id="btnPagPendPrev" onclick="cambiarPaginaPend(-1)">◀ Anterior</button>
-        <button class="btn btn-outline btn-sm" id="btnPagPendNext" onclick="cambiarPaginaPend(1)">Siguiente ▶</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btnPagPendPrev" onclick="cambiarPaginaPend(-1)">◀ Anterior</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btnPagPendNext" onclick="cambiarPaginaPend(1)">Siguiente ▶</button>
       </div>
     </div>
 
   </main>
 
   <!-- MODAL ASISTENTE IA DE COBRANZA WHATSAPP -->
-  <div class="modal-bg" id="modalCobranzaIA">
+  <div class="modal-bg" id="modalCobranzaIA" role="dialog" aria-modal="true" aria-labelledby="modalCobranzaIATit">
     <div class="modal" style="max-width:600px">
       <div class="modal-header">
-        <h3 style="display:flex;align-items:center;gap:8px;color:#6D28D9">
-          <span>🤖</span> Asistente IA de Cobranza WhatsApp
+        <h3 id="modalCobranzaIATit" style="display:flex;align-items:center;gap:8px;color:#6D28D9">
+          <span aria-hidden="true">🤖</span> Asistente IA de Cobranza WhatsApp
         </h3>
-        <button class="modal-close" onclick="cerrarModal('modalCobranzaIA')">✕</button>
+        <button type="button" class="modal-close" onclick="cerrarModal('modalCobranzaIA')" aria-label="Cerrar asistente">✕</button>
       </div>
 
       <div style="background:#F8FAFC;border:1px solid var(--borde);border-radius:10px;padding:12px 16px;margin-bottom:16px">
@@ -224,8 +229,8 @@
       <!-- Preview del Mensaje Generado -->
       <div style="margin-bottom:18px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <label class="form-label" style="margin:0">Mensaje para WhatsApp (puedes editarlo antes de enviar):</label>
-          <button class="btn btn-outline btn-sm" onclick="generarTextoModalIA()" style="padding:4px 8px;font-size:0.75rem">
+          <label class="form-label" for="aiMensajePreview" style="margin:0">Mensaje para WhatsApp (puedes editarlo antes de enviar):</label>
+          <button type="button" class="btn btn-outline btn-sm" onclick="generarTextoModalIA()" style="padding:4px 8px;font-size:0.75rem">
             🔄 Regenerar IA
           </button>
         </div>
@@ -234,8 +239,8 @@
 
       <!-- Botones de Acción -->
       <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
-        <button class="btn btn-outline" onclick="cerrarModal('modalCobranzaIA')">Cerrar</button>
-        <button class="btn btn-success" id="btnEnviarWAIA" onclick="enviarMensajeModalWA()" style="padding:10px 20px;font-weight:700">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modalCobranzaIA')">Cerrar</button>
+        <button type="button" class="btn btn-success" id="btnEnviarWAIA" onclick="enviarMensajeModalWA()" style="padding:10px 20px;font-weight:700">
           📲 Enviar Mensaje por WhatsApp
         </button>
       </div>
@@ -243,11 +248,11 @@
   </div>
 
   <!-- MODAL CONFIGURACIÓN DE CUENTAS & CLAVE GEMINI IA -->
-  <div class="modal-bg" id="modalAjustesIA">
+  <div class="modal-bg" id="modalAjustesIA" role="dialog" aria-modal="true" aria-labelledby="modalAjustesIATit">
     <div class="modal" style="max-width:540px">
       <div class="modal-header">
-        <h3>⚙️ Configuración de Cobranzas &amp; IA</h3>
-        <button class="modal-close" onclick="cerrarModal('modalAjustesIA')">✕</button>
+        <h3 id="modalAjustesIATit">⚙️ Configuración de Cobranzas &amp; IA</h3>
+        <button type="button" class="modal-close" onclick="cerrarModal('modalAjustesIA')" aria-label="Cerrar ajustes">✕</button>
       </div>
 
       <form id="formAjustesIA" onsubmit="guardarAjustesIA(event)">
@@ -260,7 +265,7 @@
           <input type="text" id="cfgNombreEmpresa" class="form-input" placeholder="Ej. Leytrix Internet Rural" required />
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div class="form-grid" style="margin-bottom:14px">
           <div>
             <label class="form-label" for="cfgNumeroYape">Número Yape / Plin</label>
             <input type="text" id="cfgNumeroYape" class="form-input" placeholder="Ej. 987654321" required />
@@ -271,7 +276,7 @@
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div class="form-grid" style="margin-bottom:14px">
           <div>
             <label class="form-label" for="cfgCuentaBcp">Número de Cuenta BCP</label>
             <input type="text" id="cfgCuentaBcp" class="form-input" placeholder="Ej. 191-98234812-0-45" />
@@ -292,7 +297,7 @@
           </p>
         </div>
 
-        <div style="display:flex;justify-content:flex-end;gap:10px">
+        <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
           <button type="button" class="btn btn-outline" onclick="cerrarModal('modalAjustesIA')">Cancelar</button>
           <button type="submit" class="btn btn-primary">💾 Guardar Configuración</button>
         </div>
@@ -311,12 +316,12 @@
     let tonoActualIA = 'amable';
 
     document.addEventListener('DOMContentLoaded', async () => {
+      window.onDatosActualizados = () => cargarDatos();
       renderSidebar('pendientes');
       
       const mesISO = typeof mesActualISO === 'function' ? mesActualISO() : new Date().toISOString().slice(0, 7);
       document.getElementById('selMesPendiente').value = mesISO;
 
-      window.onDatosActualizados = () => cargarDatos();
       await cargarDatos();
     });
 
@@ -344,7 +349,7 @@
 
       const totalClientesRed = clientesLista.filter(c => c.estado !== 'RETIRADO').length;
       const cantPagaron = totalClientesRed - listaPendientes.length;
-      const montoPorCobrar = listaPendientes.reduce((s, c) => s + (Number(c.plan) || 65), 0);
+      const montoPorCobrar = listaPendientes.reduce((s, c) => s + precioTotalCliente(c), 0);
       const efectividad = totalClientesRed > 0 ? Math.round((cantPagaron / totalClientesRed) * 100) : 0;
 
       document.getElementById('kpiPendientesCount').textContent = listaPendientes.length;
@@ -399,36 +404,36 @@
       const inicio = _pagPendientes * PENDIENTES_PAGE_SIZE;
       const paginaItems = lista.slice(inicio, inicio + PENDIENTES_PAGE_SIZE);
 
-      tbody.innerHTML = paginaItems.map(c => `
+      tbody.innerHTML = paginaItems.map(c => {
+        const tarifa = precioTotalCliente(c);
+        return `
         <tr>
           <td><strong style="color:var(--azul)">#${esc(c.id)}</strong></td>
           <td><strong>${esc(c.nombre)}</strong></td>
           <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(c.zona)}</span></td>
           <td><code>${esc(c.ip || '—')}</code></td>
-          <td><strong style="color:var(--rojo)">S/. ${c.plan || 65}</strong> (${labelPlan(c.plan)})</td>
           <td>
-            <span class="badge ${c.estado === 'ACTIVO' ? 'badge-act' : 'badge-cort'}">
-              ${esc(c.estado)}
-            </span>
+            <strong style="color:var(--rojo)">S/. ${tarifa.toFixed(2)}</strong> (${labelPlan(c.plan, c.cable)})
           </td>
+          <td>${badgeEstado(c.estado)}</td>
           <td><strong>${esc(c.celular || '—')}</strong></td>
-          <td>
+          <td class="no-print">
             <div class="btn-group">
-              <button class="btn btn-primary btn-sm" onclick="abrirModalCobranzaIA('${esc(c.id)}')" style="background:#7C3AED;border-color:#7C3AED" title="Generar mensaje con IA y enviar a WhatsApp">
+              <button type="button" class="btn btn-primary btn-sm" onclick="abrirModalCobranzaIA('${esc(c.id)}')" style="background:#7C3AED;border-color:#7C3AED" title="Generar mensaje con IA y enviar a WhatsApp">
                 🤖 IA WA
               </button>
               <a href="pagos.html?id=${encodeURIComponent(c.id)}" class="btn btn-success btn-sm" title="Registrar Pago">
                 💳 Cobrar
               </a>
               ${c.estado === 'ACTIVO' ? `
-                <button class="btn btn-danger btn-sm" onclick="cortarPorMora('${esc(c.id)}')" title="Cortar Servicio">
+                <button type="button" class="btn btn-danger btn-sm" onclick="cortarPorMora('${esc(c.id)}')" title="Cortar Servicio">
                   ✂️
                 </button>
               ` : ''}
             </div>
           </td>
-        </tr>
-      `).join('');
+        </tr>`;
+      }).join('');
 
       document.getElementById('paginfoPendientes').textContent = `Página ${_pagPendientes + 1} de ${pagTotal} (${total.toLocaleString()} pendientes)`;
       document.getElementById('btnPagPendPrev').disabled = (_pagPendientes === 0);
@@ -453,11 +458,14 @@
         return;
       }
 
-      const mesSel = document.getElementById('selMesPendiente').value;
+      const mesRaw = document.getElementById('selMesPendiente').value;
+      const mesLegible = (typeof mesISOaTexto === 'function' ? mesISOaTexto(mesRaw) : mesRaw) || mesActual();
+      const tarifa = precioTotalCliente(clienteActualIA);
+
       document.getElementById('aiModalCliNombre').textContent = clienteActualIA.nombre;
       document.getElementById('aiModalCliZona').textContent = clienteActualIA.zona || '—';
-      document.getElementById('aiModalCliMes').textContent = mesSel;
-      document.getElementById('aiModalCliMonto').textContent = `S/. ${clienteActualIA.plan || 65}.00`;
+      document.getElementById('aiModalCliMes').textContent = mesLegible;
+      document.getElementById('aiModalCliMonto').textContent = `S/. ${tarifa.toFixed(2)}`;
       document.getElementById('aiModalCliCel').textContent = clienteActualIA.celular || 'Sin celular';
 
       cambiarTonoIA(tonoActualIA);
@@ -478,11 +486,14 @@
       const preview = document.getElementById('aiMensajePreview');
       preview.value = '⏳ Generando mensaje inteligente con IA...';
 
-      const mesSel = document.getElementById('selMesPendiente').value;
+      const mesRaw = document.getElementById('selMesPendiente').value;
+      const mesLegible = (typeof mesISOaTexto === 'function' ? mesISOaTexto(mesRaw) : mesRaw) || mesActual();
+      const tarifa = precioTotalCliente(clienteActualIA);
+
       const texto = await generarMensajeCobranzaIA({
         cliente: clienteActualIA,
-        mes: mesSel,
-        monto: clienteActualIA.plan || 65,
+        mes: mesLegible,
+        monto: tarifa,
         tono: tonoActualIA
       });
 
@@ -543,31 +554,33 @@
         const resultados = await FASTNET_IA.predecirRiesgoMora(clientes, pagos);
         const altos  = resultados.filter(r => r.nivel === 'ALTO');
         const medios = resultados.filter(r => r.nivel === 'MEDIO');
-        let html = `<div style="margin-bottom:14px">
+        const html = `<div style="margin-bottom:14px">
           <strong style="color:#DC2626;font-size:0.9rem">🔴 Alto Riesgo (${altos.length} clientes)</strong>
           ${altos.slice(0,5).map(r => `<div style="background:#FFF1F2;border-left:3px solid #DC2626;padding:8px 12px;margin:6px 0;border-radius:6px;font-size:0.82rem">
-            <strong>${esc(r.cliente.nombre)}</strong> — ${esc(r.cliente.zona)} — S/. ${r.cliente.plan}<br>
-            <span style="color:#B91C1C">${r.razones.join(' • ')}</span>
+            <strong>${esc(r.cliente.nombre)}</strong> — ${esc(r.cliente.zona)} — S/. ${precioTotalCliente(r.cliente).toFixed(2)}<br>
+            <span style="color:#B91C1C">${esc(r.razones.join(' • '))}</span>
             ${r.sugerenciaIA ? `<br>🤖 <em style="color:#7C3AED">${esc(r.sugerenciaIA)}</em>` : ''}
             <div style="margin-top:6px;display:flex;gap:6px">
-              <a href="pagos.html?id=${r.cliente.id}" class="btn btn-success btn-sm" style="font-size:0.72rem;padding:3px 10px">💳 Cobrar</a>
-              <button onclick="abrirModalCobranzaIA(${r.cliente.id})" class="btn btn-primary btn-sm" style="font-size:0.72rem;padding:3px 10px;background:#7C3AED;border-color:#7C3AED">🤖 WA</button>
+              <a href="pagos.html?id=${encodeURIComponent(r.cliente.id)}" class="btn btn-success btn-sm" style="font-size:0.72rem;padding:3px 10px">💳 Cobrar</a>
+              <button type="button" onclick="abrirModalCobranzaIA(${r.cliente.id})" class="btn btn-primary btn-sm" style="font-size:0.72rem;padding:3px 10px;background:#7C3AED;border-color:#7C3AED">🤖 WA</button>
             </div>
           </div>`).join('')}
         </div>
         <div><strong style="color:#D97706;font-size:0.9rem">🟡 Riesgo Medio (${medios.length} clientes)</strong>
           ${medios.slice(0,5).map(r => `<div style="background:#FFFBEB;border-left:3px solid #F59E0B;padding:8px 12px;margin:6px 0;border-radius:6px;font-size:0.82rem">
             <strong>${esc(r.cliente.nombre)}</strong> — ${esc(r.cliente.zona)}<br>
-            <span style="color:#92400E">${r.razones.join(' • ')}</span>
+            <span style="color:#92400E">${esc(r.razones.join(' • '))}</span>
           </div>`).join('')}
         </div>`;
         const panel = document.getElementById('panelRiesgoIA');
-        if (panel) { panel.innerHTML = html; panel.style.display = 'block'; }
+        const content = document.getElementById('panelRiesgoIA-content');
+        if (content) content.innerHTML = html;
+        if (panel) panel.style.display = 'block';
         toast(`🤖 IA detectó ${altos.length} clientes en alto riesgo y ${medios.length} en riesgo medio.`);
       } catch (err) {
         toast('Error en análisis IA: ' + err.message, 'error');
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = '🤖 Analizar Riesgo de Mora con IA'; }
+        if (btn) { btn.disabled = false; btn.textContent = '🔴 Riesgo de Mora (IA)'; }
       }
     }
 
@@ -585,6 +598,8 @@
         await IDB.put('clientes', cli);
 
         const fechaHoy = new Date().toISOString().split('T')[0];
+        const mesRaw = document.getElementById('selMesPendiente').value;
+        const mesTexto = typeof mesISOaTexto === 'function' ? mesISOaTexto(mesRaw) : mesRaw;
         await IDB.add('cortes', {
           id_cliente: cli.id,
           cliente_nombre: cli.nombre,
@@ -592,7 +607,7 @@
           fecha_corte: fechaHoy,
           motivo: 'Falta de Pago (Morosidad)',
           estado: 'CORTADO',
-          notas: `Suspendido desde módulo de pendientes para el mes ${document.getElementById('selMesPendiente').value}`,
+          notas: `Suspendido desde módulo de pendientes para el mes ${mesTexto}`,
           creado_el: new Date().toISOString()
         });
 
@@ -600,7 +615,7 @@
         actualizarEstadisticasSidebar();
         await cargarDatos();
 
-      } catch(err) {
+      } catch (err) {
         toast('Error al cortar: ' + err.message, 'error');
       }
     }

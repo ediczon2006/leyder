@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <link rel="icon" type="image/png" href="img/logo.png"/>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Registro de pagos y emisión de vouchers bancarios BCP con código QR para clientes de Leytrix ISP."/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta name="theme-color" content="#0F2A4A"/>
   <title>Leytrix ISP — Pagos y Vouchers Bancarios</title>
+  <link rel="icon" type="image/png" href="img/logo.png"/>
+  <link rel="apple-touch-icon" href="img/logo.png"/>
+  <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="css/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -33,9 +38,11 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 6px;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .bcp-logo-text {
-      font-size: 1.25rem;
+      font-size: 1.18rem;
       font-weight: 900;
       letter-spacing: 0.5px;
       color: #FFFFFF;
@@ -49,7 +56,7 @@
     .bcp-agente-tag {
       background: #FF7800;
       color: #FFFFFF;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 800;
       padding: 4px 10px;
       border-radius: 20px;
@@ -57,7 +64,7 @@
       text-transform: uppercase;
     }
     .bcp-voucher-title {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: #E0E7FF;
       margin: 0;
       letter-spacing: 0.5px;
@@ -91,6 +98,7 @@
       padding: 7px 0;
       border-bottom: 1px dashed #E2E8F0;
       font-size: 0.82rem;
+      gap: 8px;
     }
     .bcp-voucher-row:last-child {
       border-bottom: none;
@@ -131,6 +139,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 10px;
       padding: 12px 14px;
       background: #F8FAFC;
       border: 1px solid #E2E8F0;
@@ -210,26 +219,26 @@
   <main id="main">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
       <div class="page-header" style="margin-bottom:0">
-        <h2>💰 Pagos &amp; Vouchers Bancarios — Leytrix ISP</h2>
+        <h1>💰 Pagos &amp; Vouchers Bancarios — Leytrix ISP</h1>
         <p>Genera comprobantes oficiales estilo BCP, guárdalos en la nube y compártelos por WhatsApp • Soporte: +51 993 053 643</p>
       </div>
       <div class="btn-group">
         <a href="explorador.html" class="btn btn-outline">📸 Ver Vouchers Guardados</a>
-        <button class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
+        <button type="button" class="btn btn-outline" onclick="sincronizarConSupabase()">☁️ Sincronizar Nube</button>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:minmax(320px, 420px) 1fr;gap:22px;align-items:start" id="pagosGridContainer">
+    <div style="display:grid;grid-template-columns:minmax(300px, 420px) 1fr;gap:22px;align-items:start" id="pagosGridContainer">
       
       <!-- FORMULARIO DE REGISTRO DE PAGO -->
       <div class="card" style="padding:22px 24px">
-        <h3 style="font-size:1.05rem;color:var(--azul);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-          <span>💳</span> Registrar Nuevo Pago
-        </h3>
+        <h2 style="font-size:1.05rem;color:var(--azul);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span aria-hidden="true">💳</span> Registrar Nuevo Pago
+        </h2>
 
-        <form id="formPago" onsubmit="registrarPago(event)">
+        <form id="formPago" onsubmit="registrarPago(event)" novalidate>
           <!-- Buscador / Selector de Cliente -->
-          <div style="margin-bottom:14px">
+          <div style="margin-bottom:14px;position:relative">
             <label class="form-label" for="busCliPago">Buscar Cliente <span style="color:var(--rojo)">*</span></label>
             <input type="text" id="busCliPago" class="form-input" placeholder="🔍 Escribe nombre, IP o celular..." autocomplete="off" oninput="filtrarClientesPago()" />
             <div id="listaSugClientes" style="display:none;position:relative;background:#fff;border:1.5px solid var(--azul);border-radius:8px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 8px 18px rgba(0,0,0,0.1);margin-top:4px"></div>
@@ -238,14 +247,14 @@
 
           <!-- Tarjeta informativa del cliente seleccionado -->
           <div id="infoCliSel" style="display:none;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;padding:12px;margin-bottom:16px">
-            <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
               <strong id="infoCliNombre" style="color:#166534;font-size:0.9rem">Cliente</strong>
-              <span id="infoCliEstado" class="badge badge-act">ACTIVO</span>
+              <span id="infoCliEstado" class="badge badge-activo">ACTIVO</span>
             </div>
             <div style="font-size:0.78rem;color:#15803D;margin-top:4px;display:flex;gap:12px;flex-wrap:wrap">
               <span>Zona: <b id="infoCliZona">—</b></span>
               <span>IP: <b id="infoCliIp">—</b></span>
-              <span>Plan: <b id="infoCliPlan">S/. 65</b></span>
+              <span>Tarifa: <b id="infoCliPlan">S/. 65</b></span>
             </div>
           </div>
 
@@ -258,11 +267,12 @@
           <!-- Monto a Pagar -->
           <div style="margin-bottom:14px">
             <label class="form-label" for="pagoMonto">Monto en Soles (S/.) <span style="color:var(--rojo)">*</span></label>
-            <div style="display:flex;gap:8px">
-              <input type="number" step="0.50" id="pagoMonto" class="form-input" placeholder="65.00" required style="font-size:1.1rem;font-weight:700;color:var(--azul)" />
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <input type="number" step="0.50" min="1" id="pagoMonto" class="form-input" placeholder="65.00" required style="flex:1;min-width:110px;font-size:1.08rem;font-weight:700;color:var(--azul)" />
               <button type="button" class="btn btn-outline btn-sm" onclick="setMontoRapido(50)">S/.50</button>
               <button type="button" class="btn btn-outline btn-sm" onclick="setMontoRapido(60)">S/.60</button>
               <button type="button" class="btn btn-outline btn-sm" onclick="setMontoRapido(65)">S/.65</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setMontoRapido(75)" title="Plan Normal + Cable">S/.75</button>
             </div>
           </div>
 
@@ -307,8 +317,8 @@
         <div class="card" style="margin-bottom:18px;padding:16px 20px">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1">
-              <input type="month" id="filtHistMes" class="form-input" style="max-width:180px;padding:7px 10px" onchange="cargarHistorialPagos()" />
-              <input type="text" id="filtHistBus" placeholder="🔍 Filtrar en historial..." class="form-input" style="flex:1;min-width:160px;padding:7px 10px" oninput="filtrarTablaHistorial()" />
+              <input type="month" id="filtHistMes" aria-label="Filtrar pagos por mes" class="form-input" style="width:auto;max-width:180px;padding:7px 10px" onchange="cargarHistorialPagos()" />
+              <input type="text" id="filtHistBus" aria-label="Filtrar en historial de pagos" placeholder="🔍 Filtrar en historial..." class="form-input" style="flex:1;min-width:150px;padding:7px 10px" oninput="filtrarTablaHistorial()" />
             </div>
             <div style="background:#EFF6FF;border:1px solid #BFDBFE;padding:8px 14px;border-radius:10px;text-align:right">
               <span style="font-size:0.75rem;color:var(--gris);display:block">Total Recaudado</span>
@@ -343,13 +353,13 @@
   </main>
 
   <!-- MODAL VOUCHER BANCARIO BCP OFICIAL -->
-  <div class="modal-bg" id="modalVoucher">
+  <div class="modal-bg" id="modalVoucher" role="dialog" aria-modal="true" aria-labelledby="modalVoucherTit">
     <div class="modal" style="max-width:480px;background:#F8FAFC">
       <div class="modal-header">
-        <h3 style="color:#002A8F;display:flex;align-items:center;gap:6px">
-          <span>🧾</span> Voucher Bancario Oficial BCP
+        <h3 id="modalVoucherTit" style="color:#002A8F;display:flex;align-items:center;gap:6px">
+          <span aria-hidden="true">🧾</span> Voucher Bancario Oficial BCP
         </h3>
-        <button class="modal-close" onclick="cerrarModal('modalVoucher')">✕</button>
+        <button type="button" class="modal-close" onclick="cerrarModal('modalVoucher')" aria-label="Cerrar voucher">✕</button>
       </div>
 
       <!-- Área de Recibo imprimible y descargable -->
@@ -359,7 +369,7 @@
           <div class="bcp-top-bar">
             <div class="bcp-brand-row">
               <div style="display:flex;align-items:center;gap:10px">
-                <img src="img/logo.png" alt="Leytrix" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid #38BDF8;background:#030712;box-shadow:0 0 10px rgba(56,189,248,0.5)" onerror="this.style.display='none'" />
+                <img src="img/logo.png" alt="Logo Leytrix" width="40" height="40" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid #38BDF8;background:#030712;box-shadow:0 0 10px rgba(56,189,248,0.5)" onerror="this.style.display='none'" />
                 <div class="bcp-logo-text">
                   BANCO DE CRÉDITO <span>BCP</span>
                 </div>
@@ -454,16 +464,16 @@
 
       <!-- Botones de Acción y Compartir -->
       <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
-        <button class="btn btn-success" onclick="compartirWhatsappRecibo()" style="flex:1">
+        <button type="button" class="btn btn-success" onclick="compartirWhatsappRecibo()" style="flex:1">
           📲 WhatsApp
         </button>
-        <button class="btn btn-primary" onclick="compartirNativoVoucher()" style="flex:1;background:#0284C7;border-color:#0284C7" title="Compartir archivo en el celular">
+        <button type="button" class="btn btn-primary" onclick="compartirNativoVoucher()" style="flex:1;background:#0284C7;border-color:#0284C7" title="Compartir archivo en el celular">
           📤 Compartir Celular
         </button>
-        <button class="btn btn-outline" onclick="descargarVoucherImagen()" style="flex:1">
+        <button type="button" class="btn btn-outline" onclick="descargarVoucherImagen()" style="flex:1">
           📥 Guardar PNG
         </button>
-        <button class="btn btn-outline" onclick="imprimirRecibo()" style="flex:1">
+        <button type="button" class="btn btn-outline" onclick="imprimirRecibo()" style="flex:1">
           🖨️ Imprimir
         </button>
       </div>
@@ -479,6 +489,10 @@
     let voucherCanvasCache = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
+      window.onDatosActualizados = async () => {
+        todosClientes = await IDB.getAll('clientes');
+        await cargarHistorialPagos();
+      };
       renderSidebar('pagos');
       
       const hoy = new Date().toISOString().split('T')[0];
@@ -493,15 +507,10 @@
       const urlParams = new URLSearchParams(window.location.search);
       const preId = urlParams.get('id');
       if (preId) {
-        seleccionarClientePorId(Number(preId));
+        seleccionarClientePorId(preId);
       }
 
       await cargarHistorialPagos();
-
-      window.onDatosActualizados = async () => {
-        todosClientes = await IDB.getAll('clientes');
-        await cargarHistorialPagos();
-      };
     });
 
     function setMontoRapido(monto) {
@@ -534,9 +543,9 @@
         <div onclick="seleccionarClientePorId(${c.id})" style="padding:8px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:0.82rem;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='#fff'">
           <div>
             <strong>${esc(c.nombre)}</strong>
-            <span style="font-size:0.75rem;color:var(--gris);display:block">${esc(c.zona)} • IP: ${esc(c.ip || '—')}</span>
+            <span style="font-size:0.75rem;color:var(--gris);display:block">${esc(c.zona)} • IP: ${esc(c.ip || '—')} • S/. ${precioTotalCliente(c).toFixed(2)}</span>
           </div>
-          <span class="badge ${c.estado === 'ACTIVO' ? 'badge-act' : 'badge-cort'}">${esc(c.estado)}</span>
+          <span class="badge ${c.estado === 'ACTIVO' ? 'badge-activo' : 'badge-cortado'}">${esc(c.estado)}</span>
         </div>
       `).join('');
       wrap.style.display = 'block';
@@ -546,6 +555,8 @@
       const cli = todosClientes.find(c => c.id === id || String(c.id) === String(id));
       if (!cli) return;
 
+      const tarifa = precioTotalCliente(cli);
+
       document.getElementById('pagoIdCliente').value = cli.id;
       document.getElementById('busCliPago').value = cli.nombre;
       document.getElementById('listaSugClientes').style.display = 'none';
@@ -554,13 +565,13 @@
       document.getElementById('infoCliNombre').textContent = cli.nombre;
       document.getElementById('infoCliZona').textContent = cli.zona || '—';
       document.getElementById('infoCliIp').textContent = cli.ip || '—';
-      document.getElementById('infoCliPlan').textContent = `S/. ${cli.plan || 65} (${labelPlan(cli.plan)})`;
+      document.getElementById('infoCliPlan').textContent = `S/. ${tarifa.toFixed(2)} (${labelPlan(cli.plan, cli.cable)})`;
       
-      const badgeEstado = document.getElementById('infoCliEstado');
-      badgeEstado.textContent = cli.estado;
-      badgeEstado.className = 'badge ' + (cli.estado === 'ACTIVO' ? 'badge-act' : 'badge-cort');
+      const badgeEl = document.getElementById('infoCliEstado');
+      badgeEl.textContent = cli.estado;
+      badgeEl.className = 'badge ' + (cli.estado === 'ACTIVO' ? 'badge-activo' : 'badge-cortado');
 
-      document.getElementById('pagoMonto').value = Number(cli.plan || 65).toFixed(2);
+      document.getElementById('pagoMonto').value = tarifa.toFixed(2);
     }
 
     async function registrarPago(e) {
@@ -578,18 +589,24 @@
         return;
       }
 
+      const monto = Number(document.getElementById('pagoMonto')?.value) || 0;
+      if (!LeytrixSecurity.isValid.monto(monto)) {
+        toast('⚠️ Ingresa un monto válido mayor a S/. 0.00', 'warn');
+        document.getElementById('pagoMonto').focus();
+        return;
+      }
+
       const btn = document.getElementById('btnGuardarPago');
       btn.disabled = true;
       btn.textContent = '⏳ Emitiendo Voucher Bancario...';
 
       try {
-        const mesRaw    = document.getElementById('pagoMes')?.value;
-        const mes       = (typeof mesISOaTexto === 'function' ? mesISOaTexto(mesRaw) : mesRaw) || mesActual();
-        const monto     = Number(document.getElementById('pagoMonto')?.value) || 0;
-        const metodo    = document.getElementById('pagoMetodo')?.value || 'Yape';
-        const numOp     = (document.getElementById('pagoNumOperacion')?.value || '').trim() || `OP-${Date.now().toString().slice(-6)}`;
-        const fecha     = document.getElementById('pagoFecha')?.value || new Date().toISOString().split('T')[0];
-        const notas     = (document.getElementById('pagoNotas')?.value || '').trim();
+        const mesRaw = document.getElementById('pagoMes')?.value;
+        const mes    = (typeof mesISOaTexto === 'function' ? mesISOaTexto(mesRaw) : mesRaw) || mesActual();
+        const metodo = document.getElementById('pagoMetodo')?.value || 'Yape';
+        const numOp  = (document.getElementById('pagoNumOperacion')?.value || '').trim() || `OP-${Date.now().toString().slice(-6)}`;
+        const fecha  = document.getElementById('pagoFecha')?.value || new Date().toISOString().split('T')[0];
+        const notas  = (document.getElementById('pagoNotas')?.value || '').trim();
 
         const nuevoPago = {
           id_cliente: cli.id,
@@ -659,7 +676,7 @@
         const total = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
         document.getElementById('lblTotalRecaudado').textContent = `S/. ${total.toFixed(2)}`;
 
-      } catch(err) {
+      } catch (err) {
         tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--rojo)">Error al cargar pagos: ${esc(err.message)}</td></tr>`;
       }
     }
@@ -673,20 +690,20 @@
 
       tbody.innerHTML = pagos.map(p => `
         <tr>
-          <td><strong style="color:var(--azul)">#${p.id}</strong></td>
+          <td><strong style="color:var(--azul)">#${esc(p.id)}</strong></td>
           <td><strong>${esc(p.cliente_nombre || 'Cliente #' + p.id_cliente)}</strong></td>
           <td><span class="badge" style="background:#F1F5F9;color:#334155">${esc(p.cliente_zona || '—')}</span></td>
           <td><strong style="color:#0284C7">${esc(p.mes)}</strong></td>
           <td><strong style="color:#16A34A">S/. ${Number(p.monto).toFixed(2)}</strong></td>
           <td>${esc(p.metodo || 'Efectivo')}</td>
-          <td><code style="font-size:0.75rem;background:#F8FAFC;padding:2px 6px;border-radius:4px">${esc(p.numero_operacion || '—')}</code></td>
+          <td><code>${esc(p.numero_operacion || '—')}</code></td>
           <td style="font-size:0.8rem;color:var(--gris)">${esc(p.fecha || '—')}</td>
           <td>
             <div class="btn-group">
-              <button class="btn btn-outline btn-sm" onclick="verVoucherHistorial(${p.id})" title="Ver / Compartir Voucher BCP">
+              <button type="button" class="btn btn-outline btn-sm" onclick="verVoucherHistorial(${p.id})" title="Ver / Compartir Voucher BCP">
                 🧾 Voucher
               </button>
-              <button class="btn btn-danger btn-sm" onclick="eliminarPago(${p.id})" title="Eliminar Pago">
+              <button type="button" class="btn btn-danger btn-sm" onclick="eliminarPago(${p.id})" title="Eliminar Pago">
                 🗑️
               </button>
             </div>
@@ -753,7 +770,7 @@
         if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
           QRCode.toCanvas(qrCanvas, qrPayload, { width: 80, margin: 1 });
         }
-      } catch(e) {
+      } catch (e) {
         console.warn('QR Code generation notice:', e);
       }
 
@@ -767,21 +784,24 @@
             const canvas = await html2canvas(el, { scale: 2, useCORS: true });
             voucherCanvasCache = canvas;
             const imgData = canvas.toDataURL('image/jpeg', 0.90);
+            const tituloVoucher = `Voucher BCP ${numOp} - ${cli.nombre}`;
 
-            // Guardar en tabla fotos (se sincroniza a Supabase y se ve en explorador.html)
             await IDB.add('fotos', {
-              titulo: `Voucher BCP ${numOp} - ${cli.nombre}`,
+              titulo: tituloVoucher,
+              nombre: `Voucher_BCP_${numOp}.jpg`,
               categoria: 'comprobante',
               cliente_id: cli.id,
               cliente_nombre: cli.nombre,
               zona: cli.zona,
+              tipo_mime: 'image/jpeg',
+              tamano: Math.round(imgData.length * 0.75),
               data_url: imgData,
-              notas: `Voucher bancario emitido automáticamente para el mes ${pago.mes} (S/. ${pago.monto}) - Leytrix ISP`,
+              notas: `Voucher bancario emitido automáticamente para el mes ${pago.mes} (S/. ${Number(pago.monto).toFixed(2)}) - Leytrix ISP`,
               creado_el: new Date().toISOString()
             });
 
             toast(`☁️ ¡Voucher bancario guardado automáticamente en Supabase Cloud y Galería!`);
-          } catch(err) {
+          } catch (err) {
             console.warn('Auto-save voucher error:', err);
           }
         }, 300);
@@ -816,10 +836,9 @@ _Leytrix ISP — Soporte: +51 993 053 643 | fastnetloboyacu@gmail.com_`;
 
       const numDestino = cel.length >= 9 ? (cel.startsWith('51') ? cel : '51' + cel) : '';
       const url = `https://api.whatsapp.com/send?phone=${numDestino}&text=${encodeURIComponent(mensaje)}`;
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
 
-    // Compartir nativo para celular (abre menú con WhatsApp, Telegram, correo, etc.)
     async function compartirNativoVoucher() {
       const el = document.getElementById('bcpVoucherVisual');
       try {
@@ -844,17 +863,16 @@ _Leytrix ISP — Soporte: +51 993 053 643 | fastnetloboyacu@gmail.com_`;
             try {
               await navigator.share(shareData);
               toast('✅ Voucher compartido con éxito');
-            } catch(e) {
+            } catch (e) {
               if (e.name !== 'AbortError') compartirWhatsappRecibo();
             }
           } else {
-            // Si el navegador no permite compartir archivos directamente, descargamos y abrimos WhatsApp
             descargarVoucherImagen();
             compartirWhatsappRecibo();
           }
         }, 'image/png');
 
-      } catch(err) {
+      } catch (err) {
         console.error('Error al compartir nativo:', err);
         compartirWhatsappRecibo();
       }
@@ -872,7 +890,7 @@ _Leytrix ISP — Soporte: +51 993 053 643 | fastnetloboyacu@gmail.com_`;
         link.href = imgData;
         link.click();
         toast('✅ Comprobante PNG descargado en tu dispositivo');
-      } catch(err) {
+      } catch (err) {
         console.error('Error html2canvas:', err);
         toast('No se pudo generar la imagen, usa el botón Imprimir', 'warn');
       }
@@ -885,7 +903,7 @@ _Leytrix ISP — Soporte: +51 993 053 643 | fastnetloboyacu@gmail.com_`;
         toast(`🗑️ Pago #${id} eliminado con éxito.`);
         await cargarHistorialPagos();
         actualizarEstadisticasSidebar();
-      } catch(err) {
+      } catch (err) {
         toast('Error al eliminar pago: ' + err.message, 'error');
       }
     }
